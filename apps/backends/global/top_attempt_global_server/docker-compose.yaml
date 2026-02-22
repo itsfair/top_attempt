@@ -1,0 +1,45 @@
+name: top_attempt_global_server
+services:
+  # Development services
+  postgres:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "8090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: top_attempt
+      POSTGRES_PASSWORD: "v_fHWB6H8VlGf1xkGzzbhm187L4YOar_"
+    volumes:
+      - top_attempt_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6.2.6
+    ports:
+      - "8091:6379"
+    command: redis-server --requirepass "JrJna-izJvv4X7tG5tH0DYv68Dx7FBv1"
+    environment:
+      - REDIS_REPLICATION_MODE=master
+
+  # Test services
+  postgres_test:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "9090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: top_attempt_test
+      POSTGRES_PASSWORD: "bAJRYo9iP_s8MfWmK7QPFSVcHe81As8Q"
+    volumes:
+      - top_attempt_test_data:/var/lib/postgresql/data
+
+  redis_test:
+    image: redis:6.2.6
+    ports:
+      - "9091:6379"
+    command: redis-server --requirepass "z1dTRGMsjMEZQdG17Ogvgf2QbTGeJiAL"
+    environment:
+      - REDIS_REPLICATION_MODE=master
+
+volumes:
+  top_attempt_data:
+  top_attempt_test_data:

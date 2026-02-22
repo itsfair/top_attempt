@@ -1,0 +1,72 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: '3.3.1'
+      SERVERPOD_PASSWORD_database: 'bAJRYo9iP_s8MfWmK7QPFSVcHe81As8Q'
+      SERVERPOD_PASSWORD_redis: 'z1dTRGMsjMEZQdG17Ogvgf2QbTGeJiAL'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.8'
+
+      - name: Start global containers
+        working-directory: backends/global/top_attempt_global_server
+        run: docker compose up --build -d
+
+      - name: Install global dependencies
+        working-directory: backends/global/top_attempt_global_server
+        run: dart pub get
+
+      - name: Install global Serverpod CLI
+        working-directory: backends/global/top_attempt_global_server
+        run: dart pub global activate serverpod_cli $VERSION
+
+      - name: Run global Serverpod generator
+        working-directory: backends/global/top_attempt_global_server
+        run: serverpod generate
+
+      - name: Run global tests
+        working-directory: backends/global/top_attempt_global_server
+        run: dart test
+
+      - name: Stop global containers
+        if: always()
+        working-directory: backends/global/top_attempt_global_server
+        run: docker compose down -v
+
+      - name: Start local containers
+        working-directory: backends/local/top_attempt_local_server
+        run: docker compose up --build -d
+
+      - name: Install local dependencies
+        working-directory: backends/local/top_attempt_local_server
+        run: dart pub get
+
+      - name: Install local Serverpod CLI
+        working-directory: backends/local/top_attempt_local_server
+        run: dart pub global activate serverpod_cli $VERSION
+
+      - name: Run local Serverpod generator
+        working-directory: backends/local/top_attempt_local_server
+        run: serverpod generate
+
+      - name: Run local tests
+        working-directory: backends/local/top_attempt_local_server
+        run: dart test
+
+      - name: Stop local containers
+        if: always()
+        working-directory: backends/local/top_attempt_local_server
+        run: docker compose down -v
