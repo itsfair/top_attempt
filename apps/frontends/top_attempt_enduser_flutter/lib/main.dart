@@ -2,8 +2,10 @@ import 'package:top_attempt_global_client/top_attempt_client.dart';
 import 'package:flutter/material.dart';
 import 'package:serverpod_flutter/serverpod_flutter.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
-
-import 'screens/greetings_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'layout.dart';
+import 'screens/home.dart';
+import 'screens/qr_reader.dart';
 
 /// Sets up a global client object that can be used to talk to the server from
 /// anywhere in our app. The client is generated from your server code
@@ -44,14 +46,31 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Serverpod Demo',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const MyHomePage(title: 'Serverpod Example'),
+      routerConfig: GoRouter(
+        routes: [
+          ShellRoute(
+            builder: (context, state, child) {
+              return Layout(child: child);
+            },
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/',
+                builder: (context, state) => HomePage(),
+              ),
+              GoRoute(
+                path: '/qr-reader',
+                builder: (context, state) => QRReader(),
+              ),
+            ])
+        ]),
     );
   }
 }
 
+/*
 class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key, required this.title});
 
@@ -60,20 +79,58 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: const GreetingsScreen(),
+      appBar: AppBar(
+        title: Text(title),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {},
+          ),
+        ],
+      ),
+      //body: const GreetingsScreen(),
       // To test authentication in this example app, uncomment the line below
       // and comment out the line above. This wraps the GreetingsScreen with a
       // SignInScreen, which automatically shows a sign-in UI when the user is
       // not authenticated and displays the GreetingsScreen once they sign in.
       //
-      // body: SignInScreen(
-      //   child: GreetingsScreen(
-      //     onSignOut: () async {
-      //       await client.auth.signOutDevice();
-      //     },
-      //   ),
-      // ),
+      body: SignInScreen(
+        child: GreetingsScreen(
+          onSignOut: () async {
+            await client.auth.signOutDevice();
+          },
+        ),
+      ),
+      bottomNavigationBar: BottomAppBar(
+        shape: CircularNotchedRectangle(),
+        notchMargin: 6.0,
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            IconButton(
+              icon: Icon(Icons.home),
+              onPressed: () {},
+            ),
+            IconButton(
+              icon: Icon(Icons.notifications),
+              onPressed: () {},
+            ),
+            SizedBox(width: 40), // Platz für den FAB
+            IconButton(
+              icon: Icon(Icons.messenger),
+              onPressed: () {},
+            ),
+          ],
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        shape: const CircleBorder(),
+        onPressed: () {},
+        child: Icon(Icons.qr_code_scanner),
+      ),
     );
   }
 }
+*/
