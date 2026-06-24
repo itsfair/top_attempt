@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'layout.dart';
 import 'screens/home.dart';
 import 'screens/qr_reader.dart';
+import 'screens/sign_in.dart';
 
 /// Sets up a global client object that can be used to talk to the server from
 /// anywhere in our app. The client is generated from your server code
@@ -36,7 +37,7 @@ void main() async {
     ..connectivityMonitor = FlutterConnectivityMonitor()
     ..authSessionManager = FlutterAuthSessionManager();
 
-  client.auth.initialize();
+  await client.auth.initialize();
 
   runApp(const MyApp());
 }
@@ -63,6 +64,10 @@ class MyApp extends StatelessWidget {
               GoRoute(
                 path: '/qr-reader',
                 builder: (context, state) => QRReader(),
+              ),
+              GoRoute(
+                path: '/sign-in',
+                builder: (context, state) => SignIn(client: client),
               ),
             ])
         ]),

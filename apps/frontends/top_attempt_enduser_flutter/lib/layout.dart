@@ -13,6 +13,14 @@ class Layout extends StatelessWidget {
         title: Text('Home'),
         backgroundColor: Colors.blue[900],
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.login),
+            onPressed: () {
+              context.go('/sign-in');
+            },
+          ),
+        ],
       ),
       body: child,
       bottomNavigationBar: BottomAppBar(
