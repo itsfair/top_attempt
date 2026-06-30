@@ -16,6 +16,20 @@ void ConfigManager::begin() {
     _cfg.deviceName           = _prefs.getString("device_name",    "doorinterface");
     _cfg.isConfigured         = _prefs.getBool("is_configured",    false);
 
+    // OTA — NVS keys are <=15 chars (Preferences limit). HTTP/JSON names are
+    // the long ones from the spec. Mapping:
+    //   ota_man_url      <- ota_manifest_url
+    //   ota_chan_lbl     <- ota_channel_label
+    //   ota_auto_check   <- ota_auto_check
+    //   ota_chk_int_min  <- ota_check_interval_min
+    //   last_boot_ver    <- last_boot_version
+    _cfg.otaManifestUrl       = _prefs.getString("ota_man_url",
+        "https://raw.githubusercontent.com/itsfair/top_attempt/main/doorinterface/firmware/manifest-dev.json");
+    _cfg.otaChannelLabel      = _prefs.getString("ota_chan_lbl",     "dev");
+    _cfg.otaAutoCheck         = _prefs.getBool("ota_auto_check",     true);
+    _cfg.otaCheckIntervalMin  = _prefs.getUInt("ota_chk_int_min",    360);
+    _cfg.lastBootVersion      = _prefs.getString("last_boot_ver",    "");
+
     Serial.println("[Config] Loaded from NVS");
     Serial.printf("[Config] WiFi SSID: %s\n", _cfg.wifiSSID.c_str());
     Serial.printf("[Config] Hardware: %d  Configured: %s\n",
@@ -34,6 +48,12 @@ void ConfigManager::save() {
     _prefs.putBool("nuki_paired",      _cfg.nukiPaired);
     _prefs.putString("device_name",    _cfg.deviceName);
     _prefs.putBool("is_configured",    _cfg.isConfigured);
+
+    _prefs.putString("ota_man_url",       _cfg.otaManifestUrl);
+    _prefs.putString("ota_chan_lbl",      _cfg.otaChannelLabel);
+    _prefs.putBool("ota_auto_check",      _cfg.otaAutoCheck);
+    _prefs.putUInt("ota_chk_int_min",     _cfg.otaCheckIntervalMin);
+    _prefs.putString("last_boot_ver",     _cfg.lastBootVersion);
     Serial.println("[Config] Saved to NVS");
 }
 
@@ -55,6 +75,11 @@ void ConfigManager::loadDefaults() {
     _cfg.nukiPaired          = false;
     _cfg.deviceName          = "doorinterface";
     _cfg.isConfigured        = false;
+    _cfg.otaManifestUrl      = "https://raw.githubusercontent.com/itsfair/top_attempt/main/doorinterface/firmware/manifest-dev.json";
+    _cfg.otaChannelLabel     = "dev";
+    _cfg.otaAutoCheck        = true;
+    _cfg.otaCheckIntervalMin = 360;
+    _cfg.lastBootVersion     = "";
 }
 
 // --- Mutators ---
@@ -119,4 +144,31 @@ void ConfigManager::setDeviceName(const String& name) {
 void ConfigManager::setConfigured(bool configured) {
     _cfg.isConfigured = configured;
     _prefs.putBool("is_configured", configured);
+}
+
+// --- OTA setters ---
+
+void ConfigManager::setOtaManifestUrl(const String& url) {
+    _cfg.otaManifestUrl = url;
+    _prefs.putString("ota_man_url", url);
+}
+
+void ConfigManager::setOtaChannelLabel(const String& label) {
+    _cfg.otaChannelLabel = label;
+    _prefs.putString("ota_chan_lbl", label);
+}
+
+void ConfigManager::setOtaAutoCheck(bool enabled) {
+    _cfg.otaAutoCheck = enabled;
+    _prefs.putBool("ota_auto_check", enabled);
+}
+
+void ConfigManager::setOtaCheckIntervalMin(uint32_t minutes) {
+    _cfg.otaCheckIntervalMin = minutes;
+    _prefs.putUInt("ota_chk_int_min", minutes);
+}
+
+void ConfigManager::setLastBootVersion(const String& version) {
+    _cfg.lastBootVersion = version;
+    _prefs.putString("last_boot_ver", version);
 }

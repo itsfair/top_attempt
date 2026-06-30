@@ -32,6 +32,14 @@ struct DeviceConfig {
     // Device
     String deviceName;
     bool   isConfigured; // Setup wizard completed
+
+    // OTA — NVS keys are abbreviated to <=15 chars (Preferences library limit);
+    // see config_manager.cpp for the mapping. HTTP/JSON field names are unchanged.
+    String   otaManifestUrl;       // Default: dev manifest URL (see .cpp)
+    String   otaChannelLabel;      // e.g. "dev", "stable"
+    bool     otaAutoCheck;         // periodic background update check
+    uint32_t otaCheckIntervalMin;  // period in minutes (default 360 = 6h)
+    String   lastBootVersion;      // version that last boot confirmed as good
 };
 
 // Singleton configuration manager backed by NVS (Non-Volatile Storage)
@@ -66,6 +74,13 @@ public:
     String   getDeviceName()  const { return _cfg.deviceName; }
     bool     isConfigured()   const { return _cfg.isConfigured; }
 
+    // OTA
+    String   getOtaManifestUrl()      const { return _cfg.otaManifestUrl; }
+    String   getOtaChannelLabel()     const { return _cfg.otaChannelLabel; }
+    bool     getOtaAutoCheck()        const { return _cfg.otaAutoCheck; }
+    uint32_t getOtaCheckIntervalMin() const { return _cfg.otaCheckIntervalMin; }
+    String   getLastBootVersion()     const { return _cfg.lastBootVersion; }
+
     // --- Mutators (write + persist) ---
     void setWifi(const String& ssid, const String& password);
     void setServerUrl(const String& url);
@@ -77,6 +92,13 @@ public:
     void setNukiAddress(const String& address);
     void setDeviceName(const String& name);
     void setConfigured(bool configured);
+
+    // OTA
+    void setOtaManifestUrl(const String& url);
+    void setOtaChannelLabel(const String& label);
+    void setOtaAutoCheck(bool enabled);
+    void setOtaCheckIntervalMin(uint32_t minutes);
+    void setLastBootVersion(const String& version);
 
 private:
     ConfigManager() = default;
