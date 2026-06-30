@@ -188,6 +188,10 @@ static void wifiReconnectTask(void* /*param*/) {
 
 static void nukiUpdateTask(void* param) {
     NukiDriver* nuki = static_cast<NukiDriver*>(param);
+    // NOTE: must keep running during UpdateManager's PENDING_VERIFY state
+    // (and any other OTA-related state). Stopping this task would make
+    // the door unopenable from the web UI while the new firmware is
+    // waiting to be confirmed or rolled back. Do not add deinit logic.
     for (;;) {
         nuki->update();
         vTaskDelay(100 / portTICK_PERIOD_MS);
