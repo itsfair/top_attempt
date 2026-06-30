@@ -25,8 +25,6 @@ jobs:
 
       - name: Build
         id: build
-        env:
-          PLATFORMIO_BUILD_FLAGS: '-DFIRMWARE_VERSION="${{ github.sha::7 }}"'
         run: |
           VERSION=${GITHUB_SHA::7}
           pio run

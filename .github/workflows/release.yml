@@ -25,8 +25,6 @@ jobs:
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
       - name: Build
-        env:
-          PLATFORMIO_BUILD_FLAGS: '-DFIRMWARE_VERSION="${{ steps.ver.outputs.VERSION }}"'
         run: pio run
 
       - name: Compute SHA-256
