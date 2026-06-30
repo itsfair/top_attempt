@@ -34,6 +34,13 @@ public:
     int    getProgressPct() const { return _progressPct; }
     String getError() const { return _error; }
 
+    // Returns ms remaining until pending-verify timeout (0 if not pending).
+    uint32_t getPendingRemainingMs() const {
+        if (_state != State::PENDING_VERIFY) return 0;
+        uint32_t elapsed = millis() - _pendingVerifyStartMs;
+        return (elapsed >= 60000UL) ? 0 : (60000UL - elapsed);
+    }
+
 private:
     UpdateManager() = default;
     UpdateManager(const UpdateManager&) = delete;
