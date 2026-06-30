@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include "hardware/nuki_driver.h"
+#include "update_manager.h"
 
 // Operational HTTP API server (runs when WiFi is connected).
 // Minimal version: dashboard + NUKI pairing only.
@@ -45,8 +46,17 @@ private:
     void handleResetWifi(AsyncWebServerRequest* req);
     void handleReboot(AsyncWebServerRequest* req);
 
+    // OTA
+    void handleUpdatePage(AsyncWebServerRequest* req);
+    void handleUpdateStatus(AsyncWebServerRequest* req);
+    void handleUpdateCheck(AsyncWebServerRequest* req);
+    void handleUpdateInstall(AsyncWebServerRequest* req);
+    void handleUpdateConfirm(AsyncWebServerRequest* req);
+    void handleConfigOta(AsyncWebServerRequest* req, uint8_t* data, size_t len);
+
     static void sendJson(AsyncWebServerRequest* req, int code, const String& json);
     static String doorStateStr(DoorState s);
+    static String otaStateStr(UpdateManager::State s);
 
     AsyncWebServer _server;
     NukiDriver*    _nuki;
@@ -54,6 +64,7 @@ private:
 
     static const char* INDEX_HTML;
     static const char* SETTINGS_HTML;
+    static const char* UPDATE_HTML;
 };
 
 inline HttpApi& Api() { return HttpApi::instance(); }
