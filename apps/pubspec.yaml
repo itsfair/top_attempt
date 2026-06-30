@@ -1,0 +1,16 @@
+name: _
+publish_to: none
+
+environment:
+  sdk: '^3.8.0'
+
+workspace:
+  - backends/global/top_attempt_global_client
+  - backends/global/top_attempt_global_server
+  - backends/local/top_attempt_local_client
+  - backends/local/top_attempt_local_server
+  - frontends/top_attempt_enduser_flutter
+  
+dependency_overrides:
+  flutter_secure_storage: ^10.0.0
+

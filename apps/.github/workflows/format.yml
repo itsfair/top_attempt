@@ -1,0 +1,34 @@
+name: Format
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.8.0
+
+      - name: Install global dependencies
+        working-directory: backends/global/top_attempt_global_server
+        run: dart pub get
+
+      - name: Check global formatting
+        working-directory: backends/global/top_attempt_global_server
+        run: dart format --set-exit-if-changed .
+
+      - name: Install local dependencies
+        working-directory: backends/local/top_attempt_local_server
+        run: dart pub get
+
+      - name: Check local formatting
+        working-directory: backends/local/top_attempt_local_server
+        run: dart format --set-exit-if-changed .
