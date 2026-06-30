@@ -8,6 +8,7 @@
 #include "ble_service.h"
 #include "serial_console.h"
 #include "hardware/nuki_driver.h"
+#include "update_manager.h"
 
 // ============================================================
 //  Device state machine
@@ -89,6 +90,7 @@ void loop() {
 
     if (gState == DeviceState::OPERATIONAL) {
         Api().process();
+        Update().tick();
     }
 
     // Notify BLE clients with updated status every 5 seconds
@@ -136,6 +138,14 @@ static void startOperationalMode() {
 
     // NUKI update task (processes BLE events)
     xTaskCreatePinnedToCore(nukiUpdateTask, "nuki_update", 3072, gNuki, 2, nullptr, 0);
+
+    // OTA tick task (pending-verify watchdog + periodic auto-check)
+    xTaskCreatePinnedToCore([](void*){
+        for (;;) {
+            Update().tick();
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+        }
+    }, "ota_tick", 4096, nullptr, 1, nullptr, 0);
 
     Serial.println("[Main] Operational — ready");
     Serial.printf("[Main] Web UI: http://%s.local  or  http://%s\n",
