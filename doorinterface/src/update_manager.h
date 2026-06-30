@@ -64,4 +64,4 @@ private:
     bool    _downloadSuccess = false;
 };
 
-inline UpdateManager& Update() { return UpdateManager::instance(); }
+inline UpdateManager& Ota() { return UpdateManager::instance(); }

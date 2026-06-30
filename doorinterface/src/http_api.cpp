@@ -572,7 +572,7 @@ void HttpApi::handleStatus(AsyncWebServerRequest* req) {
     door["ready"] = paired;
 
     auto fw = doc["firmware"].to<JsonObject>();
-    UpdateManager& u = Update();
+    UpdateManager& u = Ota();
     fw["current"]          = u.getCurrentVersion();
     fw["channel"]          = u.getChannelLabel();
     fw["manifest_url"]     = u.getManifestUrl();
@@ -689,7 +689,7 @@ void HttpApi::handleUpdatePage(AsyncWebServerRequest* req) {
 
 void HttpApi::handleUpdateStatus(AsyncWebServerRequest* req) {
     JsonDocument doc;
-    UpdateManager& u = Update();
+    UpdateManager& u = Ota();
     doc["state"]              = otaStateStr(u.getState());
     doc["progress_pct"]       = u.getProgressPct();
     doc["error"]              = u.getError();
@@ -709,17 +709,17 @@ void HttpApi::handleUpdateStatus(AsyncWebServerRequest* req) {
 }
 
 void HttpApi::handleUpdateCheck(AsyncWebServerRequest* req) {
-    Update().checkNow();
+    Ota().checkNow();
     sendJson(req, 200, "{\"status\":\"checking\"}");
 }
 
 void HttpApi::handleUpdateInstall(AsyncWebServerRequest* req) {
-    Update().startUpdate();
+    Ota().startUpdate();
     sendJson(req, 200, "{\"status\":\"downloading\"}");
 }
 
 void HttpApi::handleUpdateConfirm(AsyncWebServerRequest* req) {
-    Update().confirmBoot();
+    Ota().confirmBoot();
     sendJson(req, 200, "{\"success\":true}");
 }
 

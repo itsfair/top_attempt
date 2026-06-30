@@ -90,7 +90,7 @@ void loop() {
 
     if (gState == DeviceState::OPERATIONAL) {
         Api().process();
-        Update().tick();
+        Ota().tick();
     }
 
     // Notify BLE clients with updated status every 5 seconds
@@ -142,7 +142,7 @@ static void startOperationalMode() {
     // OTA tick task (pending-verify watchdog + periodic auto-check)
     xTaskCreatePinnedToCore([](void*){
         for (;;) {
-            Update().tick();
+            Ota().tick();
             vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
     }, "ota_tick", 4096, nullptr, 1, nullptr, 0);

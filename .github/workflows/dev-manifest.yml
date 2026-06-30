@@ -25,9 +25,11 @@ jobs:
 
       - name: Build
         id: build
+        env:
+          PLATFORMIO_BUILD_FLAGS: '-DFIRMWARE_VERSION="${{ github.sha::7 }}"'
         run: |
           VERSION=${GITHUB_SHA::7}
-          pio run -DFIRMWARE_VERSION="$VERSION"
+          pio run
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "SHA=$(sha256sum .pio/build/esp32dev/firmware.bin | cut -d' ' -f1)" >> $GITHUB_OUTPUT
           echo "SIZE=$(stat -c %s .pio/build/esp32dev/firmware.bin)" >> $GITHUB_OUTPUT
