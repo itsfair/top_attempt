@@ -3,8 +3,9 @@ name: Format
 on:
   push:
     branches: [main]
+    paths: ['apps/**', '.github/workflows/format.yml']
   pull_request:
-    branches: [main]
+    paths: ['apps/**', '.github/workflows/format.yml']
 
 jobs:
   format:
@@ -18,17 +19,17 @@ jobs:
           sdk: 3.8.0
 
       - name: Install global dependencies
-        working-directory: backends/global/top_attempt_global_server
+        working-directory: apps/backends/global/top_attempt_global_server
         run: dart pub get
 
       - name: Check global formatting
-        working-directory: backends/global/top_attempt_global_server
+        working-directory: apps/backends/global/top_attempt_global_server
         run: dart format --set-exit-if-changed .
 
       - name: Install local dependencies
-        working-directory: backends/local/top_attempt_local_server
+        working-directory: apps/backends/local/top_attempt_local_server
         run: dart pub get
 
       - name: Check local formatting
-        working-directory: backends/local/top_attempt_local_server
+        working-directory: apps/backends/local/top_attempt_local_server
         run: dart format --set-exit-if-changed .

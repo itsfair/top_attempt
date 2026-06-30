@@ -3,8 +3,9 @@ name: Tests
 on:
   push:
     branches: [main]
+    paths: ['apps/**', '.github/workflows/tests.yml']
   pull_request:
-    branches: [main]
+    paths: ['apps/**', '.github/workflows/tests.yml']
 
 jobs:
   test:
@@ -22,51 +23,51 @@ jobs:
           flutter-version: '3.32.8'
 
       - name: Start global containers
-        working-directory: backends/global/top_attempt_global_server
+        working-directory: apps/backends/global/top_attempt_global_server
         run: docker compose up --build -d
 
       - name: Install global dependencies
-        working-directory: backends/global/top_attempt_global_server
+        working-directory: apps/backends/global/top_attempt_global_server
         run: dart pub get
 
       - name: Install global Serverpod CLI
-        working-directory: backends/global/top_attempt_global_server
+        working-directory: apps/backends/global/top_attempt_global_server
         run: dart pub global activate serverpod_cli $VERSION
 
       - name: Run global Serverpod generator
-        working-directory: backends/global/top_attempt_global_server
+        working-directory: apps/backends/global/top_attempt_global_server
         run: serverpod generate
 
       - name: Run global tests
-        working-directory: backends/global/top_attempt_global_server
+        working-directory: apps/backends/global/top_attempt_global_server
         run: dart test
 
       - name: Stop global containers
         if: always()
-        working-directory: backends/global/top_attempt_global_server
+        working-directory: apps/backends/global/top_attempt_global_server
         run: docker compose down -v
 
       - name: Start local containers
-        working-directory: backends/local/top_attempt_local_server
+        working-directory: apps/backends/local/top_attempt_local_server
         run: docker compose up --build -d
 
       - name: Install local dependencies
-        working-directory: backends/local/top_attempt_local_server
+        working-directory: apps/backends/local/top_attempt_local_server
         run: dart pub get
 
       - name: Install local Serverpod CLI
-        working-directory: backends/local/top_attempt_local_server
+        working-directory: apps/backends/local/top_attempt_local_server
         run: dart pub global activate serverpod_cli $VERSION
 
       - name: Run local Serverpod generator
-        working-directory: backends/local/top_attempt_local_server
+        working-directory: apps/backends/local/top_attempt_local_server
         run: serverpod generate
 
       - name: Run local tests
-        working-directory: backends/local/top_attempt_local_server
+        working-directory: apps/backends/local/top_attempt_local_server
         run: dart test
 
       - name: Stop local containers
         if: always()
-        working-directory: backends/local/top_attempt_local_server
+        working-directory: apps/backends/local/top_attempt_local_server
         run: docker compose down -v
