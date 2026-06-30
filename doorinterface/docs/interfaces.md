@@ -20,6 +20,7 @@
 9. [Lokaler Server ↔ Globaler Server](#lokaler-server--globaler-server-phase-2)
 10. [Authentifizierungsfluss](#authentifizierungsfluss-phase-2)
 11. [Benutzergruppen](#benutzergruppen)
+12. [OTA / Firmware-Update](#ota--firmware-update)
 
 ---
 
@@ -648,3 +649,198 @@ Content-Type: application/json
 - Members: Globaler JWT wird lokal validiert (shared HMAC-SHA-512 Signing Key)
 - Employees: Zusätzlich lokale Email+Passwort-Credentials für serverunabhängigen Login
 - User-UUID ist global und lokal identisch (bei Sync übertragen)
+
+---
+
+## OTA / Firmware-Update
+
+### Übersicht
+
+Das ESP32 holt sich ein JSON-Manifest von einer konfigurierbaren URL,
+lädt die referenzierte `firmware.bin` über HTTPS herunter, prüft die
+SHA-256 aus dem Manifest, flasht das andere OTA-Partition-Slot und
+wartet 60 Sekunden auf eine explizite Bestätigung. Ohne Bestätigung
+wird automatisch auf das vorherige Image zurückgerollt.
+
+**Update-Trigger:**
+- **Web-UI:** Button "Nach Update suchen" auf `/update` (POST /update/check)
+- **REST:** `POST /update/check`, `POST /update/install`, `POST /update/confirm`
+- **Automatisch:** konfigurierbares Intervall (Default 360 Minuten = 6 h)
+
+**Update-Flow:**
+1. `checkNow()` → `HTTPClient::GET` Manifest → parsen mit ArduinoJson
+2. Wenn `available_version > current_version` → State `AVAILABLE`
+3. `startUpdate()` → `HTTPClient::GET` firmware.bin (HTTPS, insecure) → streamen in `Update.write()`
+4. SHA-256 wird parallel mit mbedtls berechnet; bei Mismatch → Abort
+5. `Update.end(true)` → State `PENDING_VERIFY`, 60 s Timer startet
+6. User sendet `POST /update/confirm` ODER Timer läuft ab
+7. Bei Timeout: `esp_ota_mark_app_invalid_rollback_and_reboot()`
+
+> **Kanäle:** Die `ota_manifest_url` zeigt standardmäßig auf den Dev-Kanal
+> (latest main, Manifest unter `doorinterface/firmware/manifest-dev.json`).
+> Für Stable wird per `ota_channel_label="stable"` die Stable-Manifest-URL
+> gesetzt — typischerweise `.../releases/latest/download/manifest-stable.json`.
+
+### HTTP-Endpunkte
+
+| Methode | Pfad | Beschreibung |
+|---|---|---|
+| `GET`  | `/update`           | Update-Webseite (Status, Buttons, Konfiguration) |
+| `GET`  | `/update/status`    | JSON-Snapshot des UpdateManager-States |
+| `POST` | `/update/check`     | Triggert `checkNow()` (asynchron) |
+| `POST` | `/update/install`   | Triggert `startUpdate()` (asynchron) |
+| `POST` | `/update/confirm`   | Bestätigt das laufende Image (`confirmBoot()`) |
+| `POST` | `/config/ota`       | Setzt OTA-Konfiguration (JSON-Body) |
+
+### GET /update/status
+
+Response `200 OK`:
+```json
+{
+  "state": "idle",
+  "progress_pct": 0,
+  "error": "",
+  "current": "0.0.0",
+  "available": "",
+  "channel": "dev",
+  "manifest_url": "https://raw.githubusercontent.com/itsfair/top_attempt/main/doorinterface/firmware/manifest-dev.json",
+  "check_interval_min": 360,
+  "auto_check": true,
+  "update_available": false
+}
+```
+
+Bei `state == "pending_verify"` zusätzlich:
+```json
+{
+  "state": "pending_verify",
+  "pending_remaining_s": 42
+}
+```
+
+### POST /update/install
+
+Startet den Download + Flash. Body wird ignoriert.
+
+Response `200 OK`:
+```json
+{ "status": "downloading" }
+```
+
+### POST /update/confirm
+
+Bestätigt das laufende Image als gut (persistiert `last_boot_version`).
+
+Response `200 OK`:
+```json
+{ "success": true }
+```
+
+### POST /config/ota
+
+Request (alle Felder optional — nicht gesetzte Felder bleiben unverändert):
+```json
+{
+  "manifest_url": "https://...",
+  "channel_label": "stable",
+  "auto_check": true,
+  "check_interval_min": 360
+}
+```
+
+Response `200 OK`:
+```json
+{ "success": true }
+```
+
+### Manifest-Schema
+
+```json
+{
+  "version": "0.0.0",
+  "url": "https://github.com/itsfair/top_attempt/releases/download/v0.0.1/firmware.bin",
+  "sha256": "abc1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd",
+  "size": 1234567,
+  "notes": "Release v0.0.1"
+}
+```
+
+| Feld | Typ | Pflicht | Beschreibung |
+|---|---|---|---|
+| `version` | String  | ja | Version, die das Device mit `FIRMWARE_VERSION` vergleicht |
+| `url`     | String  | ja | HTTPS-URL zur `firmware.bin` |
+| `sha256`  | String  | ja | SHA-256 des Binaries (64 Hex-Zeichen, Lowercase) |
+| `size`    | Number  | ja | Größe in Bytes (wird vor dem Flash gegen Content-Length geprüft) |
+| `notes`   | String  | nein | Freitext (z.B. Release-Notes) |
+
+**Default-URLs (NVS, `ota_manifest_url`):**
+- **Dev:**    `https://raw.githubusercontent.com/itsfair/top_attempt/main/doorinterface/firmware/manifest-dev.json`
+- **Stable:** `https://github.com/itsfair/top_attempt/releases/latest/download/manifest-stable.json`
+
+> **HTTPS-Zertifikate:** `WiFiClientSecure::setInsecure()` — die
+> Zertifikatsprüfung ist deaktiviert. Die Integrität wird stattdessen
+> über die SHA-256 aus dem Manifest sichergestellt. Bei Bedarf kann
+> später auf echte Zertifikatsvalidierung umgestellt werden.
+
+### NVS-Keys für OTA
+
+Namespace: `doorconfig`
+
+| Schlüssel (C++ / HTTP) | NVS-Key | Typ | Standard | Beschreibung |
+|---|---|---|---|---|
+| `ota_manifest_url`       | `ota_man_url`     | String | Dev-Manifest-URL (siehe oben) | Manifest-URL, die das Device periodisch pollt |
+| `ota_channel_label`      | `ota_chan_lbl`     | String | `"dev"` | Anzeige-Label für den Kanal (Status-UI) |
+| `ota_auto_check`         | `ota_auto_check`   | bool   | `true`  | Periodischer Auto-Check aktiv |
+| `ota_check_interval_min` | `ota_chk_int_min`  | uint32 | `360`   | Auto-Check-Intervall in Minuten (Default 6 h) |
+| `last_boot_version`      | `last_boot_ver`    | String | `""`    | Version, die zuletzt per `/update/confirm` bestätigt wurde |
+
+> **Hinweis:** Die NVS-Keys sind intern auf ≤ 15 Zeichen gekürzt
+> (Limit der Arduino-`Preferences`-Library). Die C++-Feldnamen und
+> die externen Bezeichner in HTTP/JSON bleiben unverändert
+> (`ota_manifest_url` etc.).
+
+### Pending-Verify Workflow
+
+Nach erfolgreichem Flash:
+1. `Update.end(true)` setzt das neue Partition als Boot-Partition.
+2. `UpdateManager._state` wechselt zu `PENDING_VERIFY`.
+3. `_pendingVerifyStartMs = millis()` startet den 60 s Timer.
+4. Die Webseite `/update` zeigt einen Countdown (`pending_remaining_s`)
+   und einen "Installation bestätigen"-Button.
+
+**Bestätigung (User):** `POST /update/confirm` → `confirmBoot()` →
+- `setLastBootVersion(currentVersion)` → NVS
+- `_state` → `IDLE`
+- Das Image ist als gut markiert und bleibt nach Reboot aktiv.
+
+**Auto-Rollback (kein Confirm):** Nach 60 s
+- `tick()` erkennt den Timeout
+- `esp_ota_mark_app_invalid_rollback_and_reboot()` markiert das
+  laufende Image als ungültig und bootet das andere Partition
+- Das vorherige (bekannte) Image läuft weiter
+
+> **Wichtig:** Der Auto-Rollback greift nur, solange `tick()` läuft.
+> Bei einem Hard-Crash (z.B. `while(1){delay(1000);}` in `setup()`)
+> greift der Watchdog, aber der Bootloader versucht das neue Image
+> erneut, da es als "valid" markiert ist. Für Bootloader-Level-Rollback
+> bräuchte es `CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y` im ESP-IDF
+> Bootloader-Config.
+
+### Partition-Layout
+
+`partitions/ota.csv`:
+
+```
+# Name,    Type, SubType, Offset,   Size,     Flags
+nvs,       data, nvs,     0x9000,   0x6000,
+otadata,   data, ota,     0xf000,   0x2000,
+ota_0,     app,  ota_0,   0x10000,  0x1E0000,
+ota_1,     app,  ota_1,   0x1F0000, 0x1E0000,
+spiffs,    data, spiffs,  0x3D0000, 0x10000,
+coredump,  data, coredump,0x3E0000, 0x10000,
+```
+
+> **Hard cut:** `huge_app.csv` (vorher) → `partitions/ota.csv` (jetzt)
+> ist ein harter Schnitt. Geräte, die mit dem alten Partition-Layout
+> geflasht wurden, müssen einmal per USB neu geflasht werden, sonst
+> booten sie nicht mehr.
