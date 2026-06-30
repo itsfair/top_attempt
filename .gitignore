@@ -1,0 +1,31 @@
+# Editor
+.vscode/
+*.code-workspace
+.idea/
+
+# PlatformIO
+doorinterface/.pio/
+doorinterface/.clangd/
+
+# Dart / Flutter
+apps/.dart_tool/
+apps/**/.dart_tool/
+apps/**/build/
+apps/**/.flutter-plugins
+apps/**/.flutter-plugins-dependencies
+apps/**/web/app/
+apps/**/web/main.dart.js.map
+
+# Serverpod secrets
+apps/**/config/passwords.yaml
+apps/**/config/google_client_secret.json
+apps/**/uploads/
+apps/**/storage/
+apps/**/.dart_tool/
+
+# Old sub-repo inside apps/ (we absorb the content, not its git history)
+apps/.git/
+
+# OS
+Thumbs.db
+.DS_Store
