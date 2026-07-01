@@ -586,8 +586,14 @@ void HttpApi::handleStatus(AsyncWebServerRequest* req) {
 
     doc["uptime_s"] = (uint32_t)(esp_timer_get_time() / 1000000ULL);
 
-    String out; serializeJson(doc, out);
-    sendJson(req, 200, out);
+    // Use the streaming response API instead of beginResponse(code, type, String&)
+    // — the String overload has a Content-Length mismatch on this AsyncWebServer
+    // version when the String goes out of scope. serializeJson writes directly
+    // into the stream; no length tracking involved.
+    AsyncResponseStream *response = req->beginResponseStream("application/json");
+    response->setCode(200);
+    serializeJson(doc, *response);
+    req->send(response);
 }
 
 void HttpApi::handleOpen(AsyncWebServerRequest* req) {
@@ -704,8 +710,11 @@ void HttpApi::handleUpdateStatus(AsyncWebServerRequest* req) {
     if (u.getState() == UpdateManager::State::PENDING_VERIFY) {
         doc["pending_remaining_s"] = (int)(u.getPendingRemainingMs() / 1000UL);
     }
-    String out; serializeJson(doc, out);
-    sendJson(req, 200, out);
+    // Streaming response — see comment in handleStatus above.
+    AsyncResponseStream *response = req->beginResponseStream("application/json");
+    response->setCode(200);
+    serializeJson(doc, *response);
+    req->send(response);
 }
 
 void HttpApi::handleUpdateCheck(AsyncWebServerRequest* req) {
