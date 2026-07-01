@@ -310,181 +310,71 @@ const char* HttpApi::UPDATE_HTML = R"rawhtml(<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Firmware-Update</title>
+<title>OTA Update</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
-  .card{background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);width:100%;max-width:520px;padding:28px;margin:16px}
-  h1{font-size:1.25rem;color:#1a1a2e;margin-bottom:18px}
-  h2{font-size:1rem;color:#374151;margin-bottom:10px}
-  .row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:.9rem}
-  .row:last-of-type{border-bottom:none}
-  .label{color:#6b7280}.value{font-weight:600;color:#111;font-family:monospace;font-size:.85rem;text-align:right;max-width:60%;word-break:break-all}
-  .badge{padding:3px 10px;border-radius:99px;font-size:.75rem;font-weight:700;display:inline-block}
-  .green{background:#dcfce7;color:#166534}.red{background:#fee2e2;color:#991b1b}
-  .blue{background:#dbeafe;color:#1e40af}.gray{background:#f3f4f6;color:#374151}
-  .yellow{background:#fef3c7;color:#92400e}
-  .btn{display:block;width:100%;padding:12px;border:none;border-radius:8px;cursor:pointer;font-size:.95rem;font-weight:700;margin-top:12px;transition:.2s}
-  .pri{background:#2563eb;color:#fff}.pri:hover{background:#1d4ed8}
-  .sec{background:#f3f4f6;color:#374151;border:1px solid #d1d5db;font-weight:600;font-size:.85rem}
-  .sec:hover{background:#e5e7eb}
-  .warn{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
-  .warn:hover{background:#fde68a}
-  .btn:disabled{opacity:.55;cursor:not-allowed}
-  .input{display:block;width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;margin-top:6px;font-size:.9rem;font-family:monospace}
-  .lbl{display:block;margin-top:14px;font-size:.82rem;color:#374151;font-weight:600}
-  .section{margin-top:18px;padding:16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px}
-  .section.warn{background:#fef3c7;border-color:#fde68a}
-  .msg{margin-top:12px;padding:10px;border-radius:8px;text-align:center;font-size:.85rem;display:none}
-  .ok{background:#dcfce7;color:#166534}.err{background:#fee2e2;color:#991b1b}.info{background:#dbeafe;color:#1e40af}
-  .hint{font-size:.78rem;color:#6b7280;margin-top:6px}
-  .spinner{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
-  .progress{height:14px;background:#e5e7eb;border-radius:7px;overflow:hidden;margin-top:10px;display:none}
-  .progress > div{height:100%;background:#2563eb;width:0%;transition:width .3s}
-  a.back{display:inline-block;margin-top:18px;color:#2563eb;text-decoration:none;font-size:.85rem}
-  @keyframes spin{to{transform:rotate(360deg)}}
+body{font-family:system-ui,sans-serif;max-width:480px;margin:32px auto;padding:0 16px;color:#111}
+h1{font-size:1.4em;margin:0 0 16px}
+.row{padding:8px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:12px}
+.label{color:#666;font-size:.9em}
+.value{font-family:ui-monospace,monospace;font-size:.95em}
+button{padding:12px 16px;margin:8px 0;width:100%;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:1em}
+button:disabled{opacity:.5;cursor:not-allowed}
+.ok{background:#2563eb;color:#fff}
+.warn{background:#d97706;color:#fff}
+.pending{background:#fef3c7;color:#92400e;padding:12px;border-radius:6px;margin:12px 0}
+#msg{padding:10px;margin:8px 0;display:none;border-radius:6px}
+#msg.err{background:#fee;color:#991b1b;display:block}
+a{color:#2563eb;text-decoration:none}
 </style>
 </head>
 <body>
-<div class="card">
-  <h1>Firmware-Update</h1>
-
-  <div class="row"><span class="label">Aktuelle Version</span><span id="currentVer" class="value">&mdash;</span></div>
-  <div class="row"><span class="label">Channel</span><span id="channelLbl" class="value">&mdash;</span></div>
-  <div class="row"><span class="label">Verf&uuml;gbare Version</span><span id="availVer" class="value">&mdash;</span></div>
-  <div class="row"><span class="label">Status</span><span id="state" class="value">&mdash;</span></div>
-  <div class="row"><span class="label">Fortschritt</span><span id="progress" class="value">&mdash;</span></div>
-
-  <div class="progress" id="progressBar"><div id="progressFill"></div></div>
-
-  <div id="pendingBox" class="section warn" style="display:none">
-    <h2>Installation best&auml;tigen</h2>
-    <p style="font-size:.88rem;color:#92400e">Neue Firmware l&auml;uft. Auto-Rollback in <span id="countdown">--</span>s, wenn nicht best&auml;tigt.</p>
-    <button class="btn warn" id="btnConfirm" onclick="confirmUpdate(this)">Installation best&auml;tigen</button>
-  </div>
-
-  <button class="btn pri" id="btnCheck" onclick="checkNow(this)">Nach Update suchen</button>
-  <button class="btn pri" id="btnInstall" onclick="installUpdate(this)" style="display:none">Update installieren</button>
-
-  <div id="msg" class="msg"></div>
-
-  <h2 style="margin-top:22px">OTA-Konfiguration</h2>
-  <div class="section">
-    <label class="lbl" for="manifestUrl">Manifest-URL</label>
-    <input type="text" class="input" id="manifestUrl" autocomplete="off">
-    <p class="hint">JSON-Manifest mit Feldern: <code>version</code>, <code>url</code>, <code>sha256</code>, <code>size</code>.</p>
-
-    <label class="lbl" for="channelInput">Channel-Label</label>
-    <input type="text" class="input" id="channelInput" autocomplete="off">
-
-    <label class="lbl" for="autoCheck">Auto-Check</label>
-    <select class="input" id="autoCheck"><option value="1">aktiv</option><option value="0">inaktiv</option></select>
-
-    <label class="lbl" for="intervalInput">Auto-Check-Intervall (Minuten)</label>
-    <input type="number" class="input" id="intervalInput" min="1" step="1">
-
-    <button class="btn sec" id="btnSave" onclick="saveConfig(this)">Konfiguration speichern</button>
-  </div>
-
-  <a class="back" href="/">&larr; Zur&uuml;ck zum Dashboard</a>
+<h1>Firmware-Update</h1>
+<div class="row"><span class="label">Aktuell</span><span class="value" id="cur">-</span></div>
+<div class="row"><span class="label">Verf&uuml;gbar</span><span class="value" id="avail">-</span></div>
+<div class="row"><span class="label">Status</span><span class="value" id="state">-</span></div>
+<div class="row"><span class="label">Fortschritt</span><span class="value" id="prog">0%</span></div>
+<div id="pending" class="pending" style="display:none">
+  <strong>Neue Firmware l&auml;uft.</strong> Best&auml;tigen oder Auto-Rollback in 60&nbsp;s.
+  <button class="warn" style="margin-top:10px" onclick="confirm()">Installation best&auml;tigen</button>
 </div>
-
+<div id="msg"></div>
+<button class="ok" id="checkBtn" onclick="check()">Nach Update suchen</button>
+<button class="ok" id="installBtn" style="display:none" onclick="install()">Update installieren</button>
+<p style="margin-top:16px"><a href="/">&larr; Zur&uuml;ck</a></p>
 <script>
-var pollTimer=null, pollErrCount=0;
-function setMsg(type,m){var e=document.getElementById('msg');e.className='msg '+type;e.style.display='block';e.innerHTML=m;}
-function stateStr(s){
-  return s==='idle'           ? '<span class="badge gray">BEREIT</span>' :
-         s==='checking'       ? '<span class="badge blue">SUCHE</span>' :
-         s==='available'      ? '<span class="badge yellow">VERF&Uuml;GBAR</span>' :
-         s==='downloading'    ? '<span class="badge blue">DOWNLOAD</span>' :
-         s==='pending_verify' ? '<span class="badge yellow">BEST&Auml;TIGEN</span>' :
-         s==='failed'         ? '<span class="badge red">FEHLER</span>' :
-                                '<span class="badge gray">'+s+'</span>';
+async function load(){
+  try{
+    const r=await fetch('/update/status');
+    if(!r.ok)return;
+    const d=await r.json();
+    document.getElementById('cur').textContent=d.current||'-';
+    document.getElementById('avail').textContent=d.available||'-';
+    document.getElementById('state').textContent=d.state||'-';
+    document.getElementById('prog').textContent=(d.progress_pct||0)+'%';
+    document.getElementById('installBtn').style.display=d.update_available?'block':'none';
+    document.getElementById('pending').style.display=d.state==='pending_verify'?'block':'none';
+  }catch(e){}
 }
-function loadStatus(){
-  var xhr=new XMLHttpRequest();
-  xhr.open('GET','/update/status',true);
-  xhr.setRequestHeader('Accept','application/json');
-  xhr.onload=function(){
-    if(xhr.status!==200){pollErrCount++;return;}
-    pollErrCount=0;
-    var d; try{d=JSON.parse(xhr.responseText);}catch(e){return;}
-    document.getElementById('currentVer').textContent=d.current||'—';
-    document.getElementById('channelLbl').textContent=d.channel||'—';
-    document.getElementById('availVer').textContent=d.available||'—';
-    document.getElementById('state').innerHTML=stateStr(d.state);
-    document.getElementById('progress').textContent=d.progress_pct+'%';
-    document.getElementById('manifestUrl').value=d.manifest_url||'';
-    document.getElementById('channelInput').value=d.channel||'';
-    document.getElementById('autoCheck').value=(d.auto_check===true||d.auto_check==='1'||d.auto_check===1)?'1':'0';
-    document.getElementById('intervalInput').value=d.check_interval_min||360;
-
-    var bar=document.getElementById('progressBar'),fill=document.getElementById('progressFill');
-    if(d.state==='downloading'){bar.style.display='block';fill.style.width=d.progress_pct+'%';}
-    else if(d.state==='idle'||d.state==='available'){bar.style.display='none';}
-    else if(d.state==='pending_verify'){bar.style.display='none';}
-
-    var installBtn=document.getElementById('btnInstall');
-    installBtn.style.display=d.update_available?'block':'none';
-
-    var pendingBox=document.getElementById('pendingBox');
-    if(d.state==='pending_verify'){pendingBox.style.display='block';document.getElementById('countdown').textContent=d.pending_remaining_s;}
-    else pendingBox.style.display='none';
-
-    if(d.error){setMsg('err',d.error);}
-    else if(d.state==='failed'){setMsg('err','Update fehlgeschlagen.');}
-    else{var m=document.getElementById('msg');if(m.className.indexOf('err')===-1)m.style.display='none';}
-  };
-  xhr.onerror=function(){pollErrCount++;};
-  xhr.send();
+function setMsg(text,isErr){
+  const m=document.getElementById('msg');
+  m.textContent=text;
+  m.className=isErr?'err':'';
+  m.style.display=text?'block':'none';
 }
-function post(url,body,btn,o,cb){
-  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
-  var xhr=new XMLHttpRequest();
-  xhr.open('POST',url,true);
-  if(body)xhr.setRequestHeader('Content-Type','application/json');
-  xhr.setRequestHeader('Accept','application/json');
-  xhr.onload=function(){btn.disabled=false;btn.innerHTML=o;cb(xhr);};
-  xhr.onerror=function(){btn.disabled=false;btn.innerHTML=o;setMsg('err','Netzwerkfehler');};
-  xhr.send(body||null);
+async function post(path){
+  try{
+    const r=await fetch(path,{method:'POST'});
+    if(r.ok){setMsg('OK',false);load();}
+    else{setMsg('Fehler: HTTP '+r.status,true);}
+  }catch(e){setMsg('Netzwerkfehler',true);}
 }
-function checkNow(btn){
-  post('/update/check',null,btn,btn.innerHTML,function(xhr){
-    if(xhr.status===200){setMsg('info','Suche l&auml;uft…');}
-    else{setMsg('err','Suche konnte nicht gestartet werden');}
-  });
+function check(){post('/update/check');}
+function install(){
+  if(confirm('Update jetzt installieren? Ger\u00e4t startet neu.'))post('/update/install');
 }
-function installUpdate(btn){
-  if(!confirm('Update jetzt installieren? Das Ger&auml;t startet nach dem Flash neu.'))return;
-  post('/update/install',null,btn,btn.innerHTML,function(xhr){
-    if(xhr.status===200){setMsg('info','Download l&auml;uft…');}
-    else{setMsg('err','Installation konnte nicht gestartet werden');}
-  });
-}
-function confirmUpdate(btn){
-  post('/update/confirm',null,btn,btn.innerHTML,function(xhr){
-    if(xhr.status===200){setMsg('ok','Installation best&auml;tigt.');setTimeout(function(){location.reload();},1500);}
-    else{setMsg('err','Best&auml;tigung fehlgeschlagen');}
-  });
-}
-function saveConfig(btn){
-  var body=JSON.stringify({
-    manifest_url:document.getElementById('manifestUrl').value,
-    channel_label:document.getElementById('channelInput').value,
-    auto_check:document.getElementById('autoCheck').value==='1',
-    check_interval_min:parseInt(document.getElementById('intervalInput').value,10)||360
-  });
-  post('/config/ota',body,btn,btn.innerHTML,function(xhr){
-    if(xhr.status===200){setMsg('ok','Konfiguration gespeichert.');}
-    else{setMsg('err','Speichern fehlgeschlagen');}
-  });
-}
-function startPolling(){
-  if(pollTimer)clearInterval(pollTimer);
-  loadStatus();
-  pollTimer=setInterval(loadStatus,1000);
-}
-startPolling();
+function confirm(){post('/update/confirm');}
+load();
+setInterval(load,2000);
 </script>
 </body>
 </html>)rawhtml";
@@ -636,10 +526,13 @@ void HttpApi::handleNukiScanResult(AsyncWebServerRequest* req) {
         o["address"] = dev.address;
         o["rssi"]    = dev.rssi;
     }
-    String out; serializeJson(doc, out);
     Serial.printf("%s Serving NUKI scan result: %d devices\n", TAG, (int)sNScanResults.size());
     sNScan = NScan::IDLE;
-    sendJson(req, 200, out);
+    // Streaming response (same reason as handleStatus/handleUpdateStatus).
+    AsyncResponseStream *response = req->beginResponseStream("application/json");
+    response->setCode(200);
+    serializeJson(doc, *response);
+    req->send(response);
 }
 
 void HttpApi::handleNukiPairStart(AsyncWebServerRequest* req, uint8_t* data, size_t len) {
