@@ -1,7 +1,7 @@
 {
-  "version": "aa7ec85",
+  "version": "7e2db2c",
   "url": "https://github.com/itsfair/top_attempt/releases/download/dev/firmware.bin",
-  "sha256": "f4f20897e24197053bdc22a6b6e8fea68f4b00d14624eca2c4d4929d5d0cf589",
-  "size": 1460640,
-  "notes": "Dev build from aa7ec858c5e709b043727bb6e0b4d95a027a59a3"
+  "sha256": "7d4d5c6a5db87c5b23965551be51dcee81b8a9392d6a53f27e0184588e48e568",
+  "size": 1463216,
+  "notes": "Dev build from 7e2db2c58086bf6816ff9fc5c267e5cbf83e1a20"
 }
