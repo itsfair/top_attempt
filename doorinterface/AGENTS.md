@@ -24,6 +24,30 @@ PlatformIO-Konfiguration: `platformio.ini`, env `esp32dev`, `monitor_speed = 115
 > Falls der Build auf einem anderen Rechner fehlschlägt, zuerst prüfen:
 > `Test-Path "$env:USERPROFILE\.platformio\packages\framework-arduinoespressif32\variants"`
 
+## Monorepo-Kontext
+
+Dieses Firmware-Verzeichnis ist Teil des Monorepos `top_attempt`:
+
+```
+top_attempt/
+├── apps/             → Serverpod-Backends + Flutter-Clients (eigene AGENTS.md)
+├── doorinterface/    → dieses Projekt
+├── .github/workflows/
+│   ├── firmware.yml  → baut nur `pio run` als CI-Build-Check (kein OTA!)
+│   ├── analyze.yml   → Dart-Analyse für apps/
+│   ├── format.yml    → dart format-Check für apps/
+│   └── tests.yml     → dart test für apps/
+└── README.md
+```
+
+- Die alten OTA-Workflows (`dev-manifest.yml`, `release.yml`) wurden
+  gelöscht. Es gibt aktuell **kein** automatisches Manifest- oder
+  Release-Management — eventuell später nach dem OTA-Relaunch neu anlegen.
+- Der alte Firmware-Code mit `Update()` / `update_manager.*` /
+  `partitions/ota.csv` / `firmware/manifest-*.json` wurde komplett
+  verworfen. Die aktuelle Firmware nutzt die Default-Partition-Table
+  (kein OTA-Slot), deshalb der knappe Flash (92.2%) — siehe TODO.
+
 ## Code-Struktur (Stand jetzt)
 
 ```
@@ -68,6 +92,14 @@ lib/
   = Gerätename, verwaltet von NukiBleEsp32-Lib).
 - **Debug-Logging** über `Serial.print*` mit Präfixen: `[WifiManager]`,
   `[HTTP]`, `[NUKI]`.
+- **BLE-Start verzögert**: `nuki.begin()` wird **nicht** in `setup()`
+  aufgerufen, sondern in `loop()` erst, wenn `wifi.isConnected() &&
+  !wifi.isApActive()`. Grund: der ESP32 teilt sich ein 2.4 GHz-Radio
+  für WiFi und Bluetooth — initialisiert man BLE parallel zum aktiven
+  Setup-AP,_BLOCKIERT das den AP. Im STA-Modus funktioniert WiFi/BT
+  Coexistence (Time-Slicing). Entsprechend startet auch `WebInterface`
+  erst nach erfolgreicher STA-Verbindung; `main.cpp` hält die
+  `_started`-Flags dafür.
 
 ## NUKI BLE Integration — wichtige Details
 
@@ -117,6 +149,12 @@ lib/
 5. `/scan` (GET): `WiFi.scanNetworks()` blockierend, JSON-Array.
 6. `/save` (POST): SSID/Pass + optional Hostname in NVS, `WiFi.begin()`,
    antwortet sofort `{"status":"connecting"}`.
+   **Validierung**: Ist ein Hostname angegeben, wird `setHostname()`
+   geprüft (nur `a-z`, `0-9`, `-`; 1–63 Zeichen; nicht mit `-` beginnen/
+   enden). Bei ungültigem Namen liefert `/save` HTTP 400 +
+   `{"error":"Hostname ungültig (nur a-z, 0-9, -; nicht mit - beginnen/enden)"}`
+   und bricht den Save-Flow ab — die WLAN-Daten werden nicht gespeichert.
+   Das Frontend zeigt den Fehler im Status-Bereich an.
 7. `/config` (GET): JSON `{hostname}` für Portal-Frontend.
 8. `/close` (POST): AP sofort schließen (Button im Overlay nach erfolgtem
    Connect). Frontend kopiert STA-IP ins Clipboard + schließt AP.
@@ -182,6 +220,13 @@ lib/
 10. NUKI BLE Integration: gepatchter Fork (idf-Branch), `NukiManager`,
     Pairing, Lock/Unlock, Status, Dashboard-Buttons, Setup-Seite.
 11. Pairing-Abbruch (`/api/nuki/cancel`).
+12. Hostname-Validierung im Portal: `setHostname()`-Rückgabewert wird in
+    `handleSave()` geprüft; bei ungültigem Name -> HTTP 400 + JSON-Error,
+    Frontend zeigt Meldung im Status-Bereich.
+13. BLE-Start **deferred**: `nuki.begin()` aus `setup()` in `loop()`
+    verschoben, erst wenn `wifi.isConnected() && !wifi.isApActive()`.
+    Behebt „AP nicht erreichbar nach BLE-Init“ (Radio-Konflikt auf ESP32).
+    `WebInterface` startet ebenfalls erst danach.
 
 ## Arbeitsweise
 
@@ -231,6 +276,11 @@ lib/
 - [ ] Zentrales Debug-Makro (`#define DEBUG_SERIAL` + `LOGI/LOGW/LOGE`).
 - [ ] Flash bei 92.2% — knapp. Custom-Partition-Table (kein OTA-Slot →
         2 MB App) oder `-Os` bei Bedarf.
+
+### Doku
+- [ ] `docs/interfaces.md` neu schreiben, sobald HTTP-API / NVS / BLE-GATT
+        des aktuellen Stands stabil sind (die alte Spec aus der Vor-Version
+        wurde beim Setup-Reset der Firmware gelöscht und ist veraltet).
 
 ## Konventionen / Notizen
 
