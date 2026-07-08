@@ -31,7 +31,7 @@ webServer:
 # This is the database setup for your test server.
 database:
   host: localhost
-  port: 9090
+  port: 9190
   name: top_attempt_test
   user: postgres
   #maxConnectionCount: 10 # Defaults to 10, a negative or null value removes the limit
@@ -40,7 +40,7 @@ database:
 redis:
   enabled: false
   host: localhost
-  port: 9091
+  port: 9191
   #user: # defaults to empty
   #requireSsl: true # defaults to false
 
