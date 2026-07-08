@@ -28,6 +28,15 @@ async function refresh() {
     }
     if (html !== lastActHtml) { lastActHtml = html; $('actuator').innerHTML = html; bindActuator(); }
     $('fwVersion').textContent = s.firmware.version;
+    const b = s.ble;
+    if (b) {
+      $('bleStatus').innerHTML = b.available
+        ? '<span class="badge ok">aktiv</span>'
+        : '<span class="badge err">inaktiv</span>';
+      if (b.available) {
+        $('bleDetails').innerHTML = '<dt>Hostname</dt><dd>' + (b.hostname || '–') + '</dd><dt>MAC</dt><dd>' + (b.mac || '–') + '</dd><dt>QR-Inhalt</dt><dd><code>' + (b.qrContent || '') + '</code></dd>';
+      }
+    }
   } catch (e) {}
 }
 

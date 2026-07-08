@@ -1,16 +1,21 @@
 #include "WebInterface.h"
 #include "WifiManager.h"
 #include "NukiManager.h"
+#include "BleServer.h"
 #include "web/main_html.h"
 #include "web/main_css.h"
 #include "web/main_js.h"
 #include "web/setup_html.h"
 #include "web/setup_js.h"
+#include "web/display_html.h"
+#include "web/display_js.h"
+#include "web/qr_js.h"
 #include "config.h"
 
-void WebInterface::begin(WifiManager& wifi, NukiManager& nuki) {
+void WebInterface::begin(WifiManager& wifi, NukiManager& nuki, BleServer& ble) {
     _wifi = &wifi;
     _nuki = &nuki;
+    _ble = &ble;
     String hostname = _wifi->getHostname();
     if (MDNS.begin(hostname.c_str())) MDNS.addService("http", "tcp", 80);
     _server.on("/",             HTTP_GET,  [this](){ handleRoot();        });
@@ -18,7 +23,11 @@ void WebInterface::begin(WifiManager& wifi, NukiManager& nuki) {
     _server.on("/main.js",      HTTP_GET,  [this](){ handleJs();          });
     _server.on("/setup",        HTTP_GET,  [this](){ handleSetup();       });
     _server.on("/setup.js",     HTTP_GET,  [this](){ handleSetupJs();     });
+    _server.on("/display",      HTTP_GET,  [this](){ handleDisplay();     });
+    _server.on("/display.js",   HTTP_GET,  [this](){ handleDisplayJs();   });
+    _server.on("/qr.js",        HTTP_GET,  [this](){ handleQrJs();        });
     _server.on("/api/status",   HTTP_GET,  [this](){ handleStatus();      });
+    _server.on("/api/ble/info", HTTP_GET,  [this](){ handleBleInfo();     });
     _server.on("/api/hostname", HTTP_GET,  [this](){ handleHostnameGet(); });
     _server.on("/api/hostname", HTTP_POST, [this](){ handleHostnamePost();});
     _server.on("/api/nuki/pair",   HTTP_POST, [this](){ handleNukiPair();   });
@@ -59,6 +68,18 @@ void WebInterface::handleSetupJs() {
     _server.sendHeader("Cache-Control", "no-store");
     _server.send_P(200, "application/javascript", SETUP_JS);
 }
+void WebInterface::handleDisplay() {
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send_P(200, "text/html", DISPLAY_HTML);
+}
+void WebInterface::handleDisplayJs() {
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send_P(200, "application/javascript", DISPLAY_JS);
+}
+void WebInterface::handleQrJs() {
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send_P(200, "application/javascript", QR_JS);
+}
 void WebInterface::handleNotFound() {
     _server.send(404, "text/plain", "Not found");
 }
@@ -83,6 +104,25 @@ void WebInterface::handleStatus() {
     }
     json += "}";
     json += ",\"firmware\":{\"version\":\"" FW_VERSION "\"}";
+    String mac = _ble ? _ble->getAddress() : String("");
+    String hostname = _wifi ? _wifi->getHostname() : String("");
+    json += ",\"ble\":{\"available\":" + String(_ble ? "true" : "false");
+    json += ",\"mac\":\"" + mac + "\"";
+    json += ",\"hostname\":\"" + hostname + "\"";
+    json += ",\"qrContent\":\"doorinterface|" + mac + "|\"";
+    json += "}";
+    json += "}";
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send(200, "application/json", json);
+}
+void WebInterface::handleBleInfo() {
+    String mac = _ble ? _ble->getAddress() : String("");
+    String hostname = _wifi ? _wifi->getHostname() : String("");
+    String qr = "doorinterface|" + mac + "|";
+    String json = "{";
+    json += "\"mac\":\"" + mac + "\"";
+    json += ",\"hostname\":\"" + hostname + "\"";
+    json += ",\"qrContent\":\"" + qr + "\"";
     json += "}";
     _server.sendHeader("Cache-Control", "no-store");
     _server.send(200, "application/json", json);

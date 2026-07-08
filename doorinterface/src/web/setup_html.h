@@ -33,6 +33,21 @@ const char SETUP_HTML[] PROGMEM = R"HTML(
       <p class="muted">Login/Auth folgt in einem späteren Schritt.</p>
       <a class="btn" href="/">&larr; Zurück zum Dashboard</a>
     </section>
+    <section class="card">
+      <h2>Statischer QR-Code (Kundendisplay)</h2>
+      <p class="muted">Dieser Textinhalt ist für den statischen QR-Code, den der Kunde mit der App scant. Drucke ihn einmalig aus und lege ihn gut sichtbar aus — oder rufe die <a href="/display">Kundendisplay-Seite</a> auf einem externen Gerät auf.</p>
+      <label>Inhalt (exakt so übernehmen)
+        <input type="text" id="qrContent" readonly>
+      </label>
+      <button class="btn" id="qrCopy">Inhalt kopieren</button>
+      <div id="qrCopyStatus"></div>
+      <p class="muted">Online-Generator z.B.:</p>
+      <ul class="muted">
+        <li><a href="https://www.qr-code-generator.com/" target="_blank" rel="noopener">qr-code-generator.com</a> → "Text" wählen, den Inhalt oben einfügen, Korrekturlevel M, als PNG/SVG herunterladen.</li>
+        <li>Alternativ: <a href="https://qifi.org/" target="_blank" rel="noopener">qifi.org</a> (nur WiFi, also ungeeignet), <a href="https://duckduckgo.com/?q=qr+code+generator" target="_blank" rel="noopener">Suche</a>.</li>
+      </ul>
+      <p class="muted">Tipp: Kundendisplay-Seite <a href="/display">/display</a> zeigt den QR direkt im Browser, ggf. auf einem Tablet/Display im Türbereich.</p>
+    </section>
   </main>
   <script src="/setup.js"></script>
 </body>

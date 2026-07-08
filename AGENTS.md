@@ -33,6 +33,17 @@ siehe `doorinterface/AGENTS.md` → „Monorepo-Kontext".
 - **Apps**: Dart 3.8.0, Flutter 3.32.8 (laut `tests.yml`), Serverpod 3.3.1.
 - **Für Backend-Tests lokal**: Docker (für Postgres + Redis-Container).
 
+## Schnittstellen-Specs
+
+| Pfad | Was | Status |
+|---|---|---|
+| [`doorinterface/docs/ble_interface.md`](doorinterface/docs/ble_interface.md) | BLE-GATT-Schnittstelle ESP ↔ Enduser-Smartphone-App (Prototyp, gemockte Backend-Antwort) | in Arbeit |
+| `doorinterface/docs/interfaces.md` | HTTP-API / NVS / BLE-GATT-Komplett-Spec (alt, veraltet) | TODO |
+
+Wer eine App gegen das Doorinterface baut, startet beim Lesen dieser Specs
+und der `doorinterface/AGENTS.md` (speziell „Architektur-Entscheidungen"
+und „BleServer").
+
 ## Konventionen / Notizen
 
 - Commits pro Sub-Paket sind fine; keine Cross-Paket-Commits erzwingen.

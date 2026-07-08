@@ -6,6 +6,20 @@ const $ = id => document.getElementById(id);
 
 (async () => {
   try { const r = await fetch('/api/hostname'); const h = await r.json(); if (h.hostname) $('hostInput').value = h.hostname; } catch(e){}
+  try {
+    const r = await fetch('/api/ble/info'); const b = await r.json();
+    if (b.qrContent) {
+      $('qrContent').value = b.qrContent;
+      $('qrCopy').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(b.qrContent);
+          $('qrCopyStatus').textContent = 'In die Zwischenablage kopiert.';
+        } catch (e) {
+          $('qrCopyStatus').textContent = 'Kopieren fehlgeschlagen — bitte manuell auswählen.';
+        }
+      };
+    }
+  } catch(e){}
 })();
 
 $('hostForm').onsubmit = async (e) => {

@@ -58,6 +58,7 @@ src/
   WifiManager.h/.cpp    -> WLAN-STA-Versuch + AP-Fallback + Captive Portal + Hostname
   WebInterface.h/.cpp   -> Haupt-Webserver (STA-Modus): Dashboard, Setup, API
   NukiManager.h/.cpp    -> NUKI BLE: Pairing, Lock/Unlock, Status-Querying
+  BleServer.h/.cpp      -> BLE Peripheral (GATT-Server) für Smartphone-App, s. docs/ble_interface.md
   web/
     portal_html.h       -> Captive-Portal-HTML (PROGMEM)
     portal_css.h        -> Captive-Portal-CSS (PROGMEM)
@@ -71,6 +72,8 @@ lib/
   nuki_ble/             -> Gepatchter Fork von AzonInc/NukiBleEsp32 (idf-Branch)
                            7 NimBLE-API-Patches für NimBLE-Arduino 1.4.x
                            Eigene Preferences.h/.cpp entfernt (Arduino-Framework genutzt)
+docs/
+  ble_interface.md      -> Spec der BLE-Schnittstelle ESP<->Smartphone-App (Prototyp)
 ```
 
 ## Architektur-Entscheidungen
@@ -91,7 +94,7 @@ lib/
   + NukiLock. Event-Handler für Status-Updates. Credentials in NVS (Namespace
   = Gerätename, verwaltet von NukiBleEsp32-Lib).
 - **Debug-Logging** über `Serial.print*` mit Präfixen: `[WifiManager]`,
-  `[HTTP]`, `[NUKI]`.
+  `[HTTP]`, `[NUKI]`, `[BLE]`.
 - **BLE-Start verzögert**: `nuki.begin()` wird **nicht** in `setup()`
   aufgerufen, sondern in `loop()` erst, wenn `wifi.isConnected() &&
   !wifi.isApActive()`. Grund: der ESP32 teilt sich ein 2.4 GHz-Radio
@@ -100,6 +103,24 @@ lib/
   Coexistence (Time-Slicing). Entsprechend startet auch `WebInterface`
   erst nach erfolgreicher STA-Verbindung; `main.cpp` hält die
   `_started`-Flags dafür.
+- **BleServer startet vor NukiManager**: `BleServer.begin()` ruft als
+  Erstes `NimBLEDevice::init(name)` auf — dieser Aufruf ist nur beim
+  ersten Mal wirksam, danach No-Op. NimBLE heißt also = ESP-Hostname.
+  `NukiManager.begin()` (das `init()` intern nochmal aufruft) läuft erst
+  danach. BleServer nutzt bewusst **keine eigenen Member-Pointer** auf
+  Service/Characteristic, sondern holt sie per `NimBLEDevice::getServer()`
+  /`getServiceByUUID()` zurück — das verhindert Stale-Pointer-Probleme
+  falls NimBLE intern reorganisiert und ist mit nur einem Service
+  ausreichend schnell.
+- **BleServer = Peripheral, NukiManager = Central** an demselben NimBLE-
+  Stack. NimBLE erlaubt per Default max. 3 Verbindungen + alle Rollen.
+  BleServer hat genau eine Smartphone-Verbindung, NukiManager eine
+  Central-Verbindung zum Lock — beide laufen gleichzeitig (Time-Slicing
+  im Controller). Stabilität bei parallelem Connect muss beobachtet
+  werden; ggf. später Connection-Params des Clients anpassen.
+- **Protokoll**: JSON über GATT (Write auf Request-Char, Notify auf
+  Response-Char), keine Verschlüsselung im Prototyp. Spec in
+  `docs/ble_interface.md`.
 
 ## NUKI BLE Integration — wichtige Details
 
@@ -227,6 +248,12 @@ lib/
     verschoben, erst wenn `wifi.isConnected() && !wifi.isApActive()`.
     Behebt „AP nicht erreichbar nach BLE-Init“ (Radio-Konflikt auf ESP32).
     `WebInterface` startet ebenfalls erst danach.
+14. **BleServer-Prototyp**: neues Modul `src/BleServer.cpp` (NimBLE
+    Peripheral). GATT-Service mit Request-Char (Write) + Response-Char
+    (Notify). Smartphone schickt JSON, ESP loggt und antwortet gemockt.
+    BleServer startet vor `NukiManager` (nimmt `NimBLEDevice::init` vorweg
+    → Advertising-Name = Hostname). Deferred in `loop()` analog zu Nuki.
+    Spec: `docs/ble_interface.md`. Noch ohne Backend / ohne Verschlüsselung.
 
 ## Arbeitsweise
 
@@ -278,6 +305,8 @@ lib/
         2 MB App) oder `-Os` bei Bedarf.
 
 ### Doku
+- [x] **BLE-Schnittstelle ESP↔Smartphone-App** in `docs/ble_interface.md`
+        (Prototyp-Stand, gemockte Backend-Antwort).
 - [ ] `docs/interfaces.md` neu schreiben, sobald HTTP-API / NVS / BLE-GATT
         des aktuellen Stands stabil sind (die alte Spec aus der Vor-Version
         wurde beim Setup-Reset der Firmware gelöscht und ist veraltet).
@@ -285,7 +314,7 @@ lib/
 ## Konventionen / Notizen
 
 - Keine Kommentare im Code (per Absprache).
-- `Serial`-Präfixe: `[WifiManager]`, `[HTTP]`, `[NUKI]`.
+- `Serial`-Präfixe: `[WifiManager]`, `[HTTP]`, `[NUKI]`, `[BLE]`.
 - NVS-Namespaces: `"wifi"`, `"system"`, NUKI verwaltet eigene
   (Namespace = Gerätename).
 - Dateien im `src/`-Verzeichnis, nicht in `lib/` (per Absprache).
@@ -294,5 +323,7 @@ lib/
 ## Forsetzung
 
 Nächster empfohlener Schritt:
-**NUKI PIN-Eingabe für Ultra/5th Gen** oder **Relais-GPIO** oder
-**Zugriffsschutz (Auth)** — je nach Priorität.
+**BleServer: Anbindung ans lokale Backend** (ersetzt die gemockte Antwort
+durch echte Credential-Prüfung via HTTP/WS) oder **Verschlüsselung /
+Pairing der BLE-Verbindung** (`*_ENC`-Flags + NimBLE-Security-Callbacks)
+ oder **Relais-GPIO** — je nach Priorität.

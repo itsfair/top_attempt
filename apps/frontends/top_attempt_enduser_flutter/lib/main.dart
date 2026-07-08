@@ -4,6 +4,7 @@ import 'package:serverpod_flutter/serverpod_flutter.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'layout.dart';
+import 'screens/ble_test.dart';
 import 'screens/home.dart';
 import 'screens/qr_reader.dart';
 import 'screens/sign_in.dart';
@@ -69,8 +70,20 @@ class MyApp extends StatelessWidget {
                 path: '/sign-in',
                 builder: (context, state) => SignIn(client: client),
               ),
-            ])
-        ]),
+            ],
+          ),
+          GoRoute(
+            path: '/ble-test',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>?;
+              return BleTestScreen(
+                remoteId: extra?['remoteId'] as String,
+                token: extra?['token'] as String?,
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }

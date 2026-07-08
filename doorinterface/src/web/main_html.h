@@ -33,6 +33,12 @@ const char MAIN_HTML[] PROGMEM = R"HTML(
       <div id="actuator"></div>
     </section>
     <section class="card">
+      <h2>Bluetooth (BLE)</h2>
+      <p id="bleStatus"></p>
+      <dl id="bleDetails"></dl>
+      <p class="muted"><a href="/display">Kundendisplay</a> öffnen</p>
+    </section>
+    <section class="card">
       <h2>Firmware</h2>
       <p id="fwVersion">…</p>
     </section>
