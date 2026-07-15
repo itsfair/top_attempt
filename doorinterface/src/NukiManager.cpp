@@ -60,6 +60,20 @@ void NukiManager::cancelPairing() {
     Serial.println("[NUKI] Pairing abgebrochen");
 }
 
+void NukiManager::setUltraPin(uint32_t pin) {
+    if (pin == 0) {
+        Serial.println("[NUKI] Ultra-PIN geleert");
+        _nukiLock.saveUltraPincode(0, true);
+    } else {
+        Serial.printf("[NUKI] Ultra-PIN gesetzt: %06lu\n", pin);
+        _nukiLock.saveUltraPincode(pin, true);
+    }
+}
+
+bool NukiManager::hasUltraPin() {
+    return _nukiLock.getUltraPincode() != 0;
+}
+
 String NukiManager::getLockStateStr() {
     if (!_hasState) return "unknown";
     char buf[32];
@@ -103,6 +117,27 @@ bool NukiManager::lock() {
     }
     Serial.printf("[NUKI] Lock failed: %d\n", (int)result);
     return false;
+}
+
+bool NukiManager::unlatch() {
+    if (!_nukiLock.isPairedWithLock()) return false;
+    Serial.println("[NUKI] Unlatch (Tuer oeffnen)");
+    Nuki::CmdResult result = _nukiLock.lockAction(NukiLock::LockAction::Unlatch);
+    if (result == Nuki::CmdResult::Success) {
+        _stateUpdateNeeded = true;
+        return true;
+    }
+    Serial.printf("[NUKI] Unlatch failed: %d\n", (int)result);
+    return false;
+}
+
+bool NukiManager::unpair() {
+    if (!_nukiLock.isPairedWithLock()) return false;
+    Serial.println("[NUKI] Unpair");
+    _nukiLock.unPairNuki();
+    _hasState = false;
+    Serial.println("[NUKI] Unpair abgeschlossen");
+    return true;
 }
 
 void NukiManager::notify(Nuki::EventType eventType) {

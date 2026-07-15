@@ -35,5 +35,9 @@ private:
     void handleNukiCancel();
     void handleNukiUnlock();
     void handleNukiLock();
+    void handleNukiOpen();
+    void handleNukiUnpair();
+    void handleNukiPinGet();
+    void handleNukiPinPost();
     void handleNotFound();
 };

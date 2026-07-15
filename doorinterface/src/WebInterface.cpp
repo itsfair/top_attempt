@@ -33,7 +33,11 @@ void WebInterface::begin(WifiManager& wifi, NukiManager& nuki, BleServer& ble) {
     _server.on("/api/nuki/pair",   HTTP_POST, [this](){ handleNukiPair();   });
     _server.on("/api/nuki/cancel", HTTP_POST, [this](){ handleNukiCancel(); });
     _server.on("/api/nuki/unlock", HTTP_POST, [this](){ handleNukiUnlock(); });
+    _server.on("/api/nuki/open",   HTTP_POST, [this](){ handleNukiOpen();   });
     _server.on("/api/nuki/lock",   HTTP_POST, [this](){ handleNukiLock();   });
+    _server.on("/api/nuki/unpair", HTTP_POST, [this](){ handleNukiUnpair(); });
+    _server.on("/api/nuki/pin", HTTP_GET,  [this](){ handleNukiPinGet();  });
+    _server.on("/api/nuki/pin", HTTP_POST, [this](){ handleNukiPinPost(); });
     _server.onNotFound(                     [this](){ handleNotFound();   });
     _server.begin();
     Serial.printf("[HTTP] Hauptseite bereit (%s.local)\n", hostname.c_str());
@@ -96,6 +100,7 @@ void WebInterface::handleStatus() {
     json += ",\"count\":" + String(paired ? "1" : "0");
     json += ",\"paired\":" + String(paired ? "true" : "false");
     json += ",\"pairing\":" + String(_nuki->isPairing() ? "true" : "false");
+    json += ",\"hasUltraPin\":" + String(_nuki->hasUltraPin() ? "true" : "false");
     if (paired) {
         json += ",\"lockState\":\"" + _nuki->getLockStateStr() + "\"";
         json += ",\"batteryPct\":" + String(_nuki->getBatteryPct());
@@ -174,4 +179,44 @@ void WebInterface::handleNukiLock() {
     bool ok = _nuki->lock();
     _server.sendHeader("Cache-Control", "no-store");
     _server.send(200, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false,\"error\":\"failed\"}");
+}
+void WebInterface::handleNukiOpen() {
+    if (!_nuki->isPaired()) {
+        _server.send(409, "application/json", "{\"ok\":false,\"error\":\"not_paired\"}");
+        return;
+    }
+    bool ok = _nuki->unlatch();
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send(200, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false,\"error\":\"failed\"}");
+}
+void WebInterface::handleNukiUnpair() {
+    if (!_nuki->isPaired()) {
+        _server.send(409, "application/json", "{\"ok\":false,\"error\":\"not_paired\"}");
+        return;
+    }
+    bool ok = _nuki->unpair();
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send(200, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false,\"error\":\"failed\"}");
+}
+void WebInterface::handleNukiPinGet() {
+    String json = "{\"hasPin\":" + String(_nuki->hasUltraPin() ? "true" : "false") + "}";
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send(200, "application/json", json);
+}
+void WebInterface::handleNukiPinPost() {
+    String pinStr = _server.arg("pin");
+    if (pinStr.length() != 6) {
+        _server.send(400, "application/json", "{\"ok\":false,\"error\":\"PIN muss 6 Ziffern sein\"}");
+        return;
+    }
+    for (size_t i = 0; i < pinStr.length(); i++) {
+        if (!isDigit(pinStr.charAt(i))) {
+            _server.send(400, "application/json", "{\"ok\":false,\"error\":\"PIN darf nur Ziffern enthalten\"}");
+            return;
+        }
+    }
+    uint32_t pin = (uint32_t)strtoul(pinStr.c_str(), nullptr, 10);
+    _nuki->setUltraPin(pin);
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send(200, "application/json", "{\"ok\":true}");
 }

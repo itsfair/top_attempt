@@ -27,6 +27,7 @@ const char SETUP_HTML[] PROGMEM = R"HTML(
     <section class="card">
       <h2>NUKI Smart Lock</h2>
       <div id="nukiStatus"></div>
+      <div id="nukiPinSection"></div>
     </section>
     <section class="card" id="about">
       <h2>Zugriffsschutz</h2>

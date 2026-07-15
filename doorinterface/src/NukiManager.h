@@ -14,6 +14,8 @@ public:
     bool isPairing();
     void startPairing();
     void cancelPairing();
+    void setUltraPin(uint32_t pin);
+    bool hasUltraPin();
 
     String getLockStateStr();
     int getBatteryPct();
@@ -22,6 +24,8 @@ public:
 
     bool unlock();
     bool lock();
+    bool unlatch();
+    bool unpair();
 
     void notify(Nuki::EventType eventType) override;
 

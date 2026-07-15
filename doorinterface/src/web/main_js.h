@@ -22,7 +22,11 @@ async function refresh() {
       html = '<p><span class="badge ' + cls + '">' + lk.lockState + '</span></p>';
       html += '<dl><dt>Akku</dt><dd>' + (lk.batteryPct >= 0 ? lk.batteryPct + '%' : '—') + (lk.batteryCritical ? ' ⚠' : '') + '</dd>';
       html += '<dt>RSSI</dt><dd>' + (lk.rssi || '—') + ' dBm</dd></dl>';
-      html += '<div class="btn-row"><button class="btn" id="btnUnlock">Öffnen</button><button class="btn" id="btnLock">Sperren</button></div>';
+      const isLocked = lk.lockState === 'locked';
+      html += '<div class="btn-row">';
+      html += '<button class="btn" id="' + (isLocked ? 'btnUnlock' : 'btnLock') + '">' + (isLocked ? 'Entriegeln' : 'Sperren') + '</button>';
+      html += '<button class="btn" id="btnOpen">Tür öffnen</button>';
+      html += '</div>';
     } else {
       html = '<p class="muted">nicht eingerichtet</p><a class="btn" href="/setup">Konfiguration starten</a>';
     }
@@ -41,9 +45,10 @@ async function refresh() {
 }
 
 function bindActuator() {
-  const u = $('btnUnlock'), l = $('btnLock');
+  const u = $('btnUnlock'), l = $('btnLock'), o = $('btnOpen');
   if (u) u.onclick = async () => { u.disabled = true; await fetch('/api/nuki/unlock', { method:'POST' }); setTimeout(refresh, 500); };
   if (l) l.onclick = async () => { l.disabled = true; await fetch('/api/nuki/lock', { method:'POST' }); setTimeout(refresh, 500); };
+  if (o) o.onclick = async () => { o.disabled = true; await fetch('/api/nuki/open', { method:'POST' }); setTimeout(refresh, 500); };
 }
 
 refresh();
