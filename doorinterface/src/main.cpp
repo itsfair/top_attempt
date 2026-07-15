@@ -15,6 +15,8 @@ bool webStarted = false;
 
 void setup() {
     Serial.begin(115200);
+    delay(3000);
+    Serial.println("[BOOT] starte DoorInterface");
     wifi.begin();
 }
 

@@ -40,4 +40,8 @@ private:
     bool _stateUpdateNeeded = false;
     NukiLock::KeyTurnerState _lastState;
     bool _hasState = false;
+    unsigned long _lastStateAttempt = 0;
+    static const unsigned long _stateRetryInterval = 10000;
+    static const unsigned long _stateRefreshInterval = 60000;
+    unsigned long _lastStateRefresh = 0;
 };

@@ -9,7 +9,9 @@ void NukiManager::begin() {
     _nukiLock.registerBleScanner(&_scanner);
     _nukiLock.initialize();
     _nukiLock.setEventHandler(this);
-    Serial.printf("[NUKI] paired: %s\n", _nukiLock.isPairedWithLock() ? "yes" : "no");
+    Serial.printf("[NUKI] paired: %s, hasUltraPin: %s\n",
+        _nukiLock.isPairedWithLock() ? "yes" : "no",
+        hasUltraPin() ? "yes" : "no");
     if (_nukiLock.isPairedWithLock()) {
         _stateUpdateNeeded = true;
     }
@@ -18,6 +20,31 @@ void NukiManager::begin() {
 void NukiManager::loop() {
     _scanner.update();
     _nukiLock.updateConnectionState();
+
+    unsigned long now = millis();
+    if (_nukiLock.isPairedWithLock() && !_hasState && now - _lastStateAttempt >= _stateRetryInterval) {
+        _stateUpdateNeeded = true;
+    }
+    if (_nukiLock.isPairedWithLock() && _hasState && now - _lastStateRefresh >= _stateRefreshInterval) {
+        _stateUpdateNeeded = true;
+    }
+
+    if (_stateUpdateNeeded && _nukiLock.isPairedWithLock()) {
+        _stateUpdateNeeded = false;
+        _lastStateAttempt = millis();
+        Serial.println("[NUKI] Versuche State-Request");
+        Nuki::CmdResult result = _nukiLock.requestKeyTurnerState(&_lastState);
+        if (result == Nuki::CmdResult::Success) {
+            _hasState = true;
+            _lastStateRefresh = millis();
+            char stateStr[32];
+            NukiLock::lockstateToString(_lastState.lockState, stateStr);
+            Serial.printf("[NUKI] State: %s, Battery: %d%%\n", stateStr, _nukiLock.getBatteryPerc());
+        } else {
+            Serial.printf("[NUKI] State-Request fehlgeschlagen (%d), retry in %lus\n", (int)result, _stateRetryInterval / 1000);
+            _scanner.enableScanning(true);
+        }
+    }
 
     if (_pairingRequested) {
         if (millis() - _pairingStart > _pairingTimeout) {
@@ -30,17 +57,6 @@ void NukiManager::loop() {
                 _stateUpdateNeeded = true;
                 Serial.println("[NUKI] Pairing erfolgreich");
             }
-        }
-    }
-
-    if (_stateUpdateNeeded && _nukiLock.isPairedWithLock()) {
-        _stateUpdateNeeded = false;
-        Nuki::CmdResult result = _nukiLock.requestKeyTurnerState(&_lastState);
-        if (result == Nuki::CmdResult::Success) {
-            _hasState = true;
-            char stateStr[32];
-            NukiLock::lockstateToString(_lastState.lockState, stateStr);
-            Serial.printf("[NUKI] State: %s, Battery: %d%%\n", stateStr, _nukiLock.getBatteryPerc());
         }
     }
 }
