@@ -49,54 +49,31 @@ async function refreshNuki() {
       html = '<p class="muted">Pairing läuft … Taste am Nuki 10s gedrückt halten, bis der LED-Ring leuchtet.</p>';
       html += '<button class="btn" id="nukiCancel">Pairing abbrechen</button>';
     } else if (lk.paired) {
-      html = '<p><span class="badge ok">eingerichtet</span></p>';
-      html += '<p class="muted">NUKI ist erfolgreich gekoppelt.Tür-Status, Akku und RSSI werden im Dashboard angezeigt.</p>';
-      html += '<div class="btn-row"><button class="btn" id="nukiOpen">Tür öffnen (Test)</button><button class="btn" id="nukiUnpair">Entkopplung</button></div>';
+      const cls = lk.lockState === 'locked' ? 'err' : (lk.lockState === 'unlocked' ? 'ok' : '');
+      html = '<p><span class="badge ' + cls + '">' + lk.lockState + '</span></p>';
+      html += '<dl><dt>Akku</dt><dd>' + (lk.batteryPct >= 0 ? lk.batteryPct + '%' : '—') + (lk.batteryCritical ? ' ⚠' : '') + '</dd>';
+      html += '<dt>RSSI</dt><dd>' + (lk.rssi || '—') + ' dBm</dd></dl>';
+      html += '<div class="btn-row"><button class="btn" id="nukiUnlock">Öffnen (Test)</button><button class="btn" id="nukiLock">Sperren (Test)</button></div>';
     } else {
       html = '<p class="muted">Nicht gekoppelt.</p>';
       html += '<p class="muted">1. In der Nuki App: Bluetooth Pairing aktivieren (Settings → Features & Configuration → Button and LED).</p>';
       html += '<p class="muted">2. Taste am Nuki 10s drücken, bis der LED-Ring leuchtet.</p>';
-      if (!lk.hasUltraPin) {
-        html += '<p class="muted" style="color:#c62828">Achtung: Für Smart Lock Go / Ultra / 5.0 / Pro muss unten eine 6-stellige PIN eingegeben sein (dieselbe wie in der Nuki-App).</p>';
-      }
       html += '<p class="muted">3. Hier Pairing starten:</p>';
       html += '<button class="btn" id="nukiPair">Pairing starten</button>';
     }
     $('nukiStatus').innerHTML = html;
-
-    let pinHtml = '';
-    if (!lk.paired && !lk.pairing) {
-      pinHtml = '<h3 style="margin-top:1em">Ultra-/Go-PIN</h3>';
-      pinHtml += '<p class="muted">Nur für Smart Lock Go / Ultra / 5.0 / Pro nötig. Standard-Locks (1.0–4.0) brauchen keine PIN.</p>';
-      pinHtml += '<p class="muted">Status: <span class="badge ' + (lk.hasUltraPin ? 'ok' : 'err') + '">' + (lk.hasUltraPin ? 'PIN gesetzt' : 'keine PIN') + '</span></p>';
-      pinHtml += '<form id="nukiPinForm"><label>6-stellige PIN <input type="password" id="nukiPinInput" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" title="Genau 6 Ziffern"></label>';
-      pinHtml += '<button class="btn" id="nukiPinBtn">PIN speichern</button></form>';
-      pinHtml += '<div id="nukiPinStatus" style="margin-top:0.5em"></div>';
-    }
-    $('nukiPinSection').innerHTML = pinHtml;
     bindNuki();
   } catch (e) {}
 }
 
 function bindNuki() {
-  const p = $('nukiPair'), c = $('nukiCancel'), o = $('nukiOpen'), up = $('nukiUnpair'), pf = $('nukiPinForm');
+  const p = $('nukiPair'), c = $('nukiCancel'), u = $('nukiUnlock'), l = $('nukiLock');
   if (p) p.onclick = async () => { p.disabled = true; await fetch('/api/nuki/pair', { method:'POST' }); setTimeout(refreshNuki, 500); };
   if (c) c.onclick = async () => { c.disabled = true; await fetch('/api/nuki/cancel', { method:'POST' }); setTimeout(refreshNuki, 500); };
-  if (o) o.onclick = async () => { o.disabled = true; await fetch('/api/nuki/open', { method:'POST' }); setTimeout(refreshNuki, 1000); };
-  if (up) up.onclick = async () => { up.disabled = true; await fetch('/api/nuki/unpair', { method:'POST' }); setTimeout(refreshNuki, 1000); };
-  if (pf) pf.onsubmit = async (e) => {
-    e.preventDefault();
-    const v = $('nukiPinInput').value.trim();
-    if (!/^[0-9]{6}$/.test(v)) { $('nukiPinStatus').textContent = 'Bitte genau 6 Ziffern eingeben.'; return; }
-    $('nukiPinBtn').disabled = true;
-    try {
-      const r = await fetch('/api/nuki/pin', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'pin='+encodeURIComponent(v) });
-      const s = await r.json();
-      if (r.ok) { $('nukiPinStatus').textContent = 'PIN gespeichert.'; $('nukiPinInput').value = ''; setTimeout(refreshNuki, 500); }
-      else { $('nukiPinStatus').textContent = 'Fehler: ' + (s.error || 'unbekannt'); $('nukiPinBtn').disabled = false; }
-    } catch(err) { $('nukiPinStatus').textContent = 'Fehler'; $('nukiPinBtn').disabled = false; }
-  };
+  if (u) u.onclick = async () => { u.disabled = true; await fetch('/api/nuki/unlock', { method:'POST' }); setTimeout(refreshNuki, 1000); };
+  if (l) l.onclick = async () => { l.disabled = true; await fetch('/api/nuki/lock', { method:'POST' }); setTimeout(refreshNuki, 1000); };
 }
 
 refreshNuki();
+setInterval(refreshNuki, 2000);
 )JS";

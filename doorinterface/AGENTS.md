@@ -254,12 +254,6 @@ docs/
     BleServer startet vor `NukiManager` (nimmt `NimBLEDevice::init` vorweg
     → Advertising-Name = Hostname). Deferred in `loop()` analog zu Nuki.
     Spec: `docs/ble_interface.md`. Noch ohne Backend / ohne Verschlüsselung.
-15. **NUKI Ultra-/Go-PIN-Eingabe**: Setup-Seite um PIN-Feld ergänzt
-    (`/api/nuki/pin` GET/POST), `NukiManager::setUltraPin()` ruft
-    `saveUltraPincode()` auf (Lib speichert selbst im NVS). Status-Endpoint
-    liefert `locks.hasUltraPin`. Notwendig für Smart Lock Go (2025) /
-    Ultra / 5.0 / Pro — ohne PIN verweigert `NukiBle` das Pairing
-    (`No pairing PIN code set`). Standard-Locks (1.0–4.0) brauchen keine PIN.
 
 ## Arbeitsweise
 
@@ -274,9 +268,10 @@ docs/
 ## Offene TODOs (Reihenfolge grob nach Priorität)
 
 ### NUKI
-- [x] **PIN-Eingabe für Ultra/5th Gen/Go/Pro** in der Setup-Seite
-        (`saveUltraPincode()` vor Pairing). UI + `/api/nuki/pin` (GET/POST).
+- [ ] PIN-Eingabe für Ultra/5th Gen/Go/Pro in der Setup-Seite
+        (`saveUltraPincode()` vor Pairing).
 - [ ] Unpair-Funktion (`unPairNuki()` + Setup-Button).
+- [ ] Mehrere Locks parallel (Liste von NukiLock-Instanzen am selben Scanner).
 - [ ] Keypad-Verwaltung, Auth-Entries, Time-Control.
 - [ ] Event-Log (benötigt PIN).
 
