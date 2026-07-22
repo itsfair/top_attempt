@@ -18,11 +18,11 @@ flags = f'-DFW_VERSION=\\"{version}\\"'
 env.Append(CCFLAGS=[flags])
 print(f"[pre_upload] FW_VERSION = {version}")
 
-def erase_otadata(*args, **kwargs):
+def fix_otadata(*args, **kwargs):
     port = env.subst("$UPLOAD_PORT")
     if not port:
         return
-    print(f"[pre_upload] Erasing otadata on {port}")
-    env.Execute(f"esptool.py --port {port} erase_region 0xd000 0x2000")
+    print(f"[post_upload] Erasing otadata to force slot 0 on {port}")
+    env.Execute(f'esptool.py --port "{port}" --baud 460800 erase_region 0xd000 0x2000')
 
-env.AddPreAction("upload", erase_otadata)
+env.AddPostAction("upload", fix_otadata)
