@@ -282,6 +282,7 @@ docs/
     BleServer startet vor `NukiManager` (nimmt `NimBLEDevice::init` vorweg
     → Advertising-Name = Hostname). Deferred in `loop()` analog zu Nuki.
     Spec: `docs/ble_interface.md`. Noch ohne Backend / ohne Verschlüsselung.
+<<<<<<< HEAD
 15. **NUKI Ultra-/Go-PIN-Eingabe**: Setup-Seite um PIN-Feld ergänzt
     (`/api/nuki/pin` GET/POST), `NukiManager::setUltraPin()` ruft
     `saveUltraPincode()` auf (Lib speichert selbst im NVS). Status-Endpoint
@@ -299,6 +300,8 @@ docs/
     erstellt GitHub-Release. Version wird per `${sysenv.FW_VERSION_FLAGS}`
     in den Build injiziert (lokal: `0.0.0-dev` Fallback). Flash-Stand
     nach OTA-Integration: 72.1 %.
+=======
+>>>>>>> 1d0e9c06369b58cb019c9a37ddc34579a58a15d4
 
 ## Arbeitsweise
 
@@ -316,9 +319,10 @@ docs/
 ## Offene TODOs (Reihenfolge grob nach Priorität)
 
 ### NUKI
-- [x] **PIN-Eingabe für Ultra/5th Gen/Go/Pro** in der Setup-Seite
-        (`saveUltraPincode()` vor Pairing). UI + `/api/nuki/pin` (GET/POST).
+- [ ] PIN-Eingabe für Ultra/5th Gen/Go/Pro in der Setup-Seite
+        (`saveUltraPincode()` vor Pairing).
 - [ ] Unpair-Funktion (`unPairNuki()` + Setup-Button).
+- [ ] Mehrere Locks parallel (Liste von NukiLock-Instanzen am selben Scanner).
 - [ ] Keypad-Verwaltung, Auth-Entries, Time-Control.
 - [ ] Event-Log (benötigt PIN).
 

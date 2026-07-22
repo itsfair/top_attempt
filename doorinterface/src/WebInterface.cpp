@@ -35,8 +35,8 @@ void WebInterface::begin(WifiManager& wifi, NukiManager& nuki, BleServer& ble, U
     _server.on("/api/nuki/pair",   HTTP_POST, [this](){ handleNukiPair();   });
     _server.on("/api/nuki/cancel", HTTP_POST, [this](){ handleNukiCancel(); });
     _server.on("/api/nuki/unlock", HTTP_POST, [this](){ handleNukiUnlock(); });
-    _server.on("/api/nuki/open",   HTTP_POST, [this](){ handleNukiOpen();   });
     _server.on("/api/nuki/lock",   HTTP_POST, [this](){ handleNukiLock();   });
+<<<<<<< HEAD
     _server.on("/api/nuki/unpair", HTTP_POST, [this](){ handleNukiUnpair(); });
     _server.on("/api/nuki/pin", HTTP_GET,  [this](){ handleNukiPinGet();  });
     _server.on("/api/nuki/pin", HTTP_POST, [this](){ handleNukiPinPost(); });
@@ -46,6 +46,8 @@ void WebInterface::begin(WifiManager& wifi, NukiManager& nuki, BleServer& ble, U
     _server.on("/api/update/start",   HTTP_POST, [this](){ handleUpdateStart(); });
     _server.on("/api/update/progress",HTTP_GET,  [this](){ handleUpdateProgress(); });
     _server.on("/api/reboot",         HTTP_POST, [this](){ handleReboot(); });
+=======
+>>>>>>> 1d0e9c06369b58cb019c9a37ddc34579a58a15d4
     _server.onNotFound(                     [this](){ handleNotFound();   });
     _server.begin();
     Serial.printf("[HTTP] Hauptseite bereit (%s.local)\n", hostname.c_str());
@@ -133,8 +135,11 @@ void WebInterface::handleStatus() {
     json += ",\"count\":" + String(paired ? "1" : "0");
     json += ",\"paired\":" + String(paired ? "true" : "false");
     json += ",\"pairing\":" + String(_nuki->isPairing() ? "true" : "false");
+<<<<<<< HEAD
     json += ",\"hasUltraPin\":" + String(_nuki->hasUltraPin() ? "true" : "false");
     json += ",\"pollInterval\":" + String((int)_nuki->getPollInterval());
+=======
+>>>>>>> 1d0e9c06369b58cb019c9a37ddc34579a58a15d4
     if (paired) {
         json += ",\"lockState\":\"" + _nuki->getLockStateStr() + "\"";
         json += ",\"batteryPct\":" + String(_nuki->getBatteryPct());
@@ -214,6 +219,7 @@ void WebInterface::handleNukiLock() {
     _server.sendHeader("Cache-Control", "no-store");
     _server.send(200, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false,\"error\":\"failed\"}");
 }
+<<<<<<< HEAD
 void WebInterface::handleNukiOpen() {
     if (!_nuki->isPaired()) {
         _server.send(409, "application/json", "{\"ok\":false,\"error\":\"not_paired\"}");
@@ -270,3 +276,5 @@ void WebInterface::handleNukiPollPost() {
     _server.sendHeader("Cache-Control", "no-store");
     _server.send(200, "application/json", "{\"ok\":true}");
 }
+=======
+>>>>>>> 1d0e9c06369b58cb019c9a37ddc34579a58a15d4
