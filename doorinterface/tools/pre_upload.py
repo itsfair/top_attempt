@@ -15,8 +15,8 @@ except Exception:
     version = "0.0.0-dev"
 
 flags = f'-DFW_VERSION=\\"{version}\\"'
-os.environ["FW_VERSION_FLAGS"] = flags
-print(f"[pre_upload] FW_VERSION_FLAGS = {flags}")
+env.Append(CCFLAGS=[flags])
+print(f"[pre_upload] FW_VERSION = {version}")
 
 def erase_otadata(*args, **kwargs):
     port = env.subst("$UPLOAD_PORT")

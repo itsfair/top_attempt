@@ -16,6 +16,8 @@ jobs:
         working-directory: doorinterface
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install PlatformIO
         run: pip install --upgrade platformio
@@ -29,7 +31,6 @@ jobs:
             VERSION="0.0.0-dev"
           fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "FW_VERSION_FLAGS=-DFW_VERSION=\\\"$VERSION\\\"" >> $GITHUB_ENV
 
       - name: Build
         run: pio run
