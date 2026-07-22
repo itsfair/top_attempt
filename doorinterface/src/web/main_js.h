@@ -56,4 +56,6 @@ setInterval(refresh, 3000);
 
 $('menuBtn').onclick = (e) => { e.stopPropagation(); $('menuList').classList.toggle('hidden'); };
 document.addEventListener('click', () => $('menuList').classList.add('hidden'));
+const rb = $('menuReboot');
+if (rb) rb.onclick = (e) => { e.preventDefault(); if (confirm('Gerät wirklich neu starten?')) { fetch('/api/reboot', { method:'POST' }); document.body.innerHTML = '<p style="text-align:center;margin-top:3em">Neustart... bitte warten.</p>'; } };
 )JS";

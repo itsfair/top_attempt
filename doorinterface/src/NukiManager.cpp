@@ -9,9 +9,11 @@ void NukiManager::begin() {
     _nukiLock.registerBleScanner(&_scanner);
     _nukiLock.initialize();
     _nukiLock.setEventHandler(this);
-    Serial.printf("[NUKI] paired: %s, hasUltraPin: %s\n",
+    loadPollInterval();
+    Serial.printf("[NUKI] paired: %s, hasUltraPin: %s, pollInterval: %lus\n",
         _nukiLock.isPairedWithLock() ? "yes" : "no",
-        hasUltraPin() ? "yes" : "no");
+        hasUltraPin() ? "yes" : "no",
+        (unsigned long)_pollInterval);
     if (_nukiLock.isPairedWithLock()) {
         _stateUpdateNeeded = true;
     }
@@ -22,28 +24,13 @@ void NukiManager::loop() {
     _nukiLock.updateConnectionState();
 
     unsigned long now = millis();
-    if (_nukiLock.isPairedWithLock() && !_hasState && now - _lastStateAttempt >= _stateRetryInterval) {
-        _stateUpdateNeeded = true;
-    }
-    if (_nukiLock.isPairedWithLock() && _hasState && now - _lastStateRefresh >= _stateRefreshInterval) {
+    if (_nukiLock.isPairedWithLock() && (now - _lastStateRequest >= (unsigned long)_pollInterval * 1000)) {
         _stateUpdateNeeded = true;
     }
 
     if (_stateUpdateNeeded && _nukiLock.isPairedWithLock()) {
         _stateUpdateNeeded = false;
-        _lastStateAttempt = millis();
-        Serial.println("[NUKI] Versuche State-Request");
-        Nuki::CmdResult result = _nukiLock.requestKeyTurnerState(&_lastState);
-        if (result == Nuki::CmdResult::Success) {
-            _hasState = true;
-            _lastStateRefresh = millis();
-            char stateStr[32];
-            NukiLock::lockstateToString(_lastState.lockState, stateStr);
-            Serial.printf("[NUKI] State: %s, Battery: %d%%\n", stateStr, _nukiLock.getBatteryPerc());
-        } else {
-            Serial.printf("[NUKI] State-Request fehlgeschlagen (%d), retry in %lus\n", (int)result, _stateRetryInterval / 1000);
-            _scanner.enableScanning(true);
-        }
+        requestState();
     }
 
     if (_pairingRequested) {
@@ -58,6 +45,24 @@ void NukiManager::loop() {
                 Serial.println("[NUKI] Pairing erfolgreich");
             }
         }
+    }
+}
+
+void NukiManager::requestState() {
+    _lastStateRequest = millis();
+    Nuki::CmdResult result = _nukiLock.requestKeyTurnerState(&_lastState);
+    if (result == Nuki::CmdResult::Success) {
+        _hasState = true;
+        char stateStr[32];
+        NukiLock::lockstateToString(_lastState.lockState, stateStr);
+        String currentState = String(stateStr);
+        if (currentState != _lastLoggedState) {
+            _lastLoggedState = currentState;
+            Serial.printf("[NUKI] State: %s, Battery: %d%%\n", stateStr, _nukiLock.getBatteryPerc());
+        }
+    } else {
+        Serial.printf("[NUKI] State-Request fehlgeschlagen (%d)\n", (int)result);
+        _scanner.enableScanning(true);
     }
 }
 
@@ -88,6 +93,28 @@ void NukiManager::setUltraPin(uint32_t pin) {
 
 bool NukiManager::hasUltraPin() {
     return _nukiLock.getUltraPincode() != 0;
+}
+
+void NukiManager::loadPollInterval() {
+    _prefs.begin("nuki", false);
+    if (_prefs.isKey("pollint")) {
+        _pollInterval = _prefs.getUShort("pollint", 120);
+    }
+    _prefs.end();
+}
+
+uint16_t NukiManager::getPollInterval() {
+    return _pollInterval;
+}
+
+void NukiManager::setPollInterval(uint16_t seconds) {
+    if (seconds < 10) seconds = 10;
+    if (seconds > 3600) seconds = 3600;
+    _pollInterval = seconds;
+    _prefs.begin("nuki", false);
+    _prefs.putUShort("pollint", seconds);
+    _prefs.end();
+    Serial.printf("[NUKI] Poll-Intervall gesetzt: %lus\n", (unsigned long)seconds);
 }
 
 String NukiManager::getLockStateStr() {
@@ -152,6 +179,7 @@ bool NukiManager::unpair() {
     Serial.println("[NUKI] Unpair");
     _nukiLock.unPairNuki();
     _hasState = false;
+    _lastLoggedState = "";
     Serial.println("[NUKI] Unpair abgeschlossen");
     return true;
 }

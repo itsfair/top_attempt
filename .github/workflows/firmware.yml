@@ -1,18 +1,16 @@
-name: Build firmware
+name: Build & Release firmware
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'doorinterface/**'
-      - '.github/workflows/firmware.yml'
-  pull_request:
-    paths: ['doorinterface/**', '.github/workflows/firmware.yml']
+    tags:
+      - 'fw-v*'
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: doorinterface
@@ -26,10 +24,12 @@ jobs:
         id: ver
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+            VERSION="${GITHUB_REF_NAME#fw-v}"
           else
-            echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            VERSION="0.0.0-dev"
           fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "FW_VERSION_FLAGS=-DFW_VERSION=\\\"$VERSION\\\"" >> $GITHUB_ENV
 
       - name: Build
         run: pio run
@@ -39,3 +39,12 @@ jobs:
         with:
           name: firmware-${{ steps.ver.outputs.VERSION }}
           path: doorinterface/.pio/build/esp32dev/firmware.bin
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/fw-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Firmware ${{ steps.ver.outputs.VERSION }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: doorinterface/.pio/build/esp32dev/firmware.bin

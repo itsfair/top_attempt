@@ -17,8 +17,8 @@ const char MAIN_HTML[] PROGMEM = R"HTML(
       <button id="menuBtn" class="icon" aria-label="Setup">&#9881;</button>
       <div id="menuList" class="menu-list hidden">
         <a href="/setup">Einrichtung</a>
-        <a href="/setup#wifi">WLAN</a>
-        <a href="/setup#about">Über</a>
+        <a href="/display">Kundendisplay</a>
+        <a href="#" id="menuReboot">Neustart</a>
       </div>
     </div>
   </header>

@@ -35,6 +35,11 @@ const char SETUP_HTML[] PROGMEM = R"HTML(
       <a class="btn" href="/">&larr; Zurück zum Dashboard</a>
     </section>
     <section class="card">
+      <h2>Firmware-Update</h2>
+      <p class="muted">Aktuelle Version: <span id="updCurrent">…</span></p>
+      <div id="updArea"></div>
+    </section>
+    <section class="card">
       <h2>Statischer QR-Code (Kundendisplay)</h2>
       <p class="muted">Dieser Textinhalt ist für den statischen QR-Code, den der Kunde mit der App scant. Drucke ihn einmalig aus und lege ihn gut sichtbar aus — oder rufe die <a href="/display">Kundendisplay-Seite</a> auf einem externen Gerät auf.</p>
       <label>Inhalt (exakt so übernehmen)

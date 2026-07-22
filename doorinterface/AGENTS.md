@@ -4,13 +4,31 @@ ESP32-Firmware (PlatformIO + Arduino-Framework) zur Steuerung von Türöffnern
 (Relais + NUKI Smart Locks über BLE), mit W-LAN-Einrichtung per Captive Portal,
 gesicherter Weboberfläche und API/Websocket für lokales Backend.
 
-## Build & Flash
+## Build & Flash — WICHTIG FÜR ALLE AGENTEN
 
 ```bash
 pio run                 # build
 pio run -t upload       # flash
 pio device monitor      # serial @ 115200
 ```
+
+> **DRAKONISCH REGEL FÜR ALLE AGENTEN (gilt auch für Sub-Agenten):**
+>
+> 1. **Kein Build nach jeder kleinen Code-Änderung.** Ein `pio run` dauert
+>    20–60 s und verbraucht massiv Kontextzeit. Baut nur auf ausdrücklichen
+>    Wunsch des Nutzers **oder** bei tiefergehenden Refactorings, bei denen
+>    Syntaxfehler nicht offensichtlich sind. Wenn die Änderung trivial ist
+>    (z.B. eine String-Konstante, eine Log-Zeile, eine JS-HTML-Snippet-Anpassung),
+>    vertraut auf sorgfältiges Lesen des Diffs — der Nutzer kompiliert und
+>    flasht ohnehin selbst.
+> 2. **Änderungen VORHER erklären, nicht einfach in Dateien schreiben.**
+>    Der Agent schlägt jeden Häppchen-Schritt als Code-Snippet + kurze
+>    Erklärung vor und wartet auf das „Okay" des Nutzers, bevor die Dateien
+>    tatsächlich angefasst werden. Ausnahme: reine Dokumentations-Updates
+>    (AGENTS.md, docs/*.md), die keine Code-Semantik ändern.
+>
+> Missachtet ein Agent diese Regeln, beeinträchtigt das die
+>    Arbeitsgeschwindigkeit erheblich — die Regeln sind nicht optional.
 
 PlatformIO-Konfiguration: `platformio.ini`, env `esp32dev`, `monitor_speed = 115200`.
 
@@ -59,6 +77,7 @@ src/
   WebInterface.h/.cpp   -> Haupt-Webserver (STA-Modus): Dashboard, Setup, API
   NukiManager.h/.cpp    -> NUKI BLE: Pairing, Lock/Unlock, Status-Querying
   BleServer.h/.cpp      -> BLE Peripheral (GATT-Server) für Smartphone-App, s. docs/ble_interface.md
+  Updater.h/.cpp       -> OTA-Update über GitHub-Releases-Pull (WiFiClientSecure + Update-Lib)
   web/
     portal_html.h       -> Captive-Portal-HTML (PROGMEM)
     portal_css.h        -> Captive-Portal-CSS (PROGMEM)
@@ -136,6 +155,15 @@ docs/
   5. `NimBLEDevice::setPower(int)` → `setPower(esp_power_level_t)`
   6. `NimBLEBeacon::setData(uint8_t*, uint8_t)` → `setData(std::string)`
   7. `BLEAddress::getVal()` → `BLEAddress::getNative()`
+8. **`NukiBle.cpp onResult` — Edge-Detection für Status-Updated-Flag.**
+   Original feuert `eventHandler->notify(KeyTurnerStatusUpdated)` bei jedem
+   Advertising-Paket, in dem das Status-Bit gesetzt ist — d.h. fortlaufend
+   alle paar hundert Millisekunden. Patch: `if (!statusUpdated && eventHandler)`
+   als Gate, so dass das Event nur bei echter Flanke (false→true) einmalig
+   feuert. `statusUpdated=true` wird intern weiterhin gesetzt; der Reset-Zweig
+   (Flag gelöscht) setzt `statusUpdated=false` zurück und Feuer
+   `KeyTurnerStatusReset`. Behebt permanentes State-Request-Loop im
+   NukiManager, das NUKI alle 30s aktiv connected und Batterie verbraucht.
 - **Preferences-Konflikt gelöst**: Die idf-Branch hat eine eigene
   `Preferences.h/.cpp` mit `std::string`-API, die mit der Arduino-Framework-
   `Preferences` (mit `String`-API) kollidiert. Lösung: eigene Dateien
@@ -260,16 +288,30 @@ docs/
     liefert `locks.hasUltraPin`. Notwendig für Smart Lock Go (2025) /
     Ultra / 5.0 / Pro — ohne PIN verweigert `NukiBle` das Pairing
     (`No pairing PIN code set`). Standard-Locks (1.0–4.0) brauchen keine PIN.
+16. **OTA-Update** über GitHub-Releases: neues Modul `src/Updater.cpp`
+    pollt `api.github.com/repos/itsfair/top_attempt/releases/latest`,
+    vergleicht `tag_name` (ohne `fw-v`-Präfix) mit `FW_VERSION`, lädt
+    `firmware.bin` herunter und flasht per `Update`-Lib in den inaktiven
+    OTA-Slot. Setup-Seite: „Firmware-Update"-Sektion mit Button +
+    Fortschrittsanzeige. Dashboard-Menü: „Neustart"-Button via
+    `/api/reboot`. Neue `partitions.csv` mit 2 OTA-Slots je 1.875 MB.
+    GitHub-Action `firmware.yml` triggert nur noch auf Tag-Push `fw-v*`,
+    erstellt GitHub-Release. Version wird per `${sysenv.FW_VERSION_FLAGS}`
+    in den Build injiziert (lokal: `0.0.0-dev` Fallback). Flash-Stand
+    nach OTA-Integration: 72.1 %.
 
 ## Arbeitsweise
 
 - Kleine Häppchen, jeder Schritt als Code-Snippet vorgeschlagen + erklärt,
-  erst auf "okay" in Dateien geschrieben.
+  erst auf "okay" in Dateien geschrieben. **Keine Ausnahmen** — auch nicht
+  bei „nur mal eben einer Kleinigkeit".
 - Schritte werden vor dem Anlegen erklärt, nicht automatisch committed.
 - `git commit` nur auf ausdrücklichen Wunsch.
 - **Kein Build-Test nach jeder kleinen Änderung.** Der Nutzer kompiliert/flasht
   selbst und gibt Bescheid bei Problemen. Builds nur auf ausdrücklichen Wunsch
-  oder bei tiefergehenden Refactorings.
+  oder bei tiefergehenden Refactorings. **Gilt auch wenn der Agent „sicher
+  gerade sein will" — der Build kostet 20–60 s Kontextzeit und ist ASA-Regel
+  aus dem vorherigen Abschnitt unter „Build & Flash" eh verboten.**
 
 ## Offene TODOs (Reihenfolge grob nach Priorität)
 
@@ -299,10 +341,42 @@ docs/
 ### Relais
 - [ ] GPIO-Ansteuerung (Pin, Timing, Entstörung). Braucht Hardware-Info.
 
+### Türsensor
+- [ ] **Option A — NUKI-eigener Türsensor:** Das im
+        `Keyturner States (0x000C)`-Frame der Nuki-API enthaltene Feld
+        `Door sensor state` (uint8: 0x00 unavailable, 0x02 closed, 0x03 opened,
+        0x10 uncalibrated, 0xF0 tampered, 0xFF unknown) auswerten und im
+        Dashboard anzeigen. Setzt voraus, dass ein NUKI-Türsensor gekoppelt
+        ist. Updates nur im Poll-Intervall (`locks.pollInterval`).
+- [ ] **Option B — Eigener Reed-/Magnetsensor am ESP-GPIO:** Reed-Schalter
+        am Türblatt (Magnet am Rahmen) an einem GPIO-Pin mit internem
+        Pull-up, Firmware pollt Pin und feuert Event bei Flanke.
+        Real-time (unabhängig vom NUKI-Poll-Intervall), neue Klasse etwa
+        `DoorSensor.h/.cpp` im `src/`. Pin in Setup-Seite konfigurierbar
+        (wie Poll-Intervall). Braucht Hardware-Info (welcher GPIO).
+
 ### OTA / GitHub-Workflow
-- [ ] OTA per Webserver: Binary über POST oder Pull vom GitHub-Release.
-- [ ] GitHub-Action: bei Push auf `main` Firmware bauen, als Release-Artefakt.
-- [ ] ESP prüft periodisch GitHub auf neue Version.
+- [x] **OTA per GitHub-Releases-Pull** implementiert: `src/Updater.cpp`
+        fragt `https://api.github.com/repos/itsfair/top_attempt/releases/latest`
+        ab, vergleicht Version, lädt `firmware.bin` herunter und flasht
+        per `Update`-Lib. TLS via `WiFiClientSecure::setInsecure` (ohne
+        CA-Bundle, kann später mit eingebettetem Bundle verbessert werden).
+- [x] **GitHub-Action** (`.github/workflows/firmware.yml`) baut bei
+        Tag-Push `fw-v*` und erstellt ein GitHub-Release mit
+        `firmware.bin` als Asset. Version wird aus Tag extrahiert
+        (`fw-v0.2.0` → `0.2.0`) und per `FW_VERSION_FLAGS` in den Build
+        injiziert (`platformio.ini` `${sysenv.FW_VERSION_FLAGS}`).
+        Lokaler Build ohne CI → Fallback `0.0.0-dev` (via `config.h`).
+- [x] **Web-UI Update-Sektion** in Setup-Seite (/setup → „Firmware-Update"):
+        Button „Nach Update suchen", Fortschrittsanzeige während Download,
+        Status `DONE` → separater „Neustart"-Button (`/api/reboot`).
+- [x] **Reboot-Endpoint** `/api/reboot` + Dashboard-Menü „Neustart".
+- [x] **Partition-Tabelle** `doorinterface/partitions.csv` mit 2 OTA-Slots
+        (1.875 MB je), NVS (16 KB), otadata (8 KB). Flash-Auslastung ~72 %.
+        **Wichtig**: Wechsel der Partition-Tabelle löscht NVS beim ersten
+        Flash — WLAN/NUKI-Credentials/Hostname müssen neu konfiguriert werden.
+- [ ] ESP prüft periodisch GitHub auf neue Version (z. Zt. nur manuell über
+        Setup-Seite, später Auto-Poll hintergrundlich).
 
 ### Logging / Robustheit
 - [ ] Zentrales Debug-Makro (`#define DEBUG_SERIAL` + `LOGI/LOGW/LOGE`).

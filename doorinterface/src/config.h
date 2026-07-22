@@ -1,3 +1,5 @@
 #pragma once
 
-#define FW_VERSION "0.1.0"
+#ifndef FW_VERSION
+#define FW_VERSION "0.0.0-dev"
+#endif

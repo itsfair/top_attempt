@@ -2,6 +2,7 @@
 #include "WifiManager.h"
 #include "NukiManager.h"
 #include "BleServer.h"
+#include "Updater.h"
 #include "web/main_html.h"
 #include "web/main_css.h"
 #include "web/main_js.h"
@@ -12,10 +13,11 @@
 #include "web/qr_js.h"
 #include "config.h"
 
-void WebInterface::begin(WifiManager& wifi, NukiManager& nuki, BleServer& ble) {
+void WebInterface::begin(WifiManager& wifi, NukiManager& nuki, BleServer& ble, Updater& updater) {
     _wifi = &wifi;
     _nuki = &nuki;
     _ble = &ble;
+    _updater = &updater;
     String hostname = _wifi->getHostname();
     if (MDNS.begin(hostname.c_str())) MDNS.addService("http", "tcp", 80);
     _server.on("/",             HTTP_GET,  [this](){ handleRoot();        });
@@ -38,6 +40,12 @@ void WebInterface::begin(WifiManager& wifi, NukiManager& nuki, BleServer& ble) {
     _server.on("/api/nuki/unpair", HTTP_POST, [this](){ handleNukiUnpair(); });
     _server.on("/api/nuki/pin", HTTP_GET,  [this](){ handleNukiPinGet();  });
     _server.on("/api/nuki/pin", HTTP_POST, [this](){ handleNukiPinPost(); });
+    _server.on("/api/nuki/poll", HTTP_GET,  [this](){ handleNukiPollGet(); });
+    _server.on("/api/nuki/poll", HTTP_POST, [this](){ handleNukiPollPost(); });
+    _server.on("/api/update/check",   HTTP_POST, [this](){ handleUpdateCheck(); });
+    _server.on("/api/update/start",   HTTP_POST, [this](){ handleUpdateStart(); });
+    _server.on("/api/update/progress",HTTP_GET,  [this](){ handleUpdateProgress(); });
+    _server.on("/api/reboot",         HTTP_POST, [this](){ handleReboot(); });
     _server.onNotFound(                     [this](){ handleNotFound();   });
     _server.begin();
     Serial.printf("[HTTP] Hauptseite bereit (%s.local)\n", hostname.c_str());
@@ -84,6 +92,31 @@ void WebInterface::handleQrJs() {
     _server.sendHeader("Cache-Control", "no-store");
     _server.send_P(200, "application/javascript", QR_JS);
 }
+void WebInterface::handleReboot() {
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send(200, "application/json", "{\"ok\":true}");
+    Serial.println("[HTTP] Neustart angefordert");
+    delay(500);
+    ESP.restart();
+}
+void WebInterface::handleUpdateCheck() {
+    if (!_updater) { _server.send(500, "application/json", "{\"error\":\"no updater\"}"); return; }
+    _updater->checkForUpdate();
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send(200, "application/json", "{\"started\":true}");
+}
+void WebInterface::handleUpdateStart() {
+    if (!_updater) { _server.send(500, "application/json", "{\"error\":\"no updater\"}"); return; }
+    _updater->startUpdate();
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send(200, "application/json", "{\"started\":true}");
+}
+void WebInterface::handleUpdateProgress() {
+    if (!_updater) { _server.send(500, "application/json", "{\"error\":\"no updater\"}"); return; }
+    String json = _updater->getStatusJson();
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send(200, "application/json", json);
+}
 void WebInterface::handleNotFound() {
     _server.send(404, "text/plain", "Not found");
 }
@@ -101,6 +134,7 @@ void WebInterface::handleStatus() {
     json += ",\"paired\":" + String(paired ? "true" : "false");
     json += ",\"pairing\":" + String(_nuki->isPairing() ? "true" : "false");
     json += ",\"hasUltraPin\":" + String(_nuki->hasUltraPin() ? "true" : "false");
+    json += ",\"pollInterval\":" + String((int)_nuki->getPollInterval());
     if (paired) {
         json += ",\"lockState\":\"" + _nuki->getLockStateStr() + "\"";
         json += ",\"batteryPct\":" + String(_nuki->getBatteryPct());
@@ -217,6 +251,22 @@ void WebInterface::handleNukiPinPost() {
     }
     uint32_t pin = (uint32_t)strtoul(pinStr.c_str(), nullptr, 10);
     _nuki->setUltraPin(pin);
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send(200, "application/json", "{\"ok\":true}");
+}
+void WebInterface::handleNukiPollGet() {
+    String json = "{\"interval\":" + String(_nuki->getPollInterval()) + "}";
+    _server.sendHeader("Cache-Control", "no-store");
+    _server.send(200, "application/json", json);
+}
+void WebInterface::handleNukiPollPost() {
+    String val = _server.arg("interval");
+    int interval = val.toInt();
+    if (interval < 10 || interval > 3600) {
+        _server.send(400, "application/json", "{\"ok\":false,\"error\":\"Intervall muss 10-3600 Sekunden sein\"}");
+        return;
+    }
+    _nuki->setPollInterval((uint16_t)interval);
     _server.sendHeader("Cache-Control", "no-store");
     _server.send(200, "application/json", "{\"ok\":true}");
 }

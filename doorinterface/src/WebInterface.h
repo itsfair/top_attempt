@@ -7,16 +7,18 @@
 class WifiManager;
 class NukiManager;
 class BleServer;
+class Updater;
 
 class WebInterface {
 public:
-    void begin(WifiManager& wifi, NukiManager& nuki, BleServer& ble);
+    void begin(WifiManager& wifi, NukiManager& nuki, BleServer& ble, Updater& updater);
     void loop();
 private:
     WebServer _server{80};
     WifiManager* _wifi = nullptr;
     NukiManager* _nuki = nullptr;
     BleServer* _ble = nullptr;
+    Updater* _updater = nullptr;
     bool _restartRequested = false;
     unsigned long _restartAt = 0;
     void handleRoot();
@@ -39,5 +41,11 @@ private:
     void handleNukiUnpair();
     void handleNukiPinGet();
     void handleNukiPinPost();
+    void handleNukiPollGet();
+    void handleNukiPollPost();
+    void handleUpdateCheck();
+    void handleUpdateStart();
+    void handleUpdateProgress();
+    void handleReboot();
     void handleNotFound();
 };
