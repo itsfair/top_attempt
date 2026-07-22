@@ -37,7 +37,6 @@ private:
     void handleNukiCancel();
     void handleNukiUnlock();
     void handleNukiLock();
-<<<<<<< HEAD
     void handleNukiOpen();
     void handleNukiUnpair();
     void handleNukiPinGet();
@@ -48,7 +47,5 @@ private:
     void handleUpdateStart();
     void handleUpdateProgress();
     void handleReboot();
-=======
->>>>>>> 1d0e9c06369b58cb019c9a37ddc34579a58a15d4
     void handleNotFound();
 };

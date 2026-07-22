@@ -81,7 +81,6 @@ void NukiManager::cancelPairing() {
     Serial.println("[NUKI] Pairing abgebrochen");
 }
 
-<<<<<<< HEAD
 void NukiManager::setUltraPin(uint32_t pin) {
     if (pin == 0) {
         Serial.println("[NUKI] Ultra-PIN geleert");
@@ -118,8 +117,6 @@ void NukiManager::setPollInterval(uint16_t seconds) {
     Serial.printf("[NUKI] Poll-Intervall gesetzt: %lus\n", (unsigned long)seconds);
 }
 
-=======
->>>>>>> 1d0e9c06369b58cb019c9a37ddc34579a58a15d4
 String NukiManager::getLockStateStr() {
     if (!_hasState) return "unknown";
     char buf[32];
@@ -165,7 +162,6 @@ bool NukiManager::lock() {
     return false;
 }
 
-<<<<<<< HEAD
 bool NukiManager::unlatch() {
     if (!_nukiLock.isPairedWithLock()) return false;
     Serial.println("[NUKI] Unlatch (Tuer oeffnen)");
@@ -188,8 +184,6 @@ bool NukiManager::unpair() {
     return true;
 }
 
-=======
->>>>>>> 1d0e9c06369b58cb019c9a37ddc34579a58a15d4
 void NukiManager::notify(Nuki::EventType eventType) {
     if (eventType == Nuki::EventType::KeyTurnerStatusUpdated) {
         _stateUpdateNeeded = true;

@@ -100,6 +100,8 @@ void Updater::doDownload() {
         fail("HTTP begin fehlgeschlagen");
         return;
     }
+    http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+    http.setRedirectLimit(5);
     http.addHeader("User-Agent", "DoorInterface-ESP32");
     int code = http.GET();
     if (code != 200) {
