@@ -96,14 +96,30 @@ void Updater::doDownload() {
     HTTPClient http;
     http.setReuse(false);
     http.setTimeout(60000);
-    if (!http.begin(client, _downloadUrl)) {
-        fail("HTTP begin fehlgeschlagen");
-        return;
+    String url = _downloadUrl;
+    int redirectCount = 0;
+    int code = 0;
+    while (redirectCount < 5) {
+        if (!http.begin(client, url)) {
+            fail("HTTP begin fehlgeschlagen");
+            return;
+        }
+        const char* hdrs[] = {"location"};
+        http.collectHeaders(hdrs, 1);
+        http.addHeader("User-Agent", "DoorInterface-ESP32");
+        code = http.GET();
+        Serial.printf("[UPDATE] HTTP code=%d, headers=%d\n", code, http.headers());
+        if (code == 301 || code == 302 || code == 307 || code == 308) {
+            String loc = http.header("location");
+            Serial.printf("[UPDATE] Redirect %d -> %s\n", code, loc.c_str());
+            http.end();
+            if (loc.length() == 0) { fail("Location-Header leer"); return; }
+            url = loc;
+            redirectCount++;
+            continue;
+        }
+        break;
     }
-    http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-    http.setRedirectLimit(5);
-    http.addHeader("User-Agent", "DoorInterface-ESP32");
-    int code = http.GET();
     if (code != 200) {
         http.end();
         fail("Download HTTP " + String(code));

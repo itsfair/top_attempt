@@ -379,6 +379,15 @@ docs/
         (1.875 MB je), NVS (16 KB), otadata (8 KB). Flash-Auslastung ~72 %.
         **Wichtig**: Wechsel der Partition-Tabelle löscht NVS beim ersten
         Flash — WLAN/NUKI-Credentials/Hostname müssen neu konfiguriert werden.
+- [x] **OTA-Recovery-Falle: Wenn OTA eine Firmware installiert, die nicht
+        lauffähig ist (z.B. Crash im Boot, oder fehlerhaftes Verhalten wie
+        hier beim Redirect-Bug), schreibt die Lib den anderen Slot in
+        `otadata` als „beim naechsten Start aktiv". Ein anschliessendes
+        `pio run -t upload` schreibt zwar den Fix in Slot 0, aber der
+        Bootloader startet weiterhin den (defekten) Slot 1, bis die
+        `otadata`-Partition gelöscht wird. **Loesung in diesem Fall**:
+        `pio run -t erase` → `pio run -t upload` (löscht den gesamten
+        Flash, auch `otadata`; der Bootloader defaultet auf Slot 0).
 - [ ] ESP prüft periodisch GitHub auf neue Version (z. Zt. nur manuell über
         Setup-Seite, später Auto-Poll hintergrundlich).
 
