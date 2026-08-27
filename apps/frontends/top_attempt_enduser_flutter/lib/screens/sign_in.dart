@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
-import 'package:top_attempt_global_client/top_attempt_client.dart';
+import '../main.dart';
+import 'package:go_router/go_router.dart';
 
 class SignIn extends StatelessWidget {
-  final Client client;
-
-  const SignIn({required this.client, super.key});
+  const SignIn({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,10 +12,7 @@ class SignIn extends StatelessWidget {
       body: SignInWidget(
         client: client,
         onAuthenticated: () {
-          // Do something when the user is authenticated.
-          //
-          // NOTE: You should not navigate to the home screen here, otherwise
-          // the user will have to sign in again every time they open the app.
+          context.go('/');
         },
         onError: (error) {
           // Handle errors

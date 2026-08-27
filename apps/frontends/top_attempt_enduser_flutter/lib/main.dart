@@ -68,7 +68,7 @@ class MyApp extends StatelessWidget {
               ),
               GoRoute(
                 path: '/sign-in',
-                builder: (context, state) => SignIn(client: client),
+                builder: (context, state) => SignIn(),
               ),
             ],
           ),
