@@ -51,6 +51,12 @@ redis:
 
 maxRequestSize: 524288 # The maximum size of requests allowed in bytes
 
+# File storage endpoint (RustFS / S3-compatible), read in lib/server.dart.
+#rustFS:
+#  scheme: 'https'
+#  host: 'storage.examplepod.com'
+#  port: 443
+
 sessionLogs:
   consoleEnabled: false
 # persistentEnabled: true

@@ -45,6 +45,14 @@ redis:
   #user: # defaults to empty
   #requireSsl: true # defaults to false
 
+# File storage endpoint (RustFS / S3-compatible) used by the server
+# (read in lib/server.dart). Use your LAN IP instead of localhost when
+# testing from a real device in the same network.
+rustFS:
+  scheme: 'http'
+  host: '192.168.1.109'
+  port: 9001
+
 maxRequestSize: 524288 # The maximum size of requests allowed in bytes
 
 sessionLogs:

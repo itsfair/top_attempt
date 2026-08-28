@@ -15,8 +15,6 @@ class Layout extends StatefulWidget {
 
 class _LayoutState extends State<Layout> {
   bool _isSignedIn = false;
-  String? _displayName;
-  ImageProvider<Object>? _avatarImage;
 
   @override
   void initState() {
@@ -34,29 +32,18 @@ class _LayoutState extends State<Layout> {
   void _updateAuthState() {
     setState(() {
       _isSignedIn = client.auth.isAuthenticated;
-      if (!_isSignedIn) {
-        _displayName = null;
-        _avatarImage = null;
-      }
     });
   }
 
   String? get _initials {
-    final name = _displayName?.trim();
-    if (name == null || name.isEmpty) return null;
-    return name
+    final fullName = profileState.profile?.fullName?.trim();
+    if (fullName == null || fullName.isEmpty) return null;
+    return fullName
         .split(RegExp(r'\s+'))
         .where((part) => part.isNotEmpty)
         .map((part) => part[0].toUpperCase())
         .take(2)
         .join();
-  }
-
-  void _showNotImplemented(String feature) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature ist noch nicht implementiert')),
-    );
   }
 
   Future<void> _signOut() async {
@@ -73,76 +60,96 @@ class _LayoutState extends State<Layout> {
       );
     }
 
-    final initials = _initials;
-    return PopupMenuButton<String>(
-      tooltip: 'Konto',
-      offset: const Offset(0, kToolbarHeight),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      onSelected: (value) {
-        switch (value) {
-          case 'profil':
-            _showNotImplemented('Profil');
-          case 'einstellungen':
-            _showNotImplemented('Einstellungen');
-          case 'logout':
-            _signOut();
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem<String>(
-          value: 'profil',
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.person_outline),
-            title: Text('Profil'),
+    // The profile state can change while this menu is open or rebuilds.
+    return ListenableBuilder(
+      listenable: profileState,
+      builder: (context, _) {
+        final imageUrl = profileState.profile?.imageUrl;
+        final initials = _initials;
+
+        return PopupMenuButton<String>(
+          tooltip: 'Konto',
+          offset: const Offset(0, kToolbarHeight),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        ),
-        const PopupMenuItem<String>(
-          value: 'einstellungen',
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.settings_outlined),
-            title: Text('Einstellungen'),
-          ),
-        ),
-        const PopupMenuDivider(),
-        const PopupMenuItem<String>(
-          value: 'logout',
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.logout),
-            title: Text('Logout'),
-          ),
-        ),
-      ],
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 15,
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              foregroundImage: _avatarImage,
-              child: _avatarImage == null && initials != null
-                  ? Text(
-                      initials,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    )
-                  : Icon(
-                      Icons.person_outline,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+          onSelected: (value) {
+            switch (value) {
+              case 'profil':
+                context.go('/profile');
+              case 'einstellungen':
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Einstellungen sind noch nicht implementiert',
                     ),
+                  ),
+                );
+              case 'logout':
+                _signOut();
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem<String>(
+              value: 'profil',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.person_outline),
+                title: Text('Profil'),
+              ),
             ),
-            const Icon(Icons.arrow_drop_down),
+            const PopupMenuItem<String>(
+              value: 'einstellungen',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.settings_outlined),
+                title: Text('Einstellungen'),
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem<String>(
+              value: 'logout',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.logout),
+                title: Text('Logout'),
+              ),
+            ),
           ],
-        ),
-      ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 15,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  foregroundColor: Theme.of(
+                    context,
+                  ).colorScheme.onPrimaryContainer,
+                  foregroundImage: imageUrl == null
+                      ? null
+                      : NetworkImage(imageUrl.toString()),
+                  child: imageUrl != null
+                      ? null
+                      : initials != null
+                      ? Text(
+                          initials,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        )
+                      : const Icon(Icons.person_outline, size: 18),
+                ),
+                const Icon(Icons.arrow_drop_down),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

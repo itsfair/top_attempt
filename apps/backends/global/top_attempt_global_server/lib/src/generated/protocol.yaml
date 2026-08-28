@@ -9,5 +9,14 @@ emailIdp:
   - hasAccount:
 jwtRefresh:
   - refreshAccessToken:
+userProfileEdit:
+  - removeUserImage:
+  - setUserImage:
+  - changeUserName:
+  - changeFullName:
+  - get:
 greeting:
   - hello:
+profileDetails:
+  - get:
+  - save:

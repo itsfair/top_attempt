@@ -51,20 +51,21 @@ top_attempt/
 ├── apps/             → Serverpod-Backends + Flutter-Clients (eigene AGENTS.md)
 ├── doorinterface/    → dieses Projekt
 ├── .github/workflows/
-│   ├── firmware.yml  → baut nur `pio run` als CI-Build-Check (kein OTA!)
+│   ├── firmware.yml  → Build + GitHub-Release bei Tag-Push `fw-v*`
 │   ├── analyze.yml   → Dart-Analyse für apps/
 │   ├── format.yml    → dart format-Check für apps/
 │   └── tests.yml     → dart test für apps/
 └── README.md
 ```
 
-- Die alten OTA-Workflows (`dev-manifest.yml`, `release.yml`) wurden
-  gelöscht. Es gibt aktuell **kein** automatisches Manifest- oder
-  Release-Management — eventuell später nach dem OTA-Relaunch neu anlegen.
+- Die ursprünglichen OTA-Workflows (`dev-manifest.yml`, `release.yml`)
+  wurden entfernt; stattdessen baut `firmware.yml` bei Tag-Push `fw-v*`
+  und erstellt ein GitHub-Release mit `firmware.bin` — die Firmware
+  (`src/Updater.cpp`) zieht dieses Release per OTA auf das Gerät.
 - Der alte Firmware-Code mit `Update()` / `update_manager.*` /
   `partitions/ota.csv` / `firmware/manifest-*.json` wurde komplett
-  verworfen. Die aktuelle Firmware nutzt die Default-Partition-Table
-  (kein OTA-Slot), deshalb der knappe Flash (92.2%) — siehe TODO.
+  verworfen. Die aktuelle Firmware nutzt eine Custom-Partition-Table
+  (`partitions.csv`, 2 OTA-Slots, Flash-Auslastung ~72 %).
 
 ## Code-Struktur (Stand jetzt)
 
@@ -282,7 +283,6 @@ docs/
     BleServer startet vor `NukiManager` (nimmt `NimBLEDevice::init` vorweg
     → Advertising-Name = Hostname). Deferred in `loop()` analog zu Nuki.
     Spec: `docs/ble_interface.md`. Noch ohne Backend / ohne Verschlüsselung.
-<<<<<<< HEAD
 15. **NUKI Ultra-/Go-PIN-Eingabe**: Setup-Seite um PIN-Feld ergänzt
     (`/api/nuki/pin` GET/POST), `NukiManager::setUltraPin()` ruft
     `saveUltraPincode()` auf (Lib speichert selbst im NVS). Status-Endpoint
@@ -300,8 +300,6 @@ docs/
     erstellt GitHub-Release. Version wird per `${sysenv.FW_VERSION_FLAGS}`
     in den Build injiziert (lokal: `0.0.0-dev` Fallback). Flash-Stand
     nach OTA-Integration: 72.1 %.
-=======
->>>>>>> 1d0e9c06369b58cb019c9a37ddc34579a58a15d4
 
 ## Arbeitsweise
 
@@ -393,8 +391,6 @@ docs/
 
 ### Logging / Robustheit
 - [ ] Zentrales Debug-Makro (`#define DEBUG_SERIAL` + `LOGI/LOGW/LOGE`).
-- [ ] Flash bei 92.2% — knapp. Custom-Partition-Table (kein OTA-Slot →
-        2 MB App) oder `-Os` bei Bedarf.
 
 ### Doku
 - [x] **BLE-Schnittstelle ESP↔Smartphone-App** in `docs/ble_interface.md`

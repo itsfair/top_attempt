@@ -16,9 +16,12 @@ import 'package:serverpod_client/serverpod_client.dart' as _i2;
 import 'dart:async' as _i3;
 import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
     as _i4;
+import 'dart:typed_data' as _i5;
 import 'package:top_attempt_global_client/src/protocol/greetings/greeting.dart'
-    as _i5;
-import 'protocol.dart' as _i6;
+    as _i6;
+import 'package:top_attempt_global_client/src/protocol/profile/profile_details.dart'
+    as _i7;
+import 'protocol.dart' as _i8;
 
 /// By extending [EmailIdpBaseEndpoint], the email identity provider endpoints
 /// are made available on the server and enable the corresponding sign-in widget
@@ -241,6 +244,63 @@ class EndpointJwtRefresh extends _i4.EndpointRefreshJwtTokens {
   );
 }
 
+/// Exposes the built-in user profile management endpoints of the
+/// authentication module to the app (get, set/remove image, change names).
+/// {@category Endpoint}
+class EndpointUserProfileEdit extends _i4.EndpointUserProfileEditBase {
+  EndpointUserProfileEdit(_i2.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'userProfileEdit';
+
+  /// Removes the user's uploaded image, setting it to null.
+  ///
+  /// The client should handle displaying a placeholder for users without images.
+  @override
+  _i3.Future<_i4.UserProfileModel> removeUserImage() =>
+      caller.callServerEndpoint<_i4.UserProfileModel>(
+        'userProfileEdit',
+        'removeUserImage',
+        {},
+      );
+
+  /// Sets a new user image for the signed in user.
+  @override
+  _i3.Future<_i4.UserProfileModel> setUserImage(_i5.ByteData image) =>
+      caller.callServerEndpoint<_i4.UserProfileModel>(
+        'userProfileEdit',
+        'setUserImage',
+        {'image': image},
+      );
+
+  /// Changes the name of a user.
+  @override
+  _i3.Future<_i4.UserProfileModel> changeUserName(String? userName) =>
+      caller.callServerEndpoint<_i4.UserProfileModel>(
+        'userProfileEdit',
+        'changeUserName',
+        {'userName': userName},
+      );
+
+  /// Changes the full name of a user.
+  @override
+  _i3.Future<_i4.UserProfileModel> changeFullName(String? fullName) =>
+      caller.callServerEndpoint<_i4.UserProfileModel>(
+        'userProfileEdit',
+        'changeFullName',
+        {'fullName': fullName},
+      );
+
+  /// Returns the user profile of the current user.
+  @override
+  _i3.Future<_i4.UserProfileModel> get() =>
+      caller.callServerEndpoint<_i4.UserProfileModel>(
+        'userProfileEdit',
+        'get',
+        {},
+      );
+}
+
 /// This is an example endpoint that returns a greeting message through
 /// its [hello] method.
 /// {@category Endpoint}
@@ -251,12 +311,49 @@ class EndpointGreeting extends _i2.EndpointRef {
   String get name => 'greeting';
 
   /// Returns a personalized greeting message: "Hello {name}".
-  _i3.Future<_i5.Greeting> hello(String name) =>
-      caller.callServerEndpoint<_i5.Greeting>(
+  _i3.Future<_i6.Greeting> hello(String name) =>
+      caller.callServerEndpoint<_i6.Greeting>(
         'greeting',
         'hello',
         {'name': name},
       );
+}
+
+/// Endpoint for the user's own profile details (first name, last name and
+/// birthday). Email, user id and the profile image are managed by the
+/// built-in authentication module endpoints (see UserProfileEditEndpoint).
+/// {@category Endpoint}
+class EndpointProfileDetails extends _i2.EndpointRef {
+  EndpointProfileDetails(_i2.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'profileDetails';
+
+  /// Returns the profile details of the signed-in user, or null if they have
+  /// never been saved yet.
+  _i3.Future<_i7.ProfileDetails?> get() =>
+      caller.callServerEndpoint<_i7.ProfileDetails?>(
+        'profileDetails',
+        'get',
+        {},
+      );
+
+  /// Validates and saves the profile details of the signed-in user.
+  /// The name is also written to the built-in user profile so that other
+  /// parts of the system see a consistent full name.
+  _i3.Future<_i7.ProfileDetails> save({
+    required String firstName,
+    required String lastName,
+    required DateTime birthday,
+  }) => caller.callServerEndpoint<_i7.ProfileDetails>(
+    'profileDetails',
+    'save',
+    {
+      'firstName': firstName,
+      'lastName': lastName,
+      'birthday': birthday,
+    },
+  );
 }
 
 class Modules {
@@ -290,7 +387,7 @@ class Client extends _i2.ServerpodClientShared {
     bool? disconnectStreamsOnLostInternetConnection,
   }) : super(
          host,
-         _i6.Protocol(),
+         _i8.Protocol(),
          securityContext: securityContext,
          streamingConnectionTimeout: streamingConnectionTimeout,
          connectionTimeout: connectionTimeout,
@@ -301,7 +398,9 @@ class Client extends _i2.ServerpodClientShared {
        ) {
     emailIdp = EndpointEmailIdp(this);
     jwtRefresh = EndpointJwtRefresh(this);
+    userProfileEdit = EndpointUserProfileEdit(this);
     greeting = EndpointGreeting(this);
+    profileDetails = EndpointProfileDetails(this);
     modules = Modules(this);
   }
 
@@ -309,7 +408,11 @@ class Client extends _i2.ServerpodClientShared {
 
   late final EndpointJwtRefresh jwtRefresh;
 
+  late final EndpointUserProfileEdit userProfileEdit;
+
   late final EndpointGreeting greeting;
+
+  late final EndpointProfileDetails profileDetails;
 
   late final Modules modules;
 
@@ -317,7 +420,9 @@ class Client extends _i2.ServerpodClientShared {
   Map<String, _i2.EndpointRef> get endpointRefLookup => {
     'emailIdp': emailIdp,
     'jwtRefresh': jwtRefresh,
+    'userProfileEdit': userProfileEdit,
     'greeting': greeting,
+    'profileDetails': profileDetails,
   };
 
   @override

@@ -13,11 +13,14 @@
 import 'package:serverpod/serverpod.dart' as _i1;
 import '../auth/email_idp_endpoint.dart' as _i2;
 import '../auth/jwt_refresh_endpoint.dart' as _i3;
-import '../greetings/greeting_endpoint.dart' as _i4;
+import '../auth/user_profile_edit_endpoint.dart' as _i4;
+import '../greetings/greeting_endpoint.dart' as _i5;
+import '../profile/profile_details_endpoint.dart' as _i6;
+import 'dart:typed_data' as _i7;
 import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
-    as _i5;
+    as _i8;
 import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
-    as _i6;
+    as _i9;
 
 class Endpoints extends _i1.EndpointDispatch {
   @override
@@ -35,10 +38,22 @@ class Endpoints extends _i1.EndpointDispatch {
           'jwtRefresh',
           null,
         ),
-      'greeting': _i4.GreetingEndpoint()
+      'userProfileEdit': _i4.UserProfileEditEndpoint()
+        ..initialize(
+          server,
+          'userProfileEdit',
+          null,
+        ),
+      'greeting': _i5.GreetingEndpoint()
         ..initialize(
           server,
           'greeting',
+          null,
+        ),
+      'profileDetails': _i6.ProfileDetailsEndpoint()
+        ..initialize(
+          server,
+          'profileDetails',
           null,
         ),
     };
@@ -246,6 +261,94 @@ class Endpoints extends _i1.EndpointDispatch {
         ),
       },
     );
+    connectors['userProfileEdit'] = _i1.EndpointConnector(
+      name: 'userProfileEdit',
+      endpoint: endpoints['userProfileEdit']!,
+      methodConnectors: {
+        'removeUserImage': _i1.MethodConnector(
+          name: 'removeUserImage',
+          params: {},
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['userProfileEdit'] as _i4.UserProfileEditEndpoint)
+                      .removeUserImage(session),
+        ),
+        'setUserImage': _i1.MethodConnector(
+          name: 'setUserImage',
+          params: {
+            'image': _i1.ParameterDescription(
+              name: 'image',
+              type: _i1.getType<_i7.ByteData>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['userProfileEdit'] as _i4.UserProfileEditEndpoint)
+                      .setUserImage(
+                        session,
+                        params['image'],
+                      ),
+        ),
+        'changeUserName': _i1.MethodConnector(
+          name: 'changeUserName',
+          params: {
+            'userName': _i1.ParameterDescription(
+              name: 'userName',
+              type: _i1.getType<String?>(),
+              nullable: true,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['userProfileEdit'] as _i4.UserProfileEditEndpoint)
+                      .changeUserName(
+                        session,
+                        params['userName'],
+                      ),
+        ),
+        'changeFullName': _i1.MethodConnector(
+          name: 'changeFullName',
+          params: {
+            'fullName': _i1.ParameterDescription(
+              name: 'fullName',
+              type: _i1.getType<String?>(),
+              nullable: true,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['userProfileEdit'] as _i4.UserProfileEditEndpoint)
+                      .changeFullName(
+                        session,
+                        params['fullName'],
+                      ),
+        ),
+        'get': _i1.MethodConnector(
+          name: 'get',
+          params: {},
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['userProfileEdit'] as _i4.UserProfileEditEndpoint)
+                      .get(session),
+        ),
+      },
+    );
     connectors['greeting'] = _i1.EndpointConnector(
       name: 'greeting',
       endpoint: endpoints['greeting']!,
@@ -263,16 +366,65 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['greeting'] as _i4.GreetingEndpoint).hello(
+              ) async => (endpoints['greeting'] as _i5.GreetingEndpoint).hello(
                 session,
                 params['name'],
               ),
         ),
       },
     );
-    modules['serverpod_auth_idp'] = _i5.Endpoints()
+    connectors['profileDetails'] = _i1.EndpointConnector(
+      name: 'profileDetails',
+      endpoint: endpoints['profileDetails']!,
+      methodConnectors: {
+        'get': _i1.MethodConnector(
+          name: 'get',
+          params: {},
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['profileDetails'] as _i6.ProfileDetailsEndpoint)
+                      .get(session),
+        ),
+        'save': _i1.MethodConnector(
+          name: 'save',
+          params: {
+            'firstName': _i1.ParameterDescription(
+              name: 'firstName',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+            'lastName': _i1.ParameterDescription(
+              name: 'lastName',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+            'birthday': _i1.ParameterDescription(
+              name: 'birthday',
+              type: _i1.getType<DateTime>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['profileDetails'] as _i6.ProfileDetailsEndpoint)
+                      .save(
+                        session,
+                        firstName: params['firstName'],
+                        lastName: params['lastName'],
+                        birthday: params['birthday'],
+                      ),
+        ),
+      },
+    );
+    modules['serverpod_auth_idp'] = _i8.Endpoints()
       ..initializeEndpoints(server);
-    modules['serverpod_auth_core'] = _i6.Endpoints()
+    modules['serverpod_auth_core'] = _i9.Endpoints()
       ..initializeEndpoints(server);
   }
 }
