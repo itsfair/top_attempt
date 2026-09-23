@@ -300,6 +300,18 @@ docs/
     erstellt GitHub-Release. Version wird per `${sysenv.FW_VERSION_FLAGS}`
     in den Build injiziert (lokal: `0.0.0-dev` Fallback). Flash-Stand
     nach OTA-Integration: 72.1 %.
+17. **NUKI-Pairing-Name = Hostname**: `NukiLock` wird erst in
+    `NukiManager::begin(deviceName)` erzeugt (Heap-Pointer statt Member,
+    main.cpp übergibt `wifi.getHostname()`), Name = konfigurierter
+    Hostname statt festem „DoorInterface". Name wird auf 32 Zeichen
+    gekürzt (die Lib memcpy't den Namen beim Pairing in einen festen
+    32-Byte-Puffer ohne Clamp). **Achtung**: Der Name ist zugleich der
+    NVS-Namespace der NUKI-Credentials (Lib-intern `preferencesId`) —
+    nach Hostname-Änderung ist Re-Pairing nötig, der alte Namespace
+    bleibt als Leiche im NVS, am Lock bleibt der alte Authorization-
+    Entry stehen. Zwei ESPs mit gleichem Namen: technisch unkritisch
+    (Lock unterscheidet Pairings intern per Authorization-ID), aber
+    zwei identische Entrys in der NUKI-App.
 
 ## Arbeitsweise
 

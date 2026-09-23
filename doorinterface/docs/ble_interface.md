@@ -2,8 +2,8 @@
 
 Schnittstelle für die direkte Kommunikation zwischen der Enduser-Smartphone-App
 und dem ESP32 per Bluetooth Low Energy (BLE). Status: **Prototyp / Test-Stage**
-— die Backend-Anbindung ist noch nicht implementiert, Antworten werden auf dem
-ESP gemockt.
+— die Backend-Anbindung (Credential-Prüfung) ist noch nicht implementiert.
+Die Türöffnung erfolgt jedoch bereits echt lokal per NUKI (`unlatch()`).
 
 ## Übersicht
 
@@ -48,7 +48,7 @@ Smartphone-App                ESP32 (Peripheral)              Lokales Backend
 
 | Feld         | Typ   | Pflicht | Bedeutung                                                  |
 |--------------|-------|---------|------------------------------------------------------------|
-| `action`     | str   | ja      | `"test"` zum Verbindungstest, später `"open"` zum Türöffnen |
+| `action`     | str   | ja      | `"test"` (Verbindungstest + Türöffnung) oder `"open"` (Türöffnung) |
 | `credential` | str   | nein*   | Zugangsdaten (im Prototyp beliebiger String)               |
 | `deviceId`   | str   | nein    | Geräte-ID des Smartphones, nur fürs Logging / Echo        |
 
@@ -60,7 +60,7 @@ Smartphone-App                ESP32 (Peripheral)              Lokales Backend
 {
   "success": true,
   "code": "TEST_OK",
-  "message": "Test empfangen: pixel7"
+  "message": "Test ok, Tuer geoeffnet"
 }
 ```
 
@@ -74,12 +74,14 @@ Smartphone-App                ESP32 (Peripheral)              Lokales Backend
 
 | `code`            | `success` | Bedeutung                                            |
 |-------------------|-----------|------------------------------------------------------|
-| `OK`              | true      | `action=open` akzeptiert (Mock-Türöffnung)           |
-| `TEST_OK`         | true      | `action=test` empfangen, Echo mit `deviceId`         |
+| `OK`              | true      | Tür echt geöffnet (`action=open`, NUKI `unlatch()`)  |
+| `TEST_OK`         | true      | `action=test` + Tür echt geöffnet                    |
+| `NOT_PAIRED`      | false     | Kein NUKI-Schloss gepaart                            |
+| `LOCK_FAILED`     | false     | `unlatch()` wurde nicht angenommen                   |
 | `UNKNOWN_ACTION`  | false     | `action` fehlt oder wurde nicht erkannt              |
 
 Später (mit Backend) erweitert um z.B. `BACKEND_UNREACHABLE`, `CRED_INVALID`,
-`ACCESS_DENIED`, `LOCK_FAILED`.
+`ACCESS_DENIED`.
 
 ## Ablauf einer Test-Session
 
@@ -88,8 +90,11 @@ Später (mit Backend) erweitert um z.B. `BACKEND_UNREACHABLE`, `CRED_INVALID`,
 3. App subscribt auf Response-Characteristic (CCCD, Notify=0x0001).
 4. App schreibt JSON auf Request-Characteristic, z.B.
    `{"action":"test","credential":"","deviceId":"pixel7"}`.
-5. ESP extrahiert die Felder, loggt sie im Serial Monitor, erzeugt Response.
-6. ESP sendet Notify auf Response-Characteristic mit dem Response-JSON.
+5. ESP extrahiert die Felder, loggt sie im Serial Monitor, löst per NUKI
+   `unlatch()` die Türöffnung aus und erzeugt die Response.
+6. Der Write wird sofort auf GATT-Ebene bestätigt; die Verarbeitung erfolgt
+   im Haupt-Loop — erst Türöffnung am NUKI (Connect, typisch 2–10 s),
+   dann Notify-Response mit dem Result-JSON.
 7. App zeigt Response an (z.B. Toast / SnackBar: "Test empfangen: pixel7").
 8. App trennt → ESP loggt `[BLE] client disconnected` und startet Advertising
    neu, damit der nächste Client andocken kann.
@@ -102,7 +107,7 @@ Später (mit Backend) erweitert um z.B. `BACKEND_UNREACHABLE`, `CRED_INVALID`,
 [BLE] client connected
 [BLE] RX (52 bytes): {"action":"test","credential":"","deviceId":"pixel7"}
 [BLE] parsed: action=test credential= deviceId=pixel7
-[BLE] TX: {"success":true,"code":"TEST_OK","message":"Test empfangen: pixel7"}
+[BLE] TX: {"success":true,"code":"TEST_OK","message":"Test ok, Tuer geoeffnet"}
 [BLE] client disconnected
 ```
 

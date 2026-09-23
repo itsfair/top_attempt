@@ -1,4 +1,5 @@
 #include "BleServer.h"
+#include "NukiManager.h"
 
 #define SERVICE_UUID        "5f6d4f5a-0001-0001-8000-00805f9b34fb"
 #define CHAR_REQUEST_UUID   "5f6d4f5a-0002-0001-8000-00805f9b34fb"
@@ -41,28 +42,12 @@ public:
         String deviceId   = extractField(payload, "deviceId");
         Serial.printf("[BLE] parsed: action=%s credential=%s deviceId=%s\n",
             action.c_str(), credential.c_str(), deviceId.c_str());
-
-        bool success = false;
-        String code, message;
-        if (action == "open") {
-            success = true;  code = "OK";             message = "Tuer geoeffnet (mock)";
-        } else if (action == "test") {
-            success = true;  code = "TEST_OK";        message = "Test empfangen: " + deviceId;
-        } else {
-            success = false; code = "UNKNOWN_ACTION"; message = "Aktion unbekannt";
-        }
-
-        String resp = "{\"success\":";
-        resp += success ? "true" : "false";
-        resp += ",\"code\":\"" + code + "\"";
-        resp += ",\"message\":\"" + message + "\"";
-        resp += "}";
-        Serial.printf("[BLE] TX: %s\n", resp.c_str());
-        _owner->sendResponse(resp);
+        _owner->queueRequest(action, deviceId);
     }
 };
 
-void BleServer::begin(const String& deviceName) {
+void BleServer::begin(const String& deviceName, NukiManager* nuki) {
+    _nuki = nuki;
     Serial.println("[BLE] init server");
     NimBLEDevice::init(deviceName.c_str());
     NimBLEDevice::setMTU(128);
@@ -92,7 +77,37 @@ String BleServer::getAddress() {
     return String(NimBLEDevice::getAddress().toString().c_str());
 }
 
-void BleServer::loop() {}
+void BleServer::loop() {
+    if (_pendingAction.isEmpty()) return;
+    String action = _pendingAction;
+    _pendingAction = "";
+    _pendingDeviceId = "";
+
+    bool success = false;
+    String code, message;
+    if (action == "open") {
+        success = openDoor(code, message);
+    } else if (action == "test") {
+        success = openDoor(code, message);
+        code = "TEST_OK";
+        if (success) message = "Test ok, " + message;
+    } else {
+        success = false; code = "UNKNOWN_ACTION"; message = "Aktion unbekannt";
+    }
+
+    String resp = "{\"success\":";
+    resp += success ? "true" : "false";
+    resp += ",\"code\":\"" + code + "\"";
+    resp += ",\"message\":\"" + message + "\"";
+    resp += "}";
+    Serial.printf("[BLE] TX: %s\n", resp.c_str());
+    sendResponse(resp);
+}
+
+void BleServer::queueRequest(const String& action, const String& deviceId) {
+    _pendingAction = action;
+    _pendingDeviceId = deviceId;
+}
 
 void BleServer::sendResponse(const String& resp) {
     NimBLECharacteristic* responseChar = NimBLEDevice::getServer()->getServiceByUUID(SERVICE_UUID)->getCharacteristic(CHAR_RESPONSE_UUID);
@@ -100,4 +115,17 @@ void BleServer::sendResponse(const String& resp) {
         responseChar->setValue(std::string(resp.c_str()));
         responseChar->notify();
     }
+}
+
+bool BleServer::openDoor(String& code, String& message) {
+    if (!_nuki || !_nuki->isPaired()) {
+        code = "NOT_PAIRED"; message = "Kein Schloss gepaart";
+        return false;
+    }
+    if (_nuki->unlatch()) {
+        code = "OK"; message = "Tuer geoeffnet";
+        return true;
+    }
+    code = "LOCK_FAILED"; message = "Oeffnen fehlgeschlagen";
+    return false;
 }

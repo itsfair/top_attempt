@@ -3,7 +3,7 @@ abstract final class BleConstants {
   static const String serviceUuid = '5f6d4f5a-0001-0001-8000-00805f9b34fb';
   static const String requestCharUuid = '5f6d4f5a-0002-0001-8000-00805f9b34fb';
   static const String responseCharUuid = '5f6d4f5a-0003-0001-8000-00805f9b34fb';
-  static const Duration responseTimeout = Duration(seconds: 5);
+  static const Duration responseTimeout = Duration(seconds: 20);
   static const Duration connectTimeout = Duration(seconds: 10);
 }
 

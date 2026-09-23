@@ -1,13 +1,19 @@
 # top_attempt
 
 Monorepo for the DoorInterface project — an ESP32-based door
-controller, a Serverpod 3.3.1 backend, and Flutter clients.
+controller, Serverpod backends, and Flutter clients.
+
+## Documentation
+
+The project overview, architecture, scenarios, current status, interfaces,
+security notes and prioritized roadmap are documented in
+[`docs/project.md`](docs/project.md).
 
 ## Layout
 
 | Path | What | Docs |
 |---|---|---|
-| `apps/` | Serverpod 3.3.1 backends (`global` + `local`) and Flutter clients | [`apps/AGENTS.md`](apps/AGENTS.md) |
+| `apps/` | Serverpod backends (`global` + `local`) and Flutter clients | [`docs/project.md`](docs/project.md) |
 | `doorinterface/` | ESP32 firmware (Arduino / PlatformIO) | [`doorinterface/AGENTS.md`](doorinterface/AGENTS.md) |
 
 ## Build status

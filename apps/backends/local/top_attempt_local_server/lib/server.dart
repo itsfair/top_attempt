@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:serverpod/serverpod.dart';
 import 'package:serverpod_auth_idp_server/core.dart';
 import 'package:serverpod_auth_idp_server/providers/email.dart';
+import 'package:serverpod_cloud_storage_rustfs/serverpod_cloud_storage_rustfs.dart';
+import 'package:yaml/yaml.dart';
 
 import 'src/generated/endpoints.dart';
 import 'src/generated/protocol.dart';
@@ -29,6 +31,21 @@ void run(List<String> args) async {
         sendPasswordResetVerificationCode: _sendPasswordResetCode,
       ),
     ],
+  );
+
+  // Register the RustFS cloud storage (S3-compatible) as the 'public' file
+  // storage, replacing the database-backed default. The endpoint is read
+  // from the stage specific config file (`rustFS` block, see
+  // config/development.yaml). Do not set `publicHost` - the adapter v1.0.0
+  // builds broken URLs in that case (see AGENTS.md).
+  pod.addCloudStorage(
+    RustFsCloudStorage(
+      serverpod: pod,
+      storageId: 'public',
+      public: true,
+      bucket: 'top-attempt',
+      baseUri: _rustFsBaseUri(pod),
+    ),
   );
 
   // Setup a default page at the web root.
@@ -75,6 +92,26 @@ void run(List<String> args) async {
 
   // Start the server.
   await pod.start();
+}
+
+/// Reads the RustFS endpoint (scheme/host/port) from the stage specific
+/// config file (top level `rustFS` block). Falls back to the local
+/// docker-compose default when the file or block is missing.
+Uri _rustFsBaseUri(Serverpod pod) {
+  const defaultUri = 'http://localhost:9001';
+
+  final file = File('config/${pod.config.runMode}.yaml');
+  if (!file.existsSync()) return Uri.parse(defaultUri);
+
+  final doc = loadYaml(file.readAsStringSync());
+  final rustFs = doc is YamlMap ? doc['rustFS'] : null;
+  if (rustFs is! YamlMap) return Uri.parse(defaultUri);
+
+  return Uri(
+    scheme: rustFs['scheme']?.toString() ?? 'http',
+    host: rustFs['host']?.toString() ?? 'localhost',
+    port: int.tryParse(rustFs['port']?.toString() ?? '') ?? 9001,
+  );
 }
 
 void _sendRegistrationCode(

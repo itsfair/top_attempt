@@ -8,7 +8,7 @@
 class NukiManager : public Nuki::SmartlockEventHandler {
 public:
     NukiManager();
-    void begin();
+    void begin(const String& deviceName);
     void loop();
 
     bool isPaired();
@@ -35,7 +35,7 @@ public:
 
 private:
     BleScanner::Scanner _scanner;
-    NukiLock::NukiLock _nukiLock;
+    NukiLock::NukiLock* _nukiLock = nullptr;
     Preferences _prefs;
 
     bool _pairingRequested = false;

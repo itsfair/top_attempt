@@ -1,34 +1,36 @@
 #include "NukiManager.h"
 
-NukiManager::NukiManager()
-    : _nukiLock("DoorInterface", 123456) {}
+NukiManager::NukiManager() {}
 
-void NukiManager::begin() {
+void NukiManager::begin(const String& deviceName) {
     Serial.println("[NUKI] init");
+    String nukiName = deviceName;
+    if (nukiName.length() > 32) nukiName = nukiName.substring(0, 32);
+    _nukiLock = new NukiLock::NukiLock(nukiName.c_str(), 123456);
     _scanner.initialize();
-    _nukiLock.registerBleScanner(&_scanner);
-    _nukiLock.initialize();
-    _nukiLock.setEventHandler(this);
+    _nukiLock->registerBleScanner(&_scanner);
+    _nukiLock->initialize();
+    _nukiLock->setEventHandler(this);
     loadPollInterval();
     Serial.printf("[NUKI] paired: %s, hasUltraPin: %s, pollInterval: %lus\n",
-        _nukiLock.isPairedWithLock() ? "yes" : "no",
+        _nukiLock->isPairedWithLock() ? "yes" : "no",
         hasUltraPin() ? "yes" : "no",
         (unsigned long)_pollInterval);
-    if (_nukiLock.isPairedWithLock()) {
+    if (_nukiLock->isPairedWithLock()) {
         _stateUpdateNeeded = true;
     }
 }
 
 void NukiManager::loop() {
     _scanner.update();
-    _nukiLock.updateConnectionState();
+    _nukiLock->updateConnectionState();
 
     unsigned long now = millis();
-    if (_nukiLock.isPairedWithLock() && (now - _lastStateRequest >= (unsigned long)_pollInterval * 1000)) {
+    if (_nukiLock->isPairedWithLock() && (now - _lastStateRequest >= (unsigned long)_pollInterval * 1000)) {
         _stateUpdateNeeded = true;
     }
 
-    if (_stateUpdateNeeded && _nukiLock.isPairedWithLock()) {
+    if (_stateUpdateNeeded && _nukiLock->isPairedWithLock()) {
         _stateUpdateNeeded = false;
         requestState();
     }
@@ -38,7 +40,7 @@ void NukiManager::loop() {
             _pairingRequested = false;
             Serial.println("[NUKI] Pairing-Timeout");
         } else {
-            Nuki::PairingResult result = _nukiLock.pairNuki();
+            Nuki::PairingResult result = _nukiLock->pairNuki();
             if (result == Nuki::PairingResult::Success) {
                 _pairingRequested = false;
                 _stateUpdateNeeded = true;
@@ -50,7 +52,7 @@ void NukiManager::loop() {
 
 void NukiManager::requestState() {
     _lastStateRequest = millis();
-    Nuki::CmdResult result = _nukiLock.requestKeyTurnerState(&_lastState);
+    Nuki::CmdResult result = _nukiLock->requestKeyTurnerState(&_lastState);
     if (result == Nuki::CmdResult::Success) {
         _hasState = true;
         char stateStr[32];
@@ -58,7 +60,7 @@ void NukiManager::requestState() {
         String currentState = String(stateStr);
         if (currentState != _lastLoggedState) {
             _lastLoggedState = currentState;
-            Serial.printf("[NUKI] State: %s, Battery: %d%%\n", stateStr, _nukiLock.getBatteryPerc());
+            Serial.printf("[NUKI] State: %s, Battery: %d%%\n", stateStr, _nukiLock->getBatteryPerc());
         }
     } else {
         Serial.printf("[NUKI] State-Request fehlgeschlagen (%d)\n", (int)result);
@@ -66,11 +68,11 @@ void NukiManager::requestState() {
     }
 }
 
-bool NukiManager::isPaired() { return _nukiLock.isPairedWithLock(); }
+bool NukiManager::isPaired() { return _nukiLock->isPairedWithLock(); }
 bool NukiManager::isPairing() { return _pairingRequested; }
 
 void NukiManager::startPairing() {
-    if (_nukiLock.isPairedWithLock()) return;
+    if (_nukiLock->isPairedWithLock()) return;
     _pairingRequested = true;
     _pairingStart = millis();
     Serial.println("[NUKI] Pairing gestartet");
@@ -84,15 +86,15 @@ void NukiManager::cancelPairing() {
 void NukiManager::setUltraPin(uint32_t pin) {
     if (pin == 0) {
         Serial.println("[NUKI] Ultra-PIN geleert");
-        _nukiLock.saveUltraPincode(0, true);
+        _nukiLock->saveUltraPincode(0, true);
     } else {
         Serial.printf("[NUKI] Ultra-PIN gesetzt: %06lu\n", pin);
-        _nukiLock.saveUltraPincode(pin, true);
+        _nukiLock->saveUltraPincode(pin, true);
     }
 }
 
 bool NukiManager::hasUltraPin() {
-    return _nukiLock.getUltraPincode() != 0;
+    return _nukiLock->getUltraPincode() != 0;
 }
 
 void NukiManager::loadPollInterval() {
@@ -126,22 +128,22 @@ String NukiManager::getLockStateStr() {
 
 int NukiManager::getBatteryPct() {
     if (!_hasState) return -1;
-    return _nukiLock.getBatteryPerc();
+    return _nukiLock->getBatteryPerc();
 }
 
 bool NukiManager::isBatteryCritical() {
     if (!_hasState) return false;
-    return _nukiLock.isBatteryCritical();
+    return _nukiLock->isBatteryCritical();
 }
 
 int NukiManager::getRssi() {
-    return _nukiLock.getRssi();
+    return _nukiLock->getRssi();
 }
 
 bool NukiManager::unlock() {
-    if (!_nukiLock.isPairedWithLock()) return false;
+    if (!_nukiLock->isPairedWithLock()) return false;
     Serial.println("[NUKI] Unlock");
-    Nuki::CmdResult result = _nukiLock.lockAction(NukiLock::LockAction::Unlock);
+    Nuki::CmdResult result = _nukiLock->lockAction(NukiLock::LockAction::Unlock);
     if (result == Nuki::CmdResult::Success) {
         _stateUpdateNeeded = true;
         return true;
@@ -151,9 +153,9 @@ bool NukiManager::unlock() {
 }
 
 bool NukiManager::lock() {
-    if (!_nukiLock.isPairedWithLock()) return false;
+    if (!_nukiLock->isPairedWithLock()) return false;
     Serial.println("[NUKI] Lock");
-    Nuki::CmdResult result = _nukiLock.lockAction(NukiLock::LockAction::Lock);
+    Nuki::CmdResult result = _nukiLock->lockAction(NukiLock::LockAction::Lock);
     if (result == Nuki::CmdResult::Success) {
         _stateUpdateNeeded = true;
         return true;
@@ -163,9 +165,9 @@ bool NukiManager::lock() {
 }
 
 bool NukiManager::unlatch() {
-    if (!_nukiLock.isPairedWithLock()) return false;
+    if (!_nukiLock->isPairedWithLock()) return false;
     Serial.println("[NUKI] Unlatch (Tuer oeffnen)");
-    Nuki::CmdResult result = _nukiLock.lockAction(NukiLock::LockAction::Unlatch);
+    Nuki::CmdResult result = _nukiLock->lockAction(NukiLock::LockAction::Unlatch);
     if (result == Nuki::CmdResult::Success) {
         _stateUpdateNeeded = true;
         return true;
@@ -175,9 +177,9 @@ bool NukiManager::unlatch() {
 }
 
 bool NukiManager::unpair() {
-    if (!_nukiLock.isPairedWithLock()) return false;
+    if (!_nukiLock->isPairedWithLock()) return false;
     Serial.println("[NUKI] Unpair");
-    _nukiLock.unPairNuki();
+    _nukiLock->unPairNuki();
     _hasState = false;
     _lastLoggedState = "";
     Serial.println("[NUKI] Unpair abgeschlossen");

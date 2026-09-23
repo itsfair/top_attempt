@@ -24,11 +24,11 @@ void setup() {
 void loop() {
     wifi.loop();
     if (!bleStarted && wifi.isConnected() && !wifi.isApActive()) {
-        ble.begin(wifi.getHostname());
+        ble.begin(wifi.getHostname(), &nuki);
         bleStarted = true;
     }
     if (!nukiStarted && bleStarted) {
-        nuki.begin();
+        nuki.begin(wifi.getHostname());
         nukiStarted = true;
     }
     if (nukiStarted) nuki.loop();
