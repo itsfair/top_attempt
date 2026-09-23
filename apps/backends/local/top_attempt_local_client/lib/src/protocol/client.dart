@@ -18,7 +18,9 @@ import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
     as _i4;
 import 'package:top_attempt_local_client/src/protocol/greetings/greeting.dart'
     as _i5;
-import 'protocol.dart' as _i6;
+import 'package:top_attempt_local_client/src/protocol/profile/profile_details.dart'
+    as _i6;
+import 'protocol.dart' as _i7;
 
 /// By extending [EmailIdpBaseEndpoint], the email identity provider endpoints
 /// are made available on the server and enable the corresponding sign-in widget
@@ -259,6 +261,43 @@ class EndpointGreeting extends _i2.EndpointRef {
       );
 }
 
+/// Endpoint for the user's own profile details (first name, last name and
+/// birthday). Email, user id and the profile image are managed by the
+/// built-in authentication module endpoints (see UserProfileEditEndpoint).
+/// {@category Endpoint}
+class EndpointProfileDetails extends _i2.EndpointRef {
+  EndpointProfileDetails(_i2.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'profileDetails';
+
+  /// Returns the profile details of the signed-in user, or null if they have
+  /// never been saved yet.
+  _i3.Future<_i6.ProfileDetails?> get() =>
+      caller.callServerEndpoint<_i6.ProfileDetails?>(
+        'profileDetails',
+        'get',
+        {},
+      );
+
+  /// Validates and saves the profile details of the signed-in user.
+  /// The name is also written to the built-in user profile so that other
+  /// parts of the system see a consistent full name.
+  _i3.Future<_i6.ProfileDetails> save({
+    required String firstName,
+    required String lastName,
+    required DateTime birthday,
+  }) => caller.callServerEndpoint<_i6.ProfileDetails>(
+    'profileDetails',
+    'save',
+    {
+      'firstName': firstName,
+      'lastName': lastName,
+      'birthday': birthday,
+    },
+  );
+}
+
 class Modules {
   Modules(Client client) {
     serverpod_auth_idp = _i1.Caller(client);
@@ -290,7 +329,7 @@ class Client extends _i2.ServerpodClientShared {
     bool? disconnectStreamsOnLostInternetConnection,
   }) : super(
          host,
-         _i6.Protocol(),
+         _i7.Protocol(),
          securityContext: securityContext,
          streamingConnectionTimeout: streamingConnectionTimeout,
          connectionTimeout: connectionTimeout,
@@ -302,6 +341,7 @@ class Client extends _i2.ServerpodClientShared {
     emailIdp = EndpointEmailIdp(this);
     jwtRefresh = EndpointJwtRefresh(this);
     greeting = EndpointGreeting(this);
+    profileDetails = EndpointProfileDetails(this);
     modules = Modules(this);
   }
 
@@ -311,6 +351,8 @@ class Client extends _i2.ServerpodClientShared {
 
   late final EndpointGreeting greeting;
 
+  late final EndpointProfileDetails profileDetails;
+
   late final Modules modules;
 
   @override
@@ -318,6 +360,7 @@ class Client extends _i2.ServerpodClientShared {
     'emailIdp': emailIdp,
     'jwtRefresh': jwtRefresh,
     'greeting': greeting,
+    'profileDetails': profileDetails,
   };
 
   @override

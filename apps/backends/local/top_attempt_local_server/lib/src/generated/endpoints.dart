@@ -14,10 +14,11 @@ import 'package:serverpod/serverpod.dart' as _i1;
 import '../auth/email_idp_endpoint.dart' as _i2;
 import '../auth/jwt_refresh_endpoint.dart' as _i3;
 import '../greetings/greeting_endpoint.dart' as _i4;
+import '../profile/profile_details_endpoint.dart' as _i5;
 import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
-    as _i5;
-import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
     as _i6;
+import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
+    as _i7;
 
 class Endpoints extends _i1.EndpointDispatch {
   @override
@@ -39,6 +40,12 @@ class Endpoints extends _i1.EndpointDispatch {
         ..initialize(
           server,
           'greeting',
+          null,
+        ),
+      'profileDetails': _i5.ProfileDetailsEndpoint()
+        ..initialize(
+          server,
+          'profileDetails',
           null,
         ),
     };
@@ -270,9 +277,58 @@ class Endpoints extends _i1.EndpointDispatch {
         ),
       },
     );
-    modules['serverpod_auth_idp'] = _i5.Endpoints()
+    connectors['profileDetails'] = _i1.EndpointConnector(
+      name: 'profileDetails',
+      endpoint: endpoints['profileDetails']!,
+      methodConnectors: {
+        'get': _i1.MethodConnector(
+          name: 'get',
+          params: {},
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['profileDetails'] as _i5.ProfileDetailsEndpoint)
+                      .get(session),
+        ),
+        'save': _i1.MethodConnector(
+          name: 'save',
+          params: {
+            'firstName': _i1.ParameterDescription(
+              name: 'firstName',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+            'lastName': _i1.ParameterDescription(
+              name: 'lastName',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+            'birthday': _i1.ParameterDescription(
+              name: 'birthday',
+              type: _i1.getType<DateTime>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['profileDetails'] as _i5.ProfileDetailsEndpoint)
+                      .save(
+                        session,
+                        firstName: params['firstName'],
+                        lastName: params['lastName'],
+                        birthday: params['birthday'],
+                      ),
+        ),
+      },
+    );
+    modules['serverpod_auth_idp'] = _i6.Endpoints()
       ..initializeEndpoints(server);
-    modules['serverpod_auth_core'] = _i6.Endpoints()
+    modules['serverpod_auth_core'] = _i7.Endpoints()
       ..initializeEndpoints(server);
   }
 }

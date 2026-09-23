@@ -48,7 +48,6 @@ services:
   # the server at a real endpoint via the SERVERPOD_RUSTFS_* variables.
   rustfs:
     image: rustfs/rustfs:latest
-    container_name: rustfs_server
     ports:
       - "9100:9000"
       - "9101:9001"
