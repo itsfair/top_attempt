@@ -8,8 +8,8 @@ class SignIn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SignInWidget(
+    return Center(
+      child: SignInWidget(
         client: client,
         onAuthenticated: () {
           context.go('/');

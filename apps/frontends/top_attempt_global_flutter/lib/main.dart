@@ -2,8 +2,13 @@ import 'package:top_attempt_global_client/top_attempt_client.dart';
 import 'package:flutter/material.dart';
 import 'package:serverpod_flutter/serverpod_flutter.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
+import 'package:go_router/go_router.dart';
+
+import 'layout.dart';
 
 import 'screens/greetings_screen.dart';
+import 'screens/sign_in.dart';
+import 'screens/forbidden.dart';
 
 /// Sets up a global client object that can be used to talk to the server from
 /// anywhere in our app. The client is generated from your server code
@@ -39,41 +44,56 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Serverpod Demo',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const MyHomePage(title: 'Serverpod Example'),
-    );
-  }
+  State<MyApp> createState() => _MyAppState();
 }
 
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
+class _MyAppState extends State<MyApp> {
+  late final GoRouter _router = GoRouter(
+    refreshListenable: client.auth.authInfoListenable,
+    redirect: (context, state) {
+      final location = state.matchedLocation;
+      if (!client.auth.isAuthenticated && location != '/sign-in') {
+        return '/sign-in';
+      } else if (client.auth.isAuthenticated &&
+          client.auth.authInfo?.scopeNames.contains('global-admin') != true) {
+        return '/forbidden';
+      } else {
+        return null;
+      }
+    },
+    routes: [
+      ShellRoute(
+        builder: (context, state, child) {
+          return Layout(child: child);
+        },
+        routes: <RouteBase>[
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const GreetingsScreen(),
+          ),
+          GoRoute(
+            path: '/sign-in',
+            builder: (context, state) => SignIn(),
+          ),
+          GoRoute(
+            path: '/forbidden',
+            builder: (context, state) => const Forbidden(),
+          ),
+        ],
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: const GreetingsScreen(),
-      // To test authentication in this example app, uncomment the line below
-      // and comment out the line above. This wraps the GreetingsScreen with a
-      // SignInScreen, which automatically shows a sign-in UI when the user is
-      // not authenticated and displays the GreetingsScreen once they sign in.
-      //
-      // body: SignInScreen(
-      //   child: GreetingsScreen(
-      //     onSignOut: () async {
-      //       await client.auth.signOutDevice();
-      //     },
-      //   ),
-      // ),
+    return MaterialApp.router(
+      title: 'Global Admin UI',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      routerConfig: _router,
     );
   }
 }

@@ -10,6 +10,8 @@ workspace:
   - backends/local/top_attempt_local_client
   - backends/local/top_attempt_local_server
   - frontends/top_attempt_enduser_flutter
+  - frontends/top_attempt_global_flutter
+  - frontends/top_attempt_local_flutter
   
 dependency_overrides:
   flutter_secure_storage: ^10.0.0
