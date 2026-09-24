@@ -31,8 +31,8 @@ dependencies:
     sdk: flutter
   top_attempt_global_client:
     path: ../../backends/global/top_attempt_global_client
-  serverpod_flutter: 3.4.12
-  serverpod_auth_idp_flutter: 3.4.12
+  serverpod_flutter: 4.0.2
+  serverpod_auth_idp_flutter: 4.0.2
 
 dev_dependencies:
   flutter_lints: '>=3.0.0 <7.0.0'

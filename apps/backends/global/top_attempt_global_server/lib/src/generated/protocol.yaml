@@ -10,8 +10,8 @@ emailIdp:
 jwtRefresh:
   - refreshAccessToken:
 userProfileEdit:
-  - removeUserImage:
   - setUserImage:
+  - removeUserImage:
   - changeUserName:
   - changeFullName:
   - get:

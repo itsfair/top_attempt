@@ -10,25 +10,26 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:serverpod_auth_idp_client/serverpod_auth_idp_client.dart'
-    as _i1;
-import 'package:serverpod_client/serverpod_client.dart' as _i2;
-import 'dart:async' as _i3;
+import 'dart:async' as _ida;
+import 'dart:typed_data' as _idt;
+import 'package:http/http.dart' as _i85jenna;
 import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
-    as _i4;
-import 'dart:typed_data' as _i5;
+    as _iacc;
+import 'package:serverpod_auth_idp_client/serverpod_auth_idp_client.dart'
+    as _iaic;
+import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'package:top_attempt_global_client/src/protocol/greetings/greeting.dart'
-    as _i6;
+    as _i3comy50;
 import 'package:top_attempt_global_client/src/protocol/profile/profile_details.dart'
-    as _i7;
-import 'protocol.dart' as _i8;
+    as _ibs1lgmn;
+import 'protocol.dart' as _il2as5qe;
 
 /// By extending [EmailIdpBaseEndpoint], the email identity provider endpoints
 /// are made available on the server and enable the corresponding sign-in widget
 /// on the client.
 /// {@category Endpoint}
-class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
-  EndpointEmailIdp(_i2.EndpointCaller caller) : super(caller);
+class EndpointEmailIdp extends _iaic.EndpointEmailIdpBase {
+  EndpointEmailIdp(_isc.EndpointCaller caller) : super(caller);
 
   @override
   String get name => 'emailIdp';
@@ -43,10 +44,10 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
   ///
   /// Throws an [AuthUserBlockedException] if the auth user is blocked.
   @override
-  _i3.Future<_i4.AuthSuccess> login({
+  _ida.Future<_iacc.AuthSuccess> login({
     required String email,
     required String password,
-  }) => caller.callServerEndpoint<_i4.AuthSuccess>(
+  }) => caller.callServerEndpoint<_iacc.AuthSuccess>(
     'emailIdp',
     'login',
     {
@@ -66,8 +67,8 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
   /// registration. If the email is already registered, the returned ID will not
   /// be valid.
   @override
-  _i3.Future<_i2.UuidValue> startRegistration({required String email}) =>
-      caller.callServerEndpoint<_i2.UuidValue>(
+  _ida.Future<_isc.UuidValue> startRegistration({required String email}) =>
+      caller.callServerEndpoint<_isc.UuidValue>(
         'emailIdp',
         'startRegistration',
         {'email': email},
@@ -84,8 +85,8 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
   /// - [EmailAccountRequestExceptionReason.invalid] if no request exists
   ///   for the given [accountRequestId] or [verificationCode] is invalid.
   @override
-  _i3.Future<String> verifyRegistrationCode({
-    required _i2.UuidValue accountRequestId,
+  _ida.Future<String> verifyRegistrationCode({
+    required _isc.UuidValue accountRequestId,
     required String verificationCode,
   }) => caller.callServerEndpoint<String>(
     'emailIdp',
@@ -111,10 +112,10 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
   ///
   /// Returns a session for the newly created user.
   @override
-  _i3.Future<_i4.AuthSuccess> finishRegistration({
+  _ida.Future<_iacc.AuthSuccess> finishRegistration({
     required String registrationToken,
     required String password,
-  }) => caller.callServerEndpoint<_i4.AuthSuccess>(
+  }) => caller.callServerEndpoint<_iacc.AuthSuccess>(
     'emailIdp',
     'finishRegistration',
     {
@@ -137,8 +138,8 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
   ///   made too many attempts trying to request a password reset.
   ///
   @override
-  _i3.Future<_i2.UuidValue> startPasswordReset({required String email}) =>
-      caller.callServerEndpoint<_i2.UuidValue>(
+  _ida.Future<_isc.UuidValue> startPasswordReset({required String email}) =>
+      caller.callServerEndpoint<_isc.UuidValue>(
         'emailIdp',
         'startPasswordReset',
         {'email': email},
@@ -159,8 +160,8 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
   /// should be overridden to return credentials for the next step instead
   /// of the credentials for setting the password.
   @override
-  _i3.Future<String> verifyPasswordResetCode({
-    required _i2.UuidValue passwordResetRequestId,
+  _ida.Future<String> verifyPasswordResetCode({
+    required _isc.UuidValue passwordResetRequestId,
     required String verificationCode,
   }) => caller.callServerEndpoint<String>(
     'emailIdp',
@@ -186,7 +187,7 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
   ///
   /// Throws an [AuthUserBlockedException] if the auth user is blocked.
   @override
-  _i3.Future<void> finishPasswordReset({
+  _ida.Future<void> finishPasswordReset({
     required String finishPasswordResetToken,
     required String newPassword,
   }) => caller.callServerEndpoint<void>(
@@ -199,7 +200,7 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
   );
 
   @override
-  _i3.Future<bool> hasAccount() => caller.callServerEndpoint<bool>(
+  _ida.Future<bool> hasAccount() => caller.callServerEndpoint<bool>(
     'emailIdp',
     'hasAccount',
     {},
@@ -209,13 +210,18 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
 /// By extending [RefreshJwtTokensEndpoint], the JWT token refresh endpoint
 /// is made available on the server and enables automatic token refresh on the client.
 /// {@category Endpoint}
-class EndpointJwtRefresh extends _i4.EndpointRefreshJwtTokens {
-  EndpointJwtRefresh(_i2.EndpointCaller caller) : super(caller);
+class EndpointJwtRefresh extends _iacc.EndpointRefreshJwtTokens {
+  EndpointJwtRefresh(_isc.EndpointCaller caller) : super(caller);
 
   @override
   String get name => 'jwtRefresh';
 
   /// Creates a new token pair for the given [refreshToken].
+  ///
+  /// If [refreshToken] is omitted, cookie-mode web clients fall back to the
+  /// configured HttpOnly refresh cookie. When neither source is present this
+  /// throws [RefreshTokenNotFoundException], the same public "no usable refresh
+  /// credential" exception used for unknown refresh tokens.
   ///
   /// Can throw the following exceptions:
   /// -[RefreshTokenMalformedException]: refresh token is malformed and could
@@ -234,49 +240,50 @@ class EndpointJwtRefresh extends _i4.EndpointRefreshJwtTokens {
   /// This endpoint is unauthenticated, meaning the client won't include any
   /// authentication information with the call.
   @override
-  _i3.Future<_i4.AuthSuccess> refreshAccessToken({
-    required String refreshToken,
-  }) => caller.callServerEndpoint<_i4.AuthSuccess>(
-    'jwtRefresh',
-    'refreshAccessToken',
-    {'refreshToken': refreshToken},
-    authenticated: false,
-  );
+  _ida.Future<_iacc.AuthSuccess> refreshAccessToken({String? refreshToken}) =>
+      caller.callServerEndpoint<_iacc.AuthSuccess>(
+        'jwtRefresh',
+        'refreshAccessToken',
+        {'refreshToken': refreshToken},
+        authenticated: false,
+      );
 }
 
 /// Exposes the built-in user profile management endpoints of the
 /// authentication module to the app (get, set/remove image, change names).
 /// {@category Endpoint}
-class EndpointUserProfileEdit extends _i4.EndpointUserProfileEditBase {
-  EndpointUserProfileEdit(_i2.EndpointCaller caller) : super(caller);
+class EndpointUserProfileEdit extends _iacc.EndpointUserProfileEditBase {
+  EndpointUserProfileEdit(_isc.EndpointCaller caller) : super(caller);
 
   @override
   String get name => 'userProfileEdit';
 
-  /// Removes the user's uploaded image, setting it to null.
-  ///
-  /// The client should handle displaying a placeholder for users without images.
+  /// Replaces the profile image. The previous image (database row + file in
+  /// storage) is removed first, so replacing an image does not pile up old
+  /// files. This is a no-op if the user has no image yet.
   @override
-  _i3.Future<_i4.UserProfileModel> removeUserImage() =>
-      caller.callServerEndpoint<_i4.UserProfileModel>(
-        'userProfileEdit',
-        'removeUserImage',
-        {},
-      );
-
-  /// Sets a new user image for the signed in user.
-  @override
-  _i3.Future<_i4.UserProfileModel> setUserImage(_i5.ByteData image) =>
-      caller.callServerEndpoint<_i4.UserProfileModel>(
+  _ida.Future<_iacc.UserProfileModel> setUserImage(_idt.ByteData image) =>
+      caller.callServerEndpoint<_iacc.UserProfileModel>(
         'userProfileEdit',
         'setUserImage',
         {'image': image},
       );
 
+  /// Removes the user's uploaded image, setting it to null.
+  ///
+  /// The client should handle displaying a placeholder for users without images.
+  @override
+  _ida.Future<_iacc.UserProfileModel> removeUserImage() =>
+      caller.callServerEndpoint<_iacc.UserProfileModel>(
+        'userProfileEdit',
+        'removeUserImage',
+        {},
+      );
+
   /// Changes the name of a user.
   @override
-  _i3.Future<_i4.UserProfileModel> changeUserName(String? userName) =>
-      caller.callServerEndpoint<_i4.UserProfileModel>(
+  _ida.Future<_iacc.UserProfileModel> changeUserName(String? userName) =>
+      caller.callServerEndpoint<_iacc.UserProfileModel>(
         'userProfileEdit',
         'changeUserName',
         {'userName': userName},
@@ -284,8 +291,8 @@ class EndpointUserProfileEdit extends _i4.EndpointUserProfileEditBase {
 
   /// Changes the full name of a user.
   @override
-  _i3.Future<_i4.UserProfileModel> changeFullName(String? fullName) =>
-      caller.callServerEndpoint<_i4.UserProfileModel>(
+  _ida.Future<_iacc.UserProfileModel> changeFullName(String? fullName) =>
+      caller.callServerEndpoint<_iacc.UserProfileModel>(
         'userProfileEdit',
         'changeFullName',
         {'fullName': fullName},
@@ -293,8 +300,8 @@ class EndpointUserProfileEdit extends _i4.EndpointUserProfileEditBase {
 
   /// Returns the user profile of the current user.
   @override
-  _i3.Future<_i4.UserProfileModel> get() =>
-      caller.callServerEndpoint<_i4.UserProfileModel>(
+  _ida.Future<_iacc.UserProfileModel> get() =>
+      caller.callServerEndpoint<_iacc.UserProfileModel>(
         'userProfileEdit',
         'get',
         {},
@@ -304,15 +311,15 @@ class EndpointUserProfileEdit extends _i4.EndpointUserProfileEditBase {
 /// This is an example endpoint that returns a greeting message through
 /// its [hello] method.
 /// {@category Endpoint}
-class EndpointGreeting extends _i2.EndpointRef {
-  EndpointGreeting(_i2.EndpointCaller caller) : super(caller);
+class EndpointGreeting extends _isc.EndpointRef {
+  EndpointGreeting(_isc.EndpointCaller caller) : super(caller);
 
   @override
   String get name => 'greeting';
 
   /// Returns a personalized greeting message: "Hello {name}".
-  _i3.Future<_i6.Greeting> hello(String name) =>
-      caller.callServerEndpoint<_i6.Greeting>(
+  _ida.Future<_i3comy50.Greeting> hello(String name) =>
+      caller.callServerEndpoint<_i3comy50.Greeting>(
         'greeting',
         'hello',
         {'name': name},
@@ -323,16 +330,16 @@ class EndpointGreeting extends _i2.EndpointRef {
 /// birthday). Email, user id and the profile image are managed by the
 /// built-in authentication module endpoints (see UserProfileEditEndpoint).
 /// {@category Endpoint}
-class EndpointProfileDetails extends _i2.EndpointRef {
-  EndpointProfileDetails(_i2.EndpointCaller caller) : super(caller);
+class EndpointProfileDetails extends _isc.EndpointRef {
+  EndpointProfileDetails(_isc.EndpointCaller caller) : super(caller);
 
   @override
   String get name => 'profileDetails';
 
   /// Returns the profile details of the signed-in user, or null if they have
   /// never been saved yet.
-  _i3.Future<_i7.ProfileDetails?> get() =>
-      caller.callServerEndpoint<_i7.ProfileDetails?>(
+  _ida.Future<_ibs1lgmn.ProfileDetails?> get() =>
+      caller.callServerEndpoint<_ibs1lgmn.ProfileDetails?>(
         'profileDetails',
         'get',
         {},
@@ -341,11 +348,11 @@ class EndpointProfileDetails extends _i2.EndpointRef {
   /// Validates and saves the profile details of the signed-in user.
   /// The name is also written to the built-in user profile so that other
   /// parts of the system see a consistent full name.
-  _i3.Future<_i7.ProfileDetails> save({
+  _ida.Future<_ibs1lgmn.ProfileDetails> save({
     required String firstName,
     required String lastName,
     required DateTime birthday,
-  }) => caller.callServerEndpoint<_i7.ProfileDetails>(
+  }) => caller.callServerEndpoint<_ibs1lgmn.ProfileDetails>(
     'profileDetails',
     'save',
     {
@@ -358,36 +365,33 @@ class EndpointProfileDetails extends _i2.EndpointRef {
 
 class Modules {
   Modules(Client client) {
-    serverpod_auth_idp = _i1.Caller(client);
-    serverpod_auth_core = _i4.Caller(client);
+    serverpod_auth_idp = _iaic.Caller(client);
+    serverpod_auth_core = _iacc.Caller(client);
   }
 
-  late final _i1.Caller serverpod_auth_idp;
+  late final _iaic.Caller serverpod_auth_idp;
 
-  late final _i4.Caller serverpod_auth_core;
+  late final _iacc.Caller serverpod_auth_core;
 }
 
-class Client extends _i2.ServerpodClientShared {
+class Client extends _isc.ServerpodClientShared {
   Client(
     String host, {
     dynamic securityContext,
-    @Deprecated(
-      'Use authKeyProvider instead. This will be removed in future releases.',
-    )
-    super.authenticationKeyManager,
     Duration? streamingConnectionTimeout,
     Duration? connectionTimeout,
     Function(
-      _i2.MethodCallContext,
+      _isc.MethodCallContext,
       Object,
       StackTrace,
     )?
     onFailedCall,
-    Function(_i2.MethodCallContext)? onSucceededCall,
+    Function(_isc.MethodCallContext)? onSucceededCall,
     bool? disconnectStreamsOnLostInternetConnection,
+    _i85jenna.Client? httpClientOverride,
   }) : super(
          host,
-         _i8.Protocol(),
+         _il2as5qe.Protocol(),
          securityContext: securityContext,
          streamingConnectionTimeout: streamingConnectionTimeout,
          connectionTimeout: connectionTimeout,
@@ -395,6 +399,7 @@ class Client extends _i2.ServerpodClientShared {
          onSucceededCall: onSucceededCall,
          disconnectStreamsOnLostInternetConnection:
              disconnectStreamsOnLostInternetConnection,
+         httpClientOverride: httpClientOverride,
        ) {
     emailIdp = EndpointEmailIdp(this);
     jwtRefresh = EndpointJwtRefresh(this);
@@ -417,7 +422,7 @@ class Client extends _i2.ServerpodClientShared {
   late final Modules modules;
 
   @override
-  Map<String, _i2.EndpointRef> get endpointRefLookup => {
+  Map<String, _isc.EndpointRef> get endpointRefLookup => {
     'emailIdp': emailIdp,
     'jwtRefresh': jwtRefresh,
     'userProfileEdit': userProfileEdit,
@@ -426,7 +431,7 @@ class Client extends _i2.ServerpodClientShared {
   };
 
   @override
-  Map<String, _i2.ModuleEndpointCaller> get moduleLookup => {
+  Map<String, _isc.ModuleEndpointCaller> get moduleLookup => {
     'serverpod_auth_idp': modules.serverpod_auth_idp,
     'serverpod_auth_core': modules.serverpod_auth_core,
   };

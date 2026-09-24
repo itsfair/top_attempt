@@ -12,6 +12,12 @@ Der wichtigste Architekturgrundsatz lautet: **Der Türzugang bleibt lokal und
 funktioniert ohne Cloud-Roundtrip; zentrale Dienste ergänzen Authentifizierung,
 Profile, Berechtigungen und Verwaltung.**
 
+Das Projekt wird zu einem **ERP-System für Betriebe** ausgebaut: Jede
+lokale Instanz bildet einen Betrieb ab (Selbsteinlass, später
+Kursverwaltung, Angestelltenverwaltung, Schichtplan); die globale Instanz
+ist die zentrale Plattform-Ebene (Benutzerkonten, Profile), über die
+Betriebe von außen erreicht werden können.
+
 ## Inhaltsverzeichnis
 
 - [Systemarchitektur](#systemarchitektur)
@@ -31,9 +37,10 @@ Profile, Berechtigungen und Verwaltung.**
 ```mermaid
 flowchart LR
     U[Enduser Flutter App]
-    A[Admin Flutter App<br/>geplant / Scaffold]
+    AG[Global Admin App<br/>Plattform-Verwaltung]
+    AL[Local Admin App<br/>Site-Verwaltung]
     G[Global Serverpod<br/>Auth + Profile]
-    L[Local Serverpod<br/>Türstandort / Vermittlung]
+    L[Local Serverpod<br/>Betrieb / Standort]
     DB[(PostgreSQL)]
     R[(Redis<br/>optional)]
     S[(RustFS / S3<br/>Profilbilder)]
@@ -41,15 +48,37 @@ flowchart LR
     N[NUKI Smart Lock<br/>BLE Central]
 
     U -->|HTTPS / Serverpod Client| G
-    A -->|HTTPS / Serverpod Client| G
+    AG -->|HTTPS / Serverpod Client| G
+    AL -->|HTTPS / Serverpod Client| L
+    AL -. globale Eigenschaften .-> G
     G --> DB
     G -. optional .-> R
     G --> S
+    L --> DB2[(PostgreSQL<br/>je Instanz)]
+    L -. geplante HTTP/WS-Anbindung .-> E
+    G -. Nutzerdaten-Sync / Berechtigungen .-> L
     U -->|BLE GATT, lokal| E
     E -->|BLE| N
-    L -. geplante HTTP/WS-Anbindung .-> E
-    G -. Berechtigungen / Gerätezuordnung .-> L
 ```
+
+### Instanz-Modell
+
+- **Globale Instanz** (`apps/backends/global/`): die eine zentrale
+  Plattform-Instanz. Enduser registrieren sich hier; hier leben
+  Benutzerkonten und Profile.
+- **Lokale Instanz** (`apps/backends/local/`): **eine Instanz pro
+  Betrieb/Standort**. Bildet den Betrieb ab (Türzugang, später ERP)
+  und muss bei kurzer Internettrennung autark weiterlaufen.
+- **Zusammenspiel**: Mitglied eines Betriebs wird man global
+  (Registrierung) und lokal (Einschreiben bei der Instanz); die lokale
+  Instanz erhält die nötigen Nutzerdaten synchronisiert. Details
+  (User-/Login-Modell, Umfang der Synchronisation) sind offene
+  Architekturfragen — siehe `apps/AGENTS.md` → „Offene
+  Architekturfragen“.
+
+Ziel-Ablauf „Selbsteinlass“: QR-Code an der Location scannen → OTP
+abfragen → OTP per BLE an den ESP32 → ESP32 an lokale Instanz → Instanz
+prüft Zugangsdaten → Tür schaltet (über ESP32/NUKI).
 
 ### Ist-Verbindungen und geplante Verbindungen
 
@@ -59,7 +88,9 @@ flowchart LR
 | Flutter Enduser → ESP32 | Prototyp implementiert | BLE-Scan/QR-Ziel, GATT-Testrequest, Mock-Antwort |
 | ESP32 → NUKI | implementiert | Pairing, Lock/Unlock/Unlatch, Status und Batterie |
 | ESP32 → Local Serverpod | offen | Architekturentscheidung und Protokoll fehlen |
-| Global → Local | offen | Geräte-, Standort- und Berechtigungsmodell fehlen |
+| Global → Local | offen | Nutzer-Sync, Geräte- und Berechtigungsmodell fehlen (Login-Modell offen) |
+| Local Admin App → Local | Scaffold | App vorhanden, Backend-Domäne fehlt noch |
+| Global Admin App → Global | Scaffold | App vorhanden, Admin-Domäne fehlt noch |
 | ESP32 → GitHub Release | implementiert | Manuelles OTA-Update aus dem neuesten Release |
 
 ## Komponenten
@@ -95,9 +126,15 @@ Serverpod-Backend auf den Ports 8080/8081/8082 in der Entwicklung.
 
 ### `apps/backends/local/`: lokaler Dienst
 
-Serverpod-Gerüst auf den Ports 8180/8181/8182 in der Entwicklung. Aktuell sind
-nur die Auth-Modulendpoints und der Beispiel-Endpoint `greeting` vorhanden.
-Die Türgeräte- und Berechtigungslogik ist noch nicht implementiert.
+Serverpod-Backend auf den Ports 8180/8181/8182 in der Entwicklung
+(Postgres 8190, RustFS-Konsole 9101). Eine Serverpod-Instanz pro
+Betrieb/Standort; bildet den Betrieb ab und soll autark bei kurzer
+Internettrennung laufen. Seit dem Serverpod-4-Upgrade (2026-09-23)
+strukturgleich mit dem globalen Backend (E-Mail-IdP, JWT,
+`ProfileDetailsEndpoint`, RustFS-Storage) — das Geräte-, Mitglieder-
+und Berechtigungsmodell ist noch nicht implementiert. Offene Fragen
+(User-/Login-Modell `staff` vs. `members`-Tabelle, ESP32-Protokoll):
+siehe `apps/backends/local/AGENTS.md`.
 
 ### `apps/frontends/top_attempt_enduser_flutter/`
 
@@ -114,9 +151,25 @@ Der BLE-Flow sendet aktuell immer `action: test` und prüft keine Credentials.
 
 ### `apps/frontends/top_attempt_flutter/`
 
-Separater Flutter-Client, derzeit praktisch ein Serverpod-Startprojekt mit
-Login-/Greeting-Beispielen. Eine Admin-Funktionalität ist noch nicht
-ausgebaut.
+**Kopiervorlage**: rohes Serverpod-Grundgerüst ohne eigenen Zweck; wird
+kopiert, wenn ein weiteres Frontend benötigt wird. Wird von den
+`flutter_build`-Skripten beider Backends noch als Web-App-Quelle
+referenziert (To-do).
+
+### `apps/frontends/top_attempt_global_flutter/`
+
+**Plattform-Admin-App** zur Verwaltung der globalen Instanz
+(Nutzerkonten/Profile, später mehr). Aktuell rohes Serverpod-Scaffold
+(SignIn/Greetings), noch keine Admin-Domäne.
+
+### `apps/frontends/top_attempt_local_flutter/`
+
+**Site-Admin-App** zur Verwaltung einer lokalen Instanz: Geräte, Nutzer
+vor Ort, Zugangsrechte; später ERP-Ausbau (Kursverwaltung,
+Angestelltenverwaltung, Schichtplan). Aktuell rohes Serverpod-Scaffold;
+bindet bewusst beide Clients ein (global + local), da sie auch globale
+Eigenschaften manipulieren soll (z. B. Kursverwaltung — Global-vs.-lokal
+ist noch offen).
 
 ## Szenarien
 
@@ -219,10 +272,11 @@ Die lokale API ist nicht authentifiziert und nur im lokalen Netz verfügbar.
 
 Die relevanten Serverpod-Endpoints sind:
 
-- `emailIdp`: Login, Registrierung und Passwort-Reset.
+- `emailIdp`: Login, Registrierung und Passwort-Reset (identisch für local).
 - `jwtRefresh`: Access-Token erneuern.
-- `userProfileEdit`: Profil lesen, Bild setzen/entfernen, Namen ändern.
-- `profileDetails`: authentifiziertes Lesen und Speichern von Name/Geburtstag.
+- `userProfileEdit`: Profil lesen, Bild setzen/entfernen, Namen ändern (nur global).
+- `profileDetails`: authentifiziertes Lesen und Speichern von Name/Geburtstag
+  (global und local).
 
 `ProfileDetailsEndpoint` verlangt Login, begrenzt Namen auf 1 bis 60 Zeichen
 und akzeptiert Geburtstage nur zwischen 1900 und gestern.
@@ -267,10 +321,11 @@ lokales Admin-Interface umgesetzt werden.
 | ESP32 BLE-Peripheral | Prototyp | GATT und Mock-Responses |
 | Enduser-App Auth/Profile | implementiert | globales Backend erforderlich |
 | Enduser-App BLE | Testintegration | noch kein echter Öffnungsflow |
-| Globales Backend | MVP-Basis | Auth, Profile und Storage |
-| Lokales Backend | Scaffold | noch keine Türlogik |
-| Admin-App | Scaffold | noch keine Admin-Domäne |
-| CI | vorhanden | Dart Analyze/Format/Tests, Firmware Release |
+| Globales Backend | MVP-Basis | Auth, Profile und Storage; Serverpod 4.0.2 |
+| Lokales Backend | Mirror des globalen | Auth/Profile/Storage vorhanden, Tür-/Mitgliederlogik fehlt |
+| Admin-App global | Scaffold | noch keine Admin-Domäne |
+| Admin-App local | Scaffold | bindet beide Clients; noch keine Site-Admin-Domäne |
+| CI | vorhanden | Dart Analyze/Format/Tests, Firmware Release; Versionen veraltet (To-do) |
 
 ## To-dos
 
@@ -298,7 +353,11 @@ lokales Admin-Interface umgesetzt werden.
 
 ### Priorität 2: Produktfunktionen
 
-- [ ] Admin-App für Geräte, Nutzer, Einladungen und Berechtigungen.
+- [ ] Admin-App für Geräte, Nutzer, Einladungen und Berechtigungen
+  (`top_attempt_local_flutter`, Zustand: Scaffold).
+- [ ] ERP-Feature-Kette Stück für Stück aufbauen: Kursverwaltung →
+  Angestelltenverwaltung → Schichtplan (Plattform-Roadmap: die lokale
+  Instanz bildet den Betrieb ab, globale Instanz = Plattform-Ebene).
 - [ ] NUKI-Keypad, Auth-Entries und Time-Control unterstützen.
 - [ ] QR-Code-Format finalisieren und statische QR-Codes verwalten.
 - [ ] BLE-Scan/Discovery statt reinem Direktzugriff auf Remote-ID ergänzen.
@@ -318,10 +377,13 @@ lokales Admin-Interface umgesetzt werden.
 
 ### Voraussetzungen
 
-- Dart SDK 3.8.0
-- Flutter 3.32.8
-- Serverpod CLI 3.4.12 laut Repository-Handoff; CI verwendet aktuell in
-  `tests.yml` noch `VERSION: 3.3.1` und sollte vereinheitlicht werden.
+- Dart SDK `^3.12.2` (lokal installiert: 3.13.4)
+- Flutter 3.47.5 (lokal installiert; CI `tests.yml` nutzt noch 3.32.8)
+- Serverpod 4.0.2 (Backends und Clients; Serverpod-CLI global ebenfalls
+  4.0.2 — CI pinnt in `tests.yml` noch 3.3.1, sollte vereinheitlicht
+  werden; Upgrade am 2026-09-23 nach
+  https://docs.serverpod.dev/upgrading/upgrade-to-four, Details siehe
+  `apps/AGENTS.md` → Upgrade-Abschnitt)
 - Docker für PostgreSQL, Redis und RustFS
 - PlatformIO für die Firmware
 
@@ -337,6 +399,12 @@ dart bin/main.dart
 Für den lokalen Standortdienst gilt dasselbe unter
 `apps/backends/local/top_attempt_local_server`. Die Entwicklungs-API läuft
 global auf Port 8080 und lokal auf Port 8180.
+
+Beide lokalen Instanzen-Ebenen werden per eigener AGENTS.md dokumentiert:
+globales Backend `apps/backends/global/AGENTS.md`, lokales Backend
+`apps/backends/local/AGENTS.md` — die Ebenen-Übersicht (Workspace, Ports,
+Synchronisation, offene Architekturfragen) steht in `apps/AGENTS.md`, die
+Monorepo-Struktur in `AGENTS.md` (Root).
 
 ### Firmware
 
@@ -374,8 +442,14 @@ dieses Asset über die lokale Setup-Seite laden.
 
 ## Weiterführende Dokumente
 
+- [`AGENTS.md`](../AGENTS.md): Monorepo-Struktur, Workflows und Storage-Hinweise.
+- [`apps/AGENTS.md`](../apps/AGENTS.md): apps-Ebene — Workspace, Ports,
+  Instanz-Zwecke, Synchronisation und offene Architekturfragen.
+- [`apps/backends/global/AGENTS.md`](../apps/backends/global/AGENTS.md):
+  Details zur globalen Instanz.
+- [`apps/backends/local/AGENTS.md`](../apps/backends/local/AGENTS.md):
+  Details zur lokalen Instanz (Zielbild, offene Fragen).
 - [`doorinterface/AGENTS.md`](../doorinterface/AGENTS.md): detaillierter
   Firmware-Handoff und historische Entscheidungen.
 - [`doorinterface/docs/ble_interface.md`](../doorinterface/docs/ble_interface.md):
   BLE-GATT-Spezifikation.
-- [`AGENTS.md`](../AGENTS.md): Monorepo-Struktur, Workflows und Storage-Hinweise.

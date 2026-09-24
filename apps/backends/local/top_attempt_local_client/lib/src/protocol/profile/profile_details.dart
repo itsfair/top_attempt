@@ -10,12 +10,14 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:serverpod_client/serverpod_client.dart' as _i1;
 import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
-    as _i2;
-import 'package:top_attempt_local_client/src/protocol/protocol.dart' as _i3;
+    as _iacc;
+import 'package:serverpod_client/serverpod_client.dart' as _isc;
+import 'package:top_attempt_local_client/src/protocol/protocol.dart'
+    as _i3m9u5jf;
 
-abstract class ProfileDetails implements _i1.SerializableModel {
+abstract class ProfileDetails
+    implements _isc.SerializableModel, _isc.ProtocolSerialization {
   ProfileDetails._({
     this.id,
     required this.authUserId,
@@ -27,8 +29,8 @@ abstract class ProfileDetails implements _i1.SerializableModel {
 
   factory ProfileDetails({
     int? id,
-    required _i1.UuidValue authUserId,
-    _i2.AuthUser? authUser,
+    required _isc.UuidValue authUserId,
+    _iacc.AuthUser? authUser,
     String? firstName,
     String? lastName,
     DateTime? birthday,
@@ -37,19 +39,19 @@ abstract class ProfileDetails implements _i1.SerializableModel {
   factory ProfileDetails.fromJson(Map<String, dynamic> jsonSerialization) {
     return ProfileDetails(
       id: jsonSerialization['id'] as int?,
-      authUserId: _i1.UuidValueJsonExtension.fromJson(
+      authUserId: _isc.UuidValueJsonExtension.fromJson(
         jsonSerialization['authUserId'],
       ),
       authUser: jsonSerialization['authUser'] == null
           ? null
-          : _i3.Protocol().deserialize<_i2.AuthUser>(
+          : _i3m9u5jf.Protocol().deserialize<_iacc.AuthUser>(
               jsonSerialization['authUser'],
             ),
       firstName: jsonSerialization['firstName'] as String?,
       lastName: jsonSerialization['lastName'] as String?,
       birthday: jsonSerialization['birthday'] == null
           ? null
-          : _i1.DateTimeJsonExtension.fromJson(jsonSerialization['birthday']),
+          : _isc.DateTimeJsonExtension.fromJson(jsonSerialization['birthday']),
     );
   }
 
@@ -58,10 +60,10 @@ abstract class ProfileDetails implements _i1.SerializableModel {
   /// the id will be null.
   int? id;
 
-  _i1.UuidValue authUserId;
+  _isc.UuidValue authUserId;
 
   /// The AuthUser this data belongs to.
-  _i2.AuthUser? authUser;
+  _iacc.AuthUser? authUser;
 
   String? firstName;
 
@@ -71,11 +73,11 @@ abstract class ProfileDetails implements _i1.SerializableModel {
 
   /// Returns a shallow copy of this [ProfileDetails]
   /// with some or all fields replaced by the given arguments.
-  @_i1.useResult
+  @_isc.useResult
   ProfileDetails copyWith({
     int? id,
-    _i1.UuidValue? authUserId,
-    _i2.AuthUser? authUser,
+    _isc.UuidValue? authUserId,
+    _iacc.AuthUser? authUser,
     String? firstName,
     String? lastName,
     DateTime? birthday,
@@ -94,8 +96,21 @@ abstract class ProfileDetails implements _i1.SerializableModel {
   }
 
   @override
+  Map<String, dynamic> toJsonForProtocol() {
+    return {
+      '__className__': 'ProfileDetails',
+      if (id != null) 'id': id,
+      'authUserId': authUserId.toJson(),
+      if (authUser != null) 'authUser': authUser?.toJson(),
+      if (firstName != null) 'firstName': firstName,
+      if (lastName != null) 'lastName': lastName,
+      if (birthday != null) 'birthday': birthday?.toJson(),
+    };
+  }
+
+  @override
   String toString() {
-    return _i1.SerializationManager.encode(this);
+    return _isc.SerializationManager.encode(this);
   }
 }
 
@@ -104,8 +119,8 @@ class _Undefined {}
 class _ProfileDetailsImpl extends ProfileDetails {
   _ProfileDetailsImpl({
     int? id,
-    required _i1.UuidValue authUserId,
-    _i2.AuthUser? authUser,
+    required _isc.UuidValue authUserId,
+    _iacc.AuthUser? authUser,
     String? firstName,
     String? lastName,
     DateTime? birthday,
@@ -120,11 +135,11 @@ class _ProfileDetailsImpl extends ProfileDetails {
 
   /// Returns a shallow copy of this [ProfileDetails]
   /// with some or all fields replaced by the given arguments.
-  @_i1.useResult
+  @_isc.useResult
   @override
   ProfileDetails copyWith({
     Object? id = _Undefined,
-    _i1.UuidValue? authUserId,
+    _isc.UuidValue? authUserId,
     Object? authUser = _Undefined,
     Object? firstName = _Undefined,
     Object? lastName = _Undefined,
@@ -133,7 +148,7 @@ class _ProfileDetailsImpl extends ProfileDetails {
     return ProfileDetails(
       id: id is int? ? id : this.id,
       authUserId: authUserId ?? this.authUserId,
-      authUser: authUser is _i2.AuthUser?
+      authUser: authUser is _iacc.AuthUser?
           ? authUser
           : this.authUser?.copyWith(),
       firstName: firstName is String? ? firstName : this.firstName,

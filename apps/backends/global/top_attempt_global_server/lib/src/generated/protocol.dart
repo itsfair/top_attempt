@@ -8,97 +8,85 @@
 // ignore_for_file: type_literal_in_constant_pattern
 // ignore_for_file: use_super_parameters
 // ignore_for_file: invalid_use_of_internal_member
+// ignore_for_file: dead_code, unnecessary_type_check
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:serverpod/serverpod.dart' as _i1;
-import 'package:serverpod/protocol.dart' as _i2;
-import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
-    as _i3;
+import 'package:serverpod/protocol.dart' as _isp;
+import 'package:serverpod/serverpod.dart' as _is;
 import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
-    as _i4;
-import 'greetings/greeting.dart' as _i5;
-import 'profile/profile_details.dart' as _i6;
+    as _iacs;
+import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
+    as _iais;
+import 'greetings/greeting.dart' as _izw8z7ou;
+import 'profile/profile_details.dart' as _is7ofcfc;
 export 'greetings/greeting.dart';
 export 'profile/profile_details.dart';
 
-class Protocol extends _i1.SerializationManagerServer {
+class Protocol extends _is.DatabaseSerializationManager {
   Protocol._();
 
   factory Protocol() => _instance;
 
-  static final Protocol _instance = Protocol._();
+  static final Protocol _instance = Protocol._().._registerHostProtocols();
 
-  static final List<_i2.TableDefinition> targetTableDefinitions = [
-    _i2.TableDefinition(
+  static List<_isp.TableDefinition> get targetTableDefinitions => [
+    _isp.TableDefinition(
       name: 'profile_details',
       dartName: 'ProfileDetails',
       schema: 'public',
       module: 'top_attempt_global',
       columns: [
-        _i2.ColumnDefinition(
+        _isp.ColumnDefinition(
           name: 'id',
-          columnType: _i2.ColumnType.bigint,
+          columnType: _isp.ColumnType.bigint,
           isNullable: false,
           dartType: 'int?',
-          columnDefault: 'nextval(\'profile_details_id_seq\'::regclass)',
+          columnDefault: 'serial',
         ),
-        _i2.ColumnDefinition(
+        _isp.ColumnDefinition(
           name: 'authUserId',
-          columnType: _i2.ColumnType.uuid,
+          columnType: _isp.ColumnType.uuid,
           isNullable: false,
           dartType: 'UuidValue',
         ),
-        _i2.ColumnDefinition(
+        _isp.ColumnDefinition(
           name: 'firstName',
-          columnType: _i2.ColumnType.text,
+          columnType: _isp.ColumnType.text,
           isNullable: true,
           dartType: 'String?',
         ),
-        _i2.ColumnDefinition(
+        _isp.ColumnDefinition(
           name: 'lastName',
-          columnType: _i2.ColumnType.text,
+          columnType: _isp.ColumnType.text,
           isNullable: true,
           dartType: 'String?',
         ),
-        _i2.ColumnDefinition(
+        _isp.ColumnDefinition(
           name: 'birthday',
-          columnType: _i2.ColumnType.timestampWithoutTimeZone,
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
           isNullable: true,
           dartType: 'DateTime?',
         ),
       ],
       foreignKeys: [
-        _i2.ForeignKeyDefinition(
+        _isp.ForeignKeyDefinition(
           constraintName: 'profile_details_fk_0',
           columns: ['authUserId'],
           referenceTable: 'serverpod_auth_core_user',
           referenceTableSchema: 'public',
           referenceColumns: ['id'],
-          onUpdate: _i2.ForeignKeyAction.noAction,
-          onDelete: _i2.ForeignKeyAction.cascade,
+          onUpdate: _isp.ForeignKeyAction.noAction,
+          onDelete: _isp.ForeignKeyAction.cascade,
           matchType: null,
         ),
       ],
       indexes: [
-        _i2.IndexDefinition(
-          indexName: 'profile_details_pkey',
-          tableSpace: null,
-          elements: [
-            _i2.IndexElementDefinition(
-              type: _i2.IndexElementDefinitionType.column,
-              definition: 'id',
-            ),
-          ],
-          type: 'btree',
-          isUnique: true,
-          isPrimary: true,
-        ),
-        _i2.IndexDefinition(
+        _isp.IndexDefinition(
           indexName: 'profile_details_auth_user_unique_idx',
           tableSpace: null,
           elements: [
-            _i2.IndexElementDefinition(
-              type: _i2.IndexElementDefinitionType.column,
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
               definition: 'authUserId',
             ),
           ],
@@ -109,9 +97,9 @@ class Protocol extends _i1.SerializationManagerServer {
       ],
       managed: true,
     ),
-    ..._i3.Protocol.targetTableDefinitions,
-    ..._i4.Protocol.targetTableDefinitions,
-    ..._i2.Protocol.targetTableDefinitions,
+    ..._iais.Protocol.targetTableDefinitions,
+    ..._iacs.Protocol.targetTableDefinitions,
+    ..._isp.Protocol.targetTableDefinitions,
   ];
 
   static String? getClassNameFromObjectJson(dynamic data) {
@@ -134,41 +122,42 @@ class Protocol extends _i1.SerializationManagerServer {
           'className': dataClassName,
           'data': data,
         });
-      } on FormatException catch (_) {
+      } on _is.DeserializationClassNameNotFoundException catch (_) {
         // If the className is not recognized (e.g., older client receiving
         // data with a new subtype), fall back to deserializing without the
         // className, using the expected type T.
       }
     }
 
-    if (t == _i5.Greeting) {
-      return _i5.Greeting.fromJson(data) as T;
+    if (t == _izw8z7ou.Greeting) {
+      return _izw8z7ou.Greeting.fromJson(data) as T;
     }
-    if (t == _i6.ProfileDetails) {
-      return _i6.ProfileDetails.fromJson(data) as T;
+    if (t == _is7ofcfc.ProfileDetails) {
+      return _is7ofcfc.ProfileDetails.fromJson(data) as T;
     }
-    if (t == _i1.getType<_i5.Greeting?>()) {
-      return (data != null ? _i5.Greeting.fromJson(data) : null) as T;
+    if (t == _is.getType<_izw8z7ou.Greeting?>()) {
+      return (data != null ? _izw8z7ou.Greeting.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i6.ProfileDetails?>()) {
-      return (data != null ? _i6.ProfileDetails.fromJson(data) : null) as T;
+    if (t == _is.getType<_is7ofcfc.ProfileDetails?>()) {
+      return (data != null ? _is7ofcfc.ProfileDetails.fromJson(data) : null)
+          as T;
     }
     try {
-      return _i3.Protocol().deserialize<T>(data, t);
-    } on _i1.DeserializationTypeNotFoundException catch (_) {}
+      return _iais.Protocol().deserialize<T>(data, t);
+    } on _is.DeserializationTypeNotFoundException catch (_) {}
     try {
-      return _i4.Protocol().deserialize<T>(data, t);
-    } on _i1.DeserializationTypeNotFoundException catch (_) {}
+      return _iacs.Protocol().deserialize<T>(data, t);
+    } on _is.DeserializationTypeNotFoundException catch (_) {}
     try {
-      return _i2.Protocol().deserialize<T>(data, t);
-    } on _i1.DeserializationTypeNotFoundException catch (_) {}
+      return _isp.Protocol().deserialize<T>(data, t);
+    } on _is.DeserializationTypeNotFoundException catch (_) {}
     return super.deserialize<T>(data, t);
   }
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
-      _i5.Greeting => 'Greeting',
-      _i6.ProfileDetails => 'ProfileDetails',
+      _izw8z7ou.Greeting => 'Greeting',
+      _is7ofcfc.ProfileDetails => 'ProfileDetails',
       _ => null,
     };
   }
@@ -186,22 +175,26 @@ class Protocol extends _i1.SerializationManagerServer {
     }
 
     switch (data) {
-      case _i5.Greeting():
+      case _izw8z7ou.Greeting():
         return 'Greeting';
-      case _i6.ProfileDetails():
+      case _is7ofcfc.ProfileDetails():
         return 'ProfileDetails';
     }
-    className = _i2.Protocol().getClassNameForObject(data);
+    className = _iais.Protocol().getClassNameForObject(data);
     if (className != null) {
-      return 'serverpod.$className';
+      return className.contains('.')
+          ? className
+          : 'serverpod_auth_idp.$className';
     }
-    className = _i3.Protocol().getClassNameForObject(data);
+    className = _iacs.Protocol().getClassNameForObject(data);
     if (className != null) {
-      return 'serverpod_auth_idp.$className';
+      return className.contains('.')
+          ? className
+          : 'serverpod_auth_core.$className';
     }
-    className = _i4.Protocol().getClassNameForObject(data);
+    className = _isp.Protocol().getClassNameForObject(data);
     if (className != null) {
-      return 'serverpod_auth_core.$className';
+      return className.contains('.') ? className : 'serverpod.$className';
     }
     return null;
   }
@@ -213,55 +206,60 @@ class Protocol extends _i1.SerializationManagerServer {
       return super.deserializeByClassName(data);
     }
     if (dataClassName == 'Greeting') {
-      return deserialize<_i5.Greeting>(data['data']);
+      return deserialize<_izw8z7ou.Greeting>(data['data']);
     }
     if (dataClassName == 'ProfileDetails') {
-      return deserialize<_i6.ProfileDetails>(data['data']);
-    }
-    if (dataClassName.startsWith('serverpod.')) {
-      data['className'] = dataClassName.substring(10);
-      return _i2.Protocol().deserializeByClassName(data);
+      return deserialize<_is7ofcfc.ProfileDetails>(data['data']);
     }
     if (dataClassName.startsWith('serverpod_auth_idp.')) {
       data['className'] = dataClassName.substring(19);
-      return _i3.Protocol().deserializeByClassName(data);
+      return _iais.Protocol().deserializeByClassName(data);
     }
     if (dataClassName.startsWith('serverpod_auth_core.')) {
       data['className'] = dataClassName.substring(20);
-      return _i4.Protocol().deserializeByClassName(data);
+      return _iacs.Protocol().deserializeByClassName(data);
+    }
+    if (dataClassName.startsWith('serverpod.')) {
+      data['className'] = dataClassName.substring(10);
+      return _isp.Protocol().deserializeByClassName(data);
     }
     return super.deserializeByClassName(data);
   }
 
+  void _registerHostProtocols() {
+    _iais.Protocol().registerHostProtocol('top_attempt_global', this);
+    _iacs.Protocol().registerHostProtocol('top_attempt_global', this);
+  }
+
   @override
-  _i1.Table? getTableForType(Type t) {
+  _is.Table? getTableForType(Type t) {
     {
-      var table = _i3.Protocol().getTableForType(t);
+      var table = _iais.Protocol().getTableForType(t);
       if (table != null) {
         return table;
       }
     }
     {
-      var table = _i4.Protocol().getTableForType(t);
+      var table = _iacs.Protocol().getTableForType(t);
       if (table != null) {
         return table;
       }
     }
     {
-      var table = _i2.Protocol().getTableForType(t);
+      var table = _isp.Protocol().getTableForType(t);
       if (table != null) {
         return table;
       }
     }
     switch (t) {
-      case _i6.ProfileDetails:
-        return _i6.ProfileDetails.t;
+      case _is7ofcfc.ProfileDetails:
+        return _is7ofcfc.ProfileDetails.t;
     }
     return null;
   }
 
   @override
-  List<_i2.TableDefinition> getTargetTableDefinitions() =>
+  List<_isp.TableDefinition> getTargetTableDefinitions() =>
       targetTableDefinitions;
 
   @override
@@ -277,10 +275,10 @@ class Protocol extends _i1.SerializationManagerServer {
       return null;
     }
     try {
-      return _i3.Protocol().mapRecordToJson(record);
+      return _iais.Protocol().mapRecordToJson(record);
     } catch (_) {}
     try {
-      return _i4.Protocol().mapRecordToJson(record);
+      return _iacs.Protocol().mapRecordToJson(record);
     } catch (_) {}
     throw Exception('Unsupported record type ${record.runtimeType}');
   }
