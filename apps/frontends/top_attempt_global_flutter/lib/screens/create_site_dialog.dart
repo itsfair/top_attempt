@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:top_attempt_global_client/top_attempt_client.dart';
 
 import '../main.dart';
 
 /// Dialog to create a site: address data + choice of the first site admin
-/// (from existing global users). On success returns [CreatedSiteInfo] to
+/// (from existing global users). On success returns the created [Site] to
 /// the caller; the secrets are then displayed once in the onboarding modal.
 class CreateSiteDialog extends StatefulWidget {
   const CreateSiteDialog({super.key});
@@ -236,82 +235,6 @@ class ChipWithDelete extends StatelessWidget {
       label: Text(user.email ?? 'Benutzer'),
       onDeleted: onDelete,
       deleteIcon: const Icon(Icons.clear),
-    );
-  }
-}
-
-/// Shown once right after site creation: the two generated secrets. Neither
-/// can be retrieved afterwards (the initial password is delivered once to
-/// the local instance at first connect, then cleared; the one-time password
-/// burns on enrollment). Stage 2 To-do: email delivery as an alternative.
-class OnboardingSecretsDialog extends StatefulWidget {
-  final CreatedSiteInfo info;
-
-  const OnboardingSecretsDialog({super.key, required this.info});
-
-  @override
-  State<OnboardingSecretsDialog> createState() =>
-      _OnboardingSecretsDialogState();
-}
-
-class _OnboardingSecretsDialogState extends State<OnboardingSecretsDialog> {
-  bool _acknowledged = false;
-
-  Future<void> _copy(String label, String value) async {
-    await Clipboard.setData(ClipboardData(text: value));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label kopiert')),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Einrichtung — nur einmal sichtbar'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Diese Werte werden nie mehr angezeigt. '
-            'Jetzt kopieren und sicher für die Einrichtung der lokalen '
-            'Instanz aufbewahren.',
-          ),
-          const SizedBox(height: 16),
-          ListTile(
-            title: const Text('Einmalpasswort (lokale Instanz)'),
-            subtitle: Text(widget.info.oneTimePassword ?? '-'),
-            trailing: IconButton(
-              icon: const Icon(Icons.copy),
-              onPressed: () =>
-                  _copy('Einmalpasswort', widget.info.oneTimePassword ?? ''),
-            ),
-          ),
-          ListTile(
-            title: Text('Initiales Passwort (Site-Admin)'),
-            subtitle: Text(widget.info.initialAdminPassword ?? '-'),
-            trailing: IconButton(
-              icon: const Icon(Icons.copy),
-              onPressed: () => _copy(
-                'Initiales Passwort',
-                widget.info.initialAdminPassword ?? '',
-              ),
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        CheckboxListTile(
-          value: _acknowledged,
-          onChanged: (v) => setState(() => _acknowledged = v ?? false),
-          title: const Text('Ich habe beide Werte sicher gespeichert.'),
-        ),
-        FilledButton(
-          onPressed: _acknowledged ? () => Navigator.of(context).pop() : null,
-          child: const Text('Weiter zur Site'),
-        ),
-      ],
     );
   }
 }

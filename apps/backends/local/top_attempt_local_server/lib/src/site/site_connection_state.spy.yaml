@@ -1,0 +1,25 @@
+### Connection state of the device link between this local instance and the
+### site's global instance. Used by the App-Bar chip in the local admin UI.
+enum: SiteConnectionState
+serialized: byName
+default: noneSetup
+values:
+
+  ### No enrollment configuration exists yet.
+  - noneSetup
+
+  ### Worker is currently opening the stream.
+  - connecting
+
+  ### Stream dropped, retrying with backoff.
+  - reconnecting
+
+  ### Stream is open and pings are answered.
+  - connected
+
+  ### Credential no longer accepted (revoked/expired) — the site admin must
+  ### re-run setup with their global credentials.
+  - needsReSetup
+
+  ### Persistent failure (e.g. global backend unreachable for a long time).
+  - failure

@@ -1,0 +1,15 @@
+### Snapshots the connection state for the local UI App-Bar chip.
+class: SiteConnectionInfo
+fields:
+
+  ### Current state.
+  state: SiteConnectionState
+
+  ### Name of the enrolled site (already enrolled only).
+  siteName: String?
+
+  ### Last human-readable error (failure/needsReSetup only).
+  lastError: String?
+
+  ### Most recent successful ping round trip.
+  lastConnectedAt: DateTime?

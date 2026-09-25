@@ -19,6 +19,7 @@ import '../auth/email_idp_endpoint.dart' as _iuc1hd5t;
 import '../auth/jwt_refresh_endpoint.dart' as _inwq3ztq;
 import '../greetings/greeting_endpoint.dart' as _il624ik7;
 import '../profile/profile_details_endpoint.dart' as _iev396g5;
+import '../site/site_setup_endpoint.dart' as _iq6hjzpz;
 
 class Endpoints extends _is.EndpointDispatch {
   @override
@@ -46,6 +47,12 @@ class Endpoints extends _is.EndpointDispatch {
         ..initialize(
           server,
           'profileDetails',
+          null,
+        ),
+      'siteSetup': _iq6hjzpz.SiteSetupEndpoint()
+        ..initialize(
+          server,
+          'siteSetup',
           null,
         ),
     };
@@ -328,6 +335,53 @@ class Endpoints extends _is.EndpointDispatch {
                         lastName: params['lastName'],
                         birthday: params['birthday'],
                       ),
+        ),
+      },
+    );
+    connectors['siteSetup'] = _is.EndpointConnector(
+      name: 'siteSetup',
+      endpoint: endpoints['siteSetup']!,
+      methodConnectors: {
+        'enterSetup': _is.MethodConnector(
+          name: 'enterSetup',
+          params: {
+            'email': _is.ParameterDescription(
+              name: 'email',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'password': _is.ParameterDescription(
+              name: 'password',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'siteId': _is.ParameterDescription(
+              name: 'siteId',
+              type: _is.getType<int?>(),
+              nullable: true,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['siteSetup'] as _iq6hjzpz.SiteSetupEndpoint)
+                  .enterSetup(
+                    session,
+                    email: params['email'],
+                    password: params['password'],
+                    siteId: params['siteId'],
+                  ),
+        ),
+        'connectionStatus': _is.MethodConnector(
+          name: 'connectionStatus',
+          params: {},
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['siteSetup'] as _iq6hjzpz.SiteSetupEndpoint)
+                  .connectionStatus(session),
         ),
       },
     );

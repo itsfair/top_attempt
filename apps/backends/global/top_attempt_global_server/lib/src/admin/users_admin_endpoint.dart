@@ -3,6 +3,7 @@ import 'package:serverpod_auth_idp_server/core.dart';
 
 import '../auth/scopes.dart';
 import '../generated/protocol.dart';
+import '../sites/site_device_authentication.dart';
 
 /// Admin endpoint for viewing and managing users of the global instance.
 ///
@@ -72,6 +73,15 @@ class UsersAdminEndpoint extends Endpoint {
       session,
       authUserId: authUserId,
       blocked: blocked,
+    );
+
+    // SAS session verification does not re-check `blocked` at request time
+    // (unlike the JWT rotation path), so blocking a user revokes their
+    // device sessions explicitly — a blocked site admin therefore loses the
+    // site connection (intended kill switch).
+    await SiteDeviceAuthentication.revokeDeviceSessions(
+      session,
+      authUserId: authUserId,
     );
 
     await _revokeUserSessions(session, authUserId);

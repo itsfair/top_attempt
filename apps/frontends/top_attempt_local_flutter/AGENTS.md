@@ -21,27 +21,33 @@ Nutzer vor Ort, Zugangsrechte — und langfristig der ERP-Ausbau
 
 ## Aktueller Stand
 
-**Rohes Serverpod-Scaffold** (2026-09-23 als Kopie des Scaffolds
-entstanden, zusammen mit `top_attempt_global_flutter`):
+2026-09-25 sehr erweitert (zuerst Scaffold am 2026-09-23 als Kopie):
 
-- `lib/main.dart` — Serverpod-Client-Setup (Beispiel-SignIn/Greetings)
-- `lib/screens/sign_in_screen.dart` / `greetings_screen.dart` —
-  SignIn/Greeting-Beispiele
-- Keine Site-Admin-Domäne, kein eigenes Routing-Konzept
-
-Serverpod-Flutter-Pakete auf 4.0.2. **Achtung:** Paket fehlt noch in der
-Workspace-Liste (`apps/pubspec.yaml`) — To-do, siehe apps/AGENTS.md.
+- GoRouter (`lib/main.dart`): `/` Home + `/setup` Site-Einrichtungs-Maske;
+  Layout-Shell mit Drawer und **App-Bar-Verbindungs-Chip**, der auf den
+  lokalen Backend-Status pollt (`siteSetup.connectionStatus`, alle 10 s):
+  `noneSetup|connecting|reconnecting|connected|needsReSetup|failure`.
+- Die Client-Domäne ist der **lokale Client**
+  (`top_attempt_local_client`, API `localhost:8180`); der **globale**
+  Client ist als Dependency hinterlegt (für zukünftige globale
+  Eigenschaften wie Kursverwaltung — noch nicht benutzt).
+- **Setup-Maske** (`lib/screens/site_setup.dart`): Global-E-Mail/-Passwort
+  des Site-Admins (der bei der Site-Erstellung choses wurde) →
+  `siteSetup.enterSetup` → bei mehreren Sites ein Site-Picker; Erfolg →
+  SnackBar (lokal gespeicherte Verbindung + lokale Admin-Login-Zeile).
+- Die alte scaffold sign-in/greeting UI wurde entfernt — der echte lokale
+  Login (mit `local-admin`-Account) ist ausstehend (s. Nachstehendes).
 
 ## Backend / Client
 
-- Bindet **bewusst beide Clients** ein: `top_attempt_global_client` und
-  `top_attempt_local_client`. Hintergrund: die App wird auch globale
-  Eigenschaften manipulieren (z. B. Kursverwaltung — aktuell offen, ob
-  Kurse global angelegt oder lokal angelegt und synchronisiert werden,
+- Nutzt aktuell **nur den lokalen Client** (`top_attempt_local_client`,
+  API `localhost:8180`): Setup-Maske + Verbindungs-Chip laufen gegen die
+  lokale Instanz. Das Enrollment selbst passiert serverseitig im lokalen
+  Backend (dort lebt der globale Client).
+- `top_attempt_global_client` ist **aktuell auskommentiert** (pubspec,
+  2026-09-25): zu entfernt, da ungenutzt — bewusst wieder eintragen, wenn
+  die App globale Eigenschaften manipulieren wird (z. B. Kursverwaltung,
   siehe apps/AGENTS.md → „Offene Architekturfragen“).
-- Aktuell wird im Scaffold-Code nur der **globale** Client tatsächlich
-  benutzt (`lib/main.dart` importiert `top_attempt_global_client`); der
-  lokale Client ist als Dependency hinterlegt, aber noch nicht benutzt.
 - Server-URL: `--dart-define=SERVER_URL=…` oder `assets/config.json`;
   bei physischen Geräten LAN-IP des Dev-Rechners. Lokales Backend: API
   auf Port 8180.
@@ -57,6 +63,7 @@ Workspace-Liste (`apps/pubspec.yaml`) — To-do, siehe apps/AGENTS.md.
 ## Nächste Schritte (Vorschlag)
 
 1. Ins Workspace aufnehmen (`apps/pubspec.yaml`).
-2. Scaffold aufräumen, Login gegen die **lokale** Instanz etablieren.
-3. Sobald das lokale Backend-Modell steht: UI für Geräte-Übersicht und
-   Mitgliederverwaltung (Zugangsrechte) aufbauen.
+2. Lokalen Login (`local-admin`-Account) etablieren → Schutz für Setup-
+   und Admin-Bereichte (derzeit offen für alle im LAN).
+3. Sobald das lokale Backend-Datenmodell + Membership-Sync steht: UI für
+   Geräte-Übersicht und Mitgliederverwaltung (Zugangsrechte).

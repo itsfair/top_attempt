@@ -39,3 +39,10 @@ serverpod:
       posix: |
         cd ../top_attempt_flutter
         flutter build web --base-href /app/ --wasm --output ../top_attempt_global_server/web/app
+
+  flutter_apps:
+    global_admin:
+      path: ../../../frontends/top_attempt_global_flutter
+      displayName: Global Admin
+      auto_launch: true
+      device: chrome

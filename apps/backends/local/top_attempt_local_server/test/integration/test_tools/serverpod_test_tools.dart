@@ -21,6 +21,10 @@ import 'package:top_attempt_local_server/src/generated/greetings/greeting.dart'
     as _iwishv5y;
 import 'package:top_attempt_local_server/src/generated/profile/profile_details.dart'
     as _idgknjfr;
+import 'package:top_attempt_local_server/src/generated/site/site_connection_info.dart'
+    as _ir5besx9;
+import 'package:top_attempt_local_server/src/generated/site/site_setup_result.dart'
+    as _i59cdedx;
 import 'package:top_attempt_local_server/src/generated/protocol.dart';
 import 'package:top_attempt_local_server/src/generated/endpoints.dart';
 export 'package:serverpod_test/serverpod_test_public_exports.dart';
@@ -156,6 +160,8 @@ class TestEndpoints {
   late final _GreetingEndpoint greeting;
 
   late final _ProfileDetailsEndpoint profileDetails;
+
+  late final _SiteSetupEndpoint siteSetup;
 }
 
 class _InternalTestEndpoints extends TestEndpoints
@@ -178,6 +184,10 @@ class _InternalTestEndpoints extends TestEndpoints
       serializationManager,
     );
     profileDetails = _ProfileDetailsEndpoint(
+      endpoints,
+      serializationManager,
+    );
+    siteSetup = _SiteSetupEndpoint(
       endpoints,
       serializationManager,
     );
@@ -614,6 +624,84 @@ class _ProfileDetailsEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<_idgknjfr.ProfileDetails>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
+class _SiteSetupEndpoint {
+  _SiteSetupEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_i59cdedx.SiteSetupResult> enterSetup(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required String email,
+    required String password,
+    int? siteId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'siteSetup',
+            method: 'enterSetup',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'siteSetup',
+          methodName: 'enterSetup',
+          parameters: _ist.testObjectToJson({
+            'email': email,
+            'password': password,
+            'siteId': siteId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i59cdedx.SiteSetupResult>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ir5besx9.SiteConnectionInfo> connectionStatus(
+    _ist.TestSessionBuilder sessionBuilder,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'siteSetup',
+            method: 'connectionStatus',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'siteSetup',
+          methodName: 'connectionStatus',
+          parameters: _ist.testObjectToJson({}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ir5besx9.SiteConnectionInfo>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

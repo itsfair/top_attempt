@@ -1,0 +1,10 @@
+### One candidate site for a site-admin who is admin of several sites
+### (needed for the site picker in the local setup mask).
+class: SiteAdminMembershipCandidate
+fields:
+
+  ### The site id to pass back to `sitesAdmin.enroll`.
+  siteId: int
+
+  ### Human readable name of the site.
+  siteName: String

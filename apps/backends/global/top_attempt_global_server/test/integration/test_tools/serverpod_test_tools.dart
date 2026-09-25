@@ -26,10 +26,16 @@ import 'package:top_attempt_global_server/src/generated/greetings/greeting.dart'
     as _i7mxzk0m;
 import 'package:top_attempt_global_server/src/generated/profile/profile_details.dart'
     as _is6mk0z7;
-import 'package:top_attempt_global_server/src/generated/sites/created_site_info.dart'
-    as _ib8wuf1k;
 import 'package:top_attempt_global_server/src/generated/sites/site.dart'
     as _ieymp251;
+import 'package:top_attempt_global_server/src/generated/sites/site_admin_membership_candidate.dart'
+    as _iscolcca;
+import 'package:top_attempt_global_server/src/generated/sites/site_enrollment_info.dart'
+    as _ij9rzyfr;
+import 'package:top_attempt_global_server/src/generated/sites/site_event.dart'
+    as _i5rw8pcy;
+import 'package:top_attempt_global_server/src/generated/sites/site_ping.dart'
+    as _ijzkrm2i;
 import 'package:top_attempt_global_server/src/generated/protocol.dart';
 import 'package:top_attempt_global_server/src/generated/endpoints.dart';
 export 'package:serverpod_test/serverpod_test_public_exports.dart';
@@ -170,6 +176,10 @@ class TestEndpoints {
 
   late final _ProfileDetailsEndpoint profileDetails;
 
+  late final _SiteConnectionEndpoint siteConnection;
+
+  late final _SiteEnrollmentEndpoint siteEnrollment;
+
   late final _SitesAdminEndpoint sitesAdmin;
 }
 
@@ -201,6 +211,14 @@ class _InternalTestEndpoints extends TestEndpoints
       serializationManager,
     );
     profileDetails = _ProfileDetailsEndpoint(
+      endpoints,
+      serializationManager,
+    );
+    siteConnection = _SiteConnectionEndpoint(
+      endpoints,
+      serializationManager,
+    );
+    siteEnrollment = _SiteEnrollmentEndpoint(
       endpoints,
       serializationManager,
     );
@@ -962,6 +980,133 @@ class _ProfileDetailsEndpoint {
   }
 }
 
+class _SiteConnectionEndpoint {
+  _SiteConnectionEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Stream<_i5rw8pcy.SiteEvent> connect(
+    _ist.TestSessionBuilder sessionBuilder,
+    _ida.Stream<_ijzkrm2i.SitePing> pings,
+  ) {
+    var _localTestStreamManager = _ist.TestStreamManager<_i5rw8pcy.SiteEvent>();
+    _ist.callStreamFunctionAndHandleExceptions(
+      () async {
+        var _localUniqueSession =
+            (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+              endpoint: 'siteConnection',
+              method: 'connect',
+            );
+        var _localCallContext = await _endpointDispatch
+            .getMethodStreamCallContext(
+              createSessionCallback: (_) => _localUniqueSession,
+              endpointPath: 'siteConnection',
+              methodName: 'connect',
+              arguments: {},
+              requestedInputStreams: ['pings'],
+              serializationManager: _serializationManager,
+            );
+        await _localTestStreamManager.callStreamMethod(
+          _localCallContext,
+          _localUniqueSession,
+          {'pings': pings},
+        );
+      },
+      _localTestStreamManager.outputStreamController,
+    );
+    return _localTestStreamManager.outputStreamController.stream;
+  }
+}
+
+class _SiteEnrollmentEndpoint {
+  _SiteEnrollmentEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<List<_iscolcca.SiteAdminMembershipCandidate>>
+  listSiteAdminCandidates(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required String email,
+    required String password,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'siteEnrollment',
+            method: 'listSiteAdminCandidates',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'siteEnrollment',
+          methodName: 'listSiteAdminCandidates',
+          parameters: _ist.testObjectToJson({
+            'email': email,
+            'password': password,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<List<_iscolcca.SiteAdminMembershipCandidate>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ij9rzyfr.SiteEnrollmentInfo> enroll(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required String email,
+    required String password,
+    int? siteId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'siteEnrollment',
+            method: 'enroll',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'siteEnrollment',
+          methodName: 'enroll',
+          parameters: _ist.testObjectToJson({
+            'email': email,
+            'password': password,
+            'siteId': siteId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ij9rzyfr.SiteEnrollmentInfo>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
 class _SitesAdminEndpoint {
   _SitesAdminEndpoint(
     this._endpointDispatch,
@@ -972,7 +1117,7 @@ class _SitesAdminEndpoint {
 
   final _is.SerializationManager _serializationManager;
 
-  _ida.Future<_ib8wuf1k.CreatedSiteInfo> createSite(
+  _ida.Future<_ieymp251.Site> createSite(
     _ist.TestSessionBuilder sessionBuilder, {
     required String name,
     required String street,
@@ -1009,7 +1154,7 @@ class _SitesAdminEndpoint {
                   _localUniqueSession,
                   _localCallContext.arguments,
                 )
-                as _ida.Future<_ib8wuf1k.CreatedSiteInfo>);
+                as _ida.Future<_ieymp251.Site>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();
@@ -1100,6 +1245,37 @@ class _SitesAdminEndpoint {
           createSessionCallback: (_) => _localUniqueSession,
           endpointPath: 'sitesAdmin',
           methodName: 'getSite',
+          parameters: _ist.testObjectToJson({'siteId': siteId}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ieymp251.Site>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ieymp251.Site> revokeSiteConnection(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required int siteId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'sitesAdmin',
+            method: 'revokeSiteConnection',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'sitesAdmin',
+          methodName: 'revokeSiteConnection',
           parameters: _ist.testObjectToJson({'siteId': siteId}),
           serializationManager: _serializationManager,
         );

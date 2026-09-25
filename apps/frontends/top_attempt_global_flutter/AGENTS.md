@@ -28,18 +28,17 @@ Monorepo: [Root-AGENTS.md](../../../AGENTS.md).
   Liste aller Nutzer (Backend-Paging, 50/Seite mit „Weitere laden“-Button,
   Suche nach E-Mail/Name), Detail-Route `/members/:authUserId` mit Toggles
   (Global Admin / Gesperrt; Selbstschutz-SnackBars wie im Backend).
-- **Sites** (2026-09-25, `screens/sites.dart`,
+- **Sites** (2026-09-25 erweitert, `screens/sites.dart`,
   `screens/create_site_dialog.dart`, `screens/site_detail.dart`):
   Sites-Liste (Backend-Paging 50/Seite + Suche nach Name/E-Mail/Stadt,
-  Status-Chip „Setup offen“/„Registriert“), FAB unten rechts öffnet den
+  **Verbindungs-Chip je Site** abgeleitet aus `lastSeenAt` — Setup offen/
+  Verbunden (frisch, <90 s)/Offline seit …), FAB unten rechts öffnet den
   Create-Dialog (Adresse + Firmenmail + erster Site-Admin per
-  Such-Dropdown über `usersAdmin.listUsers`). Nach dem Anlegen zeigt ein
-  Onboarding-Modal **beide Geheimnisse je genau einmal** (Einmalpasswort
-  der lokalen Instanz + initiales Site-Admin-Passwort; Copy-Buttons,
-  Bestätigungs-Checkbox). Detail-Route `/sites/:id` zeigt Adresse, Status
-  und den ersten Site-Admin — die Geheimnisse sind dort nie wieder
-  sichtbar. Per-Site-WS-Verbindungsstatus (via `lastSeenAt`) folgt in
-  Stufe 2.
+  Such-Dropdown über `usersAdmin.listUsers`). Nach dem Anlegen KEIN
+  Onboarding-Secrets-Modal mehr — Hinweis-Snackbar (Einrichtung vor Ort
+  mit globalen Zugangsdaten) und Übergang zur Detail-Route
+  `/sites/:siteId`: Status-Chip, `lastSeenAt`-Anzeige und Aktion
+  „Verbindung widerrufen" (`sitesAdmin.revokeSiteConnection`).
 - Registrierung im Admin-Frontend ist **bewusst sichtbar und nutzbar**
    (Stand: Versuch, sie zu unterdrücken, scheiterte an den
    Serverpod-Auth-Widget-Internals — To-do siehe unten). Kein

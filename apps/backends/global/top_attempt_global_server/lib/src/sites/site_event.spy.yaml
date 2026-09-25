@@ -1,0 +1,12 @@
+### Server to client event on the site connection stream.
+class: SiteEvent
+fields:
+
+  ### Acknowledgement for a received ping.
+  pongSentAtMs: int, defaultModel=0
+
+  ### Round trip marker: matches `SitePing.sentAtMs` when pong.
+  pingSentAtMs: int, defaultModel=0
+
+  ### Millisecond timestamp of the senders send time.
+  sentAtMs: int, defaultModel=0

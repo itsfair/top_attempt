@@ -12,3 +12,15 @@
 /// effect on the next login. Users of this scope are managed via
 /// `AuthUsers.update` (server code; never per raw SQL while users are active).
 const String kGlobalAdminScope = 'global-admin';
+
+/// Scope used on the site connection device session (SAS session for the
+/// site admin, `method: 'device'`). Issued token-level only at enrollment;
+/// it never lands on the admin's user scopes and must not be used anywhere
+/// else.
+const String kSiteDeviceScope = 'site-device';
+
+/// Scope of the *local instance* for its site admin (local AuthUser, created
+/// at first setup). Documented here for name-symmetry only: this scope lives
+/// purely in the LOCAL instance's auth realm and is meaningless at the
+/// global backend.
+const String kLocalAdminScope = 'local-admin';

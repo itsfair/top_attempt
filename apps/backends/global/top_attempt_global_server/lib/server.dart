@@ -8,6 +8,7 @@ import 'package:yaml/yaml.dart';
 
 import 'src/generated/endpoints.dart';
 import 'src/generated/protocol.dart';
+import 'src/sites/site_device_authentication.dart';
 import 'src/web/routes/app_config_route.dart';
 import 'src/web/routes/root.dart';
 
@@ -21,8 +22,15 @@ void run(List<String> args) async {
   // and the identity providers will be the authentication options available for users.
   pod.initializeAuthServices(
     tokenManagerBuilders: [
-      // Use JWT for authentication keys towards the server.
+      // Use JWT for authentication keys towards the server (identity
+      // providers issue this type; interactive users).
       JwtConfigFromPasswords(),
+      // Server-side (SAS) sessions validate our device credentials: the
+      // credential the local instance obtains at enrollment is a
+      // non-rotating SAS session key (`method: 'device'`, scope
+      // `site-device`). Same config/pepper as the issuance in
+      // SiteDeviceAuthentication (see lib/src/sites/site_device_authentication.dart).
+      SiteDeviceAuthentication.config,
     ],
     identityProviderBuilders: [
       // Configure the email identity provider for email/password authentication.

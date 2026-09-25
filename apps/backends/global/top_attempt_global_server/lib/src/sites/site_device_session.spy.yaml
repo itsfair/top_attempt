@@ -1,0 +1,20 @@
+### Device session binding for a site connection. One active session per
+### site (the row is replaced on recovery, the old server-side session is
+### revoked together with this row).
+class: SiteDeviceSession
+table: site_device_sessions
+fields:
+
+  ### The site this device connection belongs to.
+  site: Site?, relation(onDelete=Cascade)
+
+  ### The id of the server-side (SAS) session that carries the device
+  ### credential. Resolvable via `session.authenticated!.authId`.
+  serverSideSessionId: UuidValue
+
+  ### When the enrollment happened (fresh setup or recovery).
+  createdAt: DateTime, defaultModel=now
+indexes:
+  site_unique_idx:
+    fields: siteId
+    unique: true

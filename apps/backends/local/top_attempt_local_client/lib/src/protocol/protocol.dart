@@ -18,8 +18,22 @@ import 'package:serverpod_auth_idp_client/serverpod_auth_idp_client.dart'
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'greetings/greeting.dart' as _izw8z7ou;
 import 'profile/profile_details.dart' as _is7ofcfc;
+import 'site/member.dart' as _ixt8mg2q;
+import 'site/site_candidate_local.dart' as _iin2gxgd;
+import 'site/site_connection.dart' as _irwm5040;
+import 'site/site_connection_info.dart' as _i9oolunz;
+import 'site/site_connection_state.dart' as _ifrxdjdr;
+import 'site/site_setup_exception.dart' as _imfczqeb;
+import 'site/site_setup_result.dart' as _in5mc098;
 export 'greetings/greeting.dart';
 export 'profile/profile_details.dart';
+export 'site/member.dart';
+export 'site/site_candidate_local.dart';
+export 'site/site_connection.dart';
+export 'site/site_connection_info.dart';
+export 'site/site_connection_state.dart';
+export 'site/site_setup_exception.dart';
+export 'site/site_setup_result.dart';
 export 'client.dart';
 
 class Protocol extends _isc.SerializationManager {
@@ -62,11 +76,67 @@ class Protocol extends _isc.SerializationManager {
     if (t == _is7ofcfc.ProfileDetails) {
       return _is7ofcfc.ProfileDetails.fromJson(data) as T;
     }
+    if (t == _ixt8mg2q.Member) {
+      return _ixt8mg2q.Member.fromJson(data) as T;
+    }
+    if (t == _iin2gxgd.SiteCandidateLocal) {
+      return _iin2gxgd.SiteCandidateLocal.fromJson(data) as T;
+    }
+    if (t == _irwm5040.SiteConnection) {
+      return _irwm5040.SiteConnection.fromJson(data) as T;
+    }
+    if (t == _i9oolunz.SiteConnectionInfo) {
+      return _i9oolunz.SiteConnectionInfo.fromJson(data) as T;
+    }
+    if (t == _ifrxdjdr.SiteConnectionState) {
+      return _ifrxdjdr.SiteConnectionState.fromJson(data) as T;
+    }
+    if (t == _imfczqeb.SiteSetupException) {
+      return _imfczqeb.SiteSetupException.fromJson(data) as T;
+    }
+    if (t == _in5mc098.SiteSetupResult) {
+      return _in5mc098.SiteSetupResult.fromJson(data) as T;
+    }
     if (t == _isc.getType<_izw8z7ou.Greeting?>()) {
       return (data != null ? _izw8z7ou.Greeting.fromJson(data) : null) as T;
     }
     if (t == _isc.getType<_is7ofcfc.ProfileDetails?>()) {
       return (data != null ? _is7ofcfc.ProfileDetails.fromJson(data) : null)
+          as T;
+    }
+    if (t == _isc.getType<_ixt8mg2q.Member?>()) {
+      return (data != null ? _ixt8mg2q.Member.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_iin2gxgd.SiteCandidateLocal?>()) {
+      return (data != null ? _iin2gxgd.SiteCandidateLocal.fromJson(data) : null)
+          as T;
+    }
+    if (t == _isc.getType<_irwm5040.SiteConnection?>()) {
+      return (data != null ? _irwm5040.SiteConnection.fromJson(data) : null)
+          as T;
+    }
+    if (t == _isc.getType<_i9oolunz.SiteConnectionInfo?>()) {
+      return (data != null ? _i9oolunz.SiteConnectionInfo.fromJson(data) : null)
+          as T;
+    }
+    if (t == _isc.getType<_ifrxdjdr.SiteConnectionState?>()) {
+      return (data != null
+              ? _ifrxdjdr.SiteConnectionState.fromJson(data)
+              : null)
+          as T;
+    }
+    if (t == _isc.getType<_imfczqeb.SiteSetupException?>()) {
+      return (data != null ? _imfczqeb.SiteSetupException.fromJson(data) : null)
+          as T;
+    }
+    if (t == _isc.getType<_in5mc098.SiteSetupResult?>()) {
+      return (data != null ? _in5mc098.SiteSetupResult.fromJson(data) : null)
+          as T;
+    }
+    if (t == List<_iin2gxgd.SiteCandidateLocal>) {
+      return (data as List)
+              .map((e) => deserialize<_iin2gxgd.SiteCandidateLocal>(e))
+              .toList()
           as T;
     }
     try {
@@ -82,6 +152,13 @@ class Protocol extends _isc.SerializationManager {
     return switch (type) {
       _izw8z7ou.Greeting => 'Greeting',
       _is7ofcfc.ProfileDetails => 'ProfileDetails',
+      _ixt8mg2q.Member => 'Member',
+      _iin2gxgd.SiteCandidateLocal => 'SiteCandidateLocal',
+      _irwm5040.SiteConnection => 'SiteConnection',
+      _i9oolunz.SiteConnectionInfo => 'SiteConnectionInfo',
+      _ifrxdjdr.SiteConnectionState => 'SiteConnectionState',
+      _imfczqeb.SiteSetupException => 'SiteSetupException',
+      _in5mc098.SiteSetupResult => 'SiteSetupResult',
       _ => null,
     };
   }
@@ -103,6 +180,20 @@ class Protocol extends _isc.SerializationManager {
         return 'Greeting';
       case _is7ofcfc.ProfileDetails():
         return 'ProfileDetails';
+      case _ixt8mg2q.Member():
+        return 'Member';
+      case _iin2gxgd.SiteCandidateLocal():
+        return 'SiteCandidateLocal';
+      case _irwm5040.SiteConnection():
+        return 'SiteConnection';
+      case _i9oolunz.SiteConnectionInfo():
+        return 'SiteConnectionInfo';
+      case _ifrxdjdr.SiteConnectionState():
+        return 'SiteConnectionState';
+      case _imfczqeb.SiteSetupException():
+        return 'SiteSetupException';
+      case _in5mc098.SiteSetupResult():
+        return 'SiteSetupResult';
     }
     className = _iaic.Protocol().getClassNameForObject(data);
     if (className != null) {
@@ -130,6 +221,27 @@ class Protocol extends _isc.SerializationManager {
     }
     if (dataClassName == 'ProfileDetails') {
       return deserialize<_is7ofcfc.ProfileDetails>(data['data']);
+    }
+    if (dataClassName == 'Member') {
+      return deserialize<_ixt8mg2q.Member>(data['data']);
+    }
+    if (dataClassName == 'SiteCandidateLocal') {
+      return deserialize<_iin2gxgd.SiteCandidateLocal>(data['data']);
+    }
+    if (dataClassName == 'SiteConnection') {
+      return deserialize<_irwm5040.SiteConnection>(data['data']);
+    }
+    if (dataClassName == 'SiteConnectionInfo') {
+      return deserialize<_i9oolunz.SiteConnectionInfo>(data['data']);
+    }
+    if (dataClassName == 'SiteConnectionState') {
+      return deserialize<_ifrxdjdr.SiteConnectionState>(data['data']);
+    }
+    if (dataClassName == 'SiteSetupException') {
+      return deserialize<_imfczqeb.SiteSetupException>(data['data']);
+    }
+    if (dataClassName == 'SiteSetupResult') {
+      return deserialize<_in5mc098.SiteSetupResult>(data['data']);
     }
     if (dataClassName.startsWith('serverpod_auth_idp.')) {
       data['className'] = dataClassName.substring(19);

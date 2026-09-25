@@ -163,6 +163,8 @@ class _SitesScreenState extends State<SitesScreen> {
                             leading: Icon(
                               site.status == SiteSetupStatus.pendingSetup
                                   ? Icons.business_outlined
+                                  : site.status == SiteSetupStatus.registered
+                                  ? Icons.wifi
                                   : Icons.check_circle_outline,
                             ),
                             title: Text(site.name),
@@ -170,13 +172,7 @@ class _SitesScreenState extends State<SitesScreen> {
                               '${site.zipCode} ${site.city} · '
                               '${site.companyEmail}',
                             ),
-                            trailing: Chip(
-                              label: Text(
-                                site.status == SiteSetupStatus.pendingSetup
-                                    ? 'Setup offen'
-                                    : 'Registriert',
-                              ),
-                            ),
+                            trailing: _chipFor(site),
                             onTap: () => context.go('/sites/${site.id!}'),
                           ),
                         );
@@ -201,22 +197,62 @@ class _SitesScreenState extends State<SitesScreen> {
     );
   }
 
+  /// Per-site connection chip, derived from the local instance's
+  /// `lastSeenAt` heartbeats (WS pings). Registered + fresh = connected;
+  /// stale = offline; pendingSetup = no local instance yet. Live push
+  /// (Serverpod message central) is a To-do — this polls.
+  Widget _chipFor(final Site site) {
+    if (site.status == SiteSetupStatus.pendingSetup) {
+      return const Chip(
+        avatar: Icon(Icons.pending_outlined, size: 16, color: Colors.blueGrey),
+        label: Text('Setup offen'),
+      );
+    }
+
+    final lastSeen = site.lastSeenAt;
+    if (lastSeen == null) {
+      return const Chip(
+        avatar: Icon(Icons.wifi_off, size: 16, color: Colors.red),
+        label: Text('Offline'),
+      );
+    }
+
+    final offlineFor = DateTime.now().difference(lastSeen);
+    if (offlineFor <= const Duration(seconds: 90)) {
+      return const Chip(
+        avatar: Icon(Icons.wifi, size: 16, color: Colors.green),
+        label: Text('Verbunden'),
+      );
+    }
+
+    return Chip(
+      avatar: const Icon(Icons.wifi_off, size: 16, color: Colors.red),
+      label: Text('Offline seit ${_shortDuration(offlineFor)}'),
+    );
+  }
+
+  String _shortDuration(final Duration duration) {
+    if (duration.inHours >= 24) return '${duration.inDays} d';
+    if (duration.inMinutes >= 60) return '${duration.inHours} h';
+    return '${duration.inMinutes} m';
+  }
+
   Future<void> _openCreateDialog() async {
-    final created = await showDialog<CreatedSiteInfo>(
+    final created = await showDialog<Site>(
       context: context,
       barrierDismissible: false,
       builder: (context) => const CreateSiteDialog(),
     );
     if (created == null || !mounted) return;
 
-    // The secrets are shown exactly once, directly after creation.
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => OnboardingSecretsDialog(info: created),
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Site angelegt. Die Einrichtung erfolgt vor Ort: der Site-Admin '
+          'gibt dort seine globalen Anmeldedaten ein (keine Secrets nötig).',
+        ),
+      ),
     );
-    if (mounted) {
-      context.go('/sites/${created.siteId}');
-    }
+    context.go('/sites/${created.id!}');
   }
 }

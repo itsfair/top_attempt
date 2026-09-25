@@ -1,0 +1,38 @@
+### Local person directory of this site. Every person of the site appears
+### here — either as plain member (no local login) or with a linked local
+### AuthUser (site admin / staff with login). One row per global person.
+class: Member
+table: members
+fields:
+
+  ### The GLOBAL authUserId of the person — the exchange key with the
+  ### global instance (and later used by the door-opening flow: ESP32 ->
+  ### local backend -> member lookup). This is NOT the local AuthUser id.
+  globalAuthUserId: UuidValue
+
+  ### Link to the local login account (site admin / staff); null for plain
+  ### members without login. The local AuthUser uuid is local-only and must
+  ### never be used for cross-instance matching.
+  localAuthUser: module:serverpod_auth_core:AuthUser?, relation
+
+  ### Mirrored profile data from the global instance.
+  email: String?
+  fullName: String?
+
+  ### Role as string, mirrored from the global `SiteRole` (member/staff/
+  ### siteAdmin) — synced; the local backend derives privileges from it.
+  role: String, defaultModel='member'
+
+  ### Mirrored active state of the global membership.
+  active: bool, defaultModel=true
+
+  ### When the local row was created (at enrollment for the site admin or
+  ### when a membership sync event arrived).
+  createdAt: DateTime, defaultModel=now
+indexes:
+  global_auth_user_unique_idx:
+    fields: globalAuthUserId
+    unique: true
+  local_auth_user_unique_idx:
+    fields: localAuthUserId
+    unique: true

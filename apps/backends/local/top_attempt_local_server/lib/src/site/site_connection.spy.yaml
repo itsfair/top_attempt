@@ -1,0 +1,28 @@
+### Enrollment state of this local instance at its site's global instance.
+### Single-row configuration table (the worker reads it on every startup).
+class: SiteConnection
+table: site_connections
+fields:
+
+  ### The API URL of the global backend this instance is bound to
+  ### (e.g. `http://192.168.x.x:8080` in dev, real URL in production).
+  globalApiUrl: String
+
+  ### The site we are enrolled at.
+  siteId: int
+  siteName: String
+
+  ### Admin identity handed over at enrollment (the site admin acts as the
+  ### connection owner; `member.globalAuthUserId` for this admin uses the
+  ### same id).
+  adminEmail: String?
+  adminFullName: String?
+  adminAuthUserId: UuidValue?, scope=serverOnly
+
+  ### The device credential: non-rotating SAS session key issued by the
+  ### global backend at enrollment (`AuthStrategy.session`). Write-once;
+  ### storage needs no rotation handling. Encrypt at rest is a To-do.
+  deviceSessionKey: String?, scope=serverOnly
+
+  ### When the enrollment happened (may be a recovery).
+  enrolledAt: DateTime, defaultModel=now

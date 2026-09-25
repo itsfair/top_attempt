@@ -8,6 +8,7 @@ import 'package:yaml/yaml.dart';
 
 import 'src/generated/endpoints.dart';
 import 'src/generated/protocol.dart';
+import 'src/site/global_site_connection.dart';
 import 'src/web/routes/app_config_route.dart';
 import 'src/web/routes/root.dart';
 
@@ -92,6 +93,10 @@ void run(List<String> args) async {
 
   // Start the server.
   await pod.start();
+
+  // Start the site connection worker (no-op until the local instance is
+  // enrolled at a global instance; the worker then connects on every start).
+  await GlobalSiteConnection.instance.start();
 }
 
 /// Reads the RustFS endpoint (scheme/host/port) from the stage specific

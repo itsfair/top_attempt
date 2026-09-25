@@ -1,0 +1,7 @@
+### Exception raised by the local site setup endpoints (bad credentials,
+### global backend unreachable, etc.).
+exception: SiteSetupException
+fields:
+
+  ### Human-readable description for the setup mask.
+  message: String

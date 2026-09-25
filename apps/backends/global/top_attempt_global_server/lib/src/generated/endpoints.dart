@@ -16,12 +16,16 @@ import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
     as _iacs;
 import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
     as _iais;
+import 'package:top_attempt_global_server/src/generated/sites/site_ping.dart'
+    as _ijzkrm2i;
 import '../admin/users_admin_endpoint.dart' as _i9qj2dak;
 import '../auth/email_idp_endpoint.dart' as _iuc1hd5t;
 import '../auth/jwt_refresh_endpoint.dart' as _inwq3ztq;
 import '../auth/user_profile_edit_endpoint.dart' as _ije0zjyg;
 import '../greetings/greeting_endpoint.dart' as _il624ik7;
 import '../profile/profile_details_endpoint.dart' as _iev396g5;
+import '../sites/site_connection_endpoint.dart' as _iy15yji6;
+import '../sites/site_enrollment_endpoint.dart' as _ii29ea4g;
 import '../sites/sites_admin_endpoint.dart' as _i6ok1ur0;
 
 class Endpoints extends _is.EndpointDispatch {
@@ -62,6 +66,18 @@ class Endpoints extends _is.EndpointDispatch {
         ..initialize(
           server,
           'profileDetails',
+          null,
+        ),
+      'siteConnection': _iy15yji6.SiteConnectionEndpoint()
+        ..initialize(
+          server,
+          'siteConnection',
+          null,
+        ),
+      'siteEnrollment': _ii29ea4g.SiteEnrollmentEndpoint()
+        ..initialize(
+          server,
+          'siteEnrollment',
           null,
         ),
       'sitesAdmin': _i6ok1ur0.SitesAdminEndpoint()
@@ -556,6 +572,101 @@ class Endpoints extends _is.EndpointDispatch {
         ),
       },
     );
+    connectors['siteConnection'] = _is.EndpointConnector(
+      name: 'siteConnection',
+      endpoint: endpoints['siteConnection']!,
+      methodConnectors: {
+        'connect': _is.MethodStreamConnector(
+          name: 'connect',
+          params: {},
+          streamParams: {
+            'pings': _is.StreamParameterDescription<_ijzkrm2i.SitePing>(
+              name: 'pings',
+              nullable: false,
+            ),
+          },
+          returnType: _is.MethodStreamReturnType.streamType,
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+                Map<String, Stream> streamParams,
+              ) =>
+                  (endpoints['siteConnection']
+                          as _iy15yji6.SiteConnectionEndpoint)
+                      .connect(
+                        session,
+                        streamParams['pings']!.cast<_ijzkrm2i.SitePing>(),
+                      ),
+        ),
+      },
+    );
+    connectors['siteEnrollment'] = _is.EndpointConnector(
+      name: 'siteEnrollment',
+      endpoint: endpoints['siteEnrollment']!,
+      methodConnectors: {
+        'listSiteAdminCandidates': _is.MethodConnector(
+          name: 'listSiteAdminCandidates',
+          params: {
+            'email': _is.ParameterDescription(
+              name: 'email',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'password': _is.ParameterDescription(
+              name: 'password',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['siteEnrollment']
+                          as _ii29ea4g.SiteEnrollmentEndpoint)
+                      .listSiteAdminCandidates(
+                        session,
+                        email: params['email'],
+                        password: params['password'],
+                      ),
+        ),
+        'enroll': _is.MethodConnector(
+          name: 'enroll',
+          params: {
+            'email': _is.ParameterDescription(
+              name: 'email',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'password': _is.ParameterDescription(
+              name: 'password',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'siteId': _is.ParameterDescription(
+              name: 'siteId',
+              type: _is.getType<int?>(),
+              nullable: true,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['siteEnrollment']
+                          as _ii29ea4g.SiteEnrollmentEndpoint)
+                      .enroll(
+                        session,
+                        email: params['email'],
+                        password: params['password'],
+                        siteId: params['siteId'],
+                      ),
+        ),
+      },
+    );
     connectors['sitesAdmin'] = _is.EndpointConnector(
       name: 'sitesAdmin',
       endpoint: endpoints['sitesAdmin']!,
@@ -684,6 +795,26 @@ class Endpoints extends _is.EndpointDispatch {
               ) async =>
                   (endpoints['sitesAdmin'] as _i6ok1ur0.SitesAdminEndpoint)
                       .getSite(
+                        session,
+                        siteId: params['siteId'],
+                      ),
+        ),
+        'revokeSiteConnection': _is.MethodConnector(
+          name: 'revokeSiteConnection',
+          params: {
+            'siteId': _is.ParameterDescription(
+              name: 'siteId',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['sitesAdmin'] as _i6ok1ur0.SitesAdminEndpoint)
+                      .revokeSiteConnection(
                         session,
                         siteId: params['siteId'],
                       ),

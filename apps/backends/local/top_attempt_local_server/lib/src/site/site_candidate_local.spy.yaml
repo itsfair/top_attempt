@@ -1,0 +1,9 @@
+### One pickable site in the local setup mask.
+class: SiteCandidateLocal
+fields:
+
+  ### The site id to pass back to `enterSetup`.
+  siteId: int
+
+  ### Human readable site name.
+  siteName: String

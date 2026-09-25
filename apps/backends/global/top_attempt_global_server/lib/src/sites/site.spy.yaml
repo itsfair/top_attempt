@@ -25,14 +25,6 @@ fields:
   ### (authoritative linkage is the `SiteMembership` with role siteAdmin).
   firstAdmin: module:serverpod_auth_core:AuthUser?, relation
 
-  ### Hash of the one-time password the local instance uses to register.
-  oneTimePasswordHash: String?, scope=serverOnly
-
-  ### Initial password for the local admin AuthUser; deliverable at first
-  ### connect, cleared immediately after transfer. Encrypted at rest (key
-  ### from `passwords.yaml`).
-  initialAdminPasswordEncrypted: String?, scope=serverOnly
-
   ### When the local instance registered at the global instance.
   registeredAt: DateTime?
 

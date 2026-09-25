@@ -94,22 +94,30 @@ Redis ist in beiden `development.yaml` derzeit `enabled: false`.
 Zentrale Benutzerverwaltung: E-Mail-IdP (Registrierung/Login/Reset),
 JWT-Auth, `UserProfileEditEndpoint` (E-Mail/User-ID/Bild),
 `ProfileDetailsEndpoint` (Vor-/Nachname, Geburtstag), RustFS-Storage.
-Stand: MVP-Basis, funktionsfähig gegen die Enduser-App; seit 2026-09-24
-`usersAdmin`-Endpoint-Set (Nutzerlisten-Paging, Globale-Admin-/Blocked-
-Toggles inkl. Token-Revocation, `global-admin`-Scope via
-`Endpoint.requiredScopes`); seit 2026-09-25 Site-Anlage (`sitesAdmin`:
-`sites`- und `site_memberships`-Tabellen,
-One-Time-Passwort + initiales Admin-Passwort mit verschlüsseltem
-Atrest-Speicher, Membership-Seed `siteAdmin`) für die Sites der
-Plattform-Admin-App.
+Stand: MVP-Basis, funktionsfähig gegen die Enduser-App; `usersAdmin`
+(2026-09-24: Nutzerlisten-Paging, Globale-Admin-/Blocked-Toggles inkl.
+Token-Revocation, `global-admin`-Scope); **Site-Ebene (2026-09-25)**:
+`sitesAdmin` (createSite ohne Secrets, Site-Verwaltung inkl.
+`revokeSiteConnection`), `siteEnrollment` (globale Anmeldedaten-Verify,
+Site-Picker, Device-Session = SAS `method:'device'`, token-level Scope
+`site-device`, Mapping-Tabelle), `siteConnection` (Method-Stream,
+Ping/Pone aktualisiert `lastSeenAt`) — der lokale Backend verbindet sich
+damit — Details/Offenpunkte im Backend-AGENTS.md. Site-Migrationen:
+`20260923122822442` + `20260925150857366`.
 
 ### local (`apps/backends/local/`) — Details in [AGENTS.md](backends/local/AGENTS.md)
 
-Momentan 1:1-Spiegel des globalen Backends (gleiche Endpoints, gleiche
-Struktur, Ports/DB verschoben) — entstanden beim „Repaired local backend
-for upgrade" (2026-09-23). Fachlich noch ohne Tür-/Mitglieder-Logik;
-das Geräte-/Mitglieder-/Berechtigungsmodell ist der nächste große
-Baustein.
+Lokale Instanz eines Betriebs/Standorts. Seit 2026-09-25 **Site-Modul**:
+Enrollment über die globalen Anmeldedaten des Site-Admins
+(`siteSetup.enterSetup` mit globalem Client-Dep), lokales
+Mitglieder-Verzeichnis (`members` mit `globalAuthUserId` als
+Austausch-/Tür-ID), lokaler `local-admin`-Login (gleiches Passwort wie
+global beim Setup), und der Verbindungs-Worker
+(`GlobalSiteConnection`: SAS-Session-Key device cred, long-lived
+Method-Stream + 30s-Ping → `lastSeenAt`, Backoff-Reconnect,
+`needsReSetup`-Status). Keine lokale Selbst-Registrierung — Logins
+entstehen nur aus verifizierten Global-Logins (gilt später für
+Angestellte identisch). Grundverwaltung/Ports: wie global (8180er-Schema).
 
 ## Frontends
 
@@ -194,37 +202,39 @@ Rekonstruktion aus Git:
    wirkten nicht — Details und Ansätze für später in
    [`frontends/top_attempt_global_flutter/AGENTS.md`](frontends/top_attempt_global_flutter/AGENTS.md)
    → „Nächste Schritte“, Punkt 5.
-8. **Stufe 2 — Site-Aufsicht / lokale Instanz (2026-09-25 entschieden)**:
-   a) Registrierungsprotokoll lokale Instanz: Einmalpasswort verifizieren
-      (SHA-256-Hash), als verbraucht markieren, device credential
-      ausstellen + Revokation, Site → `registered`.
-   b) WS-Anbindung lokale Instanz → global (Client-Tunnel, Reconnect/
-      Wiederherstellung bei kurzen Ausfällen), Heartbeat → `lastSeenAt`.
-   c) **Erstverbindung**: lokale `members`-Zeile für den Site-Admin +
-      lokaler AuthUser mit dem übertragenen initialen Passwort (lokal
-      argon2-gehashed, danach global `initialAdminPasswordEncrypted`
-      löschen) + `local-admin`-Scope. Konsistenzregel (chef-Entscheid):
-      **keine lokale Registrierung** — Admins/Angestellte erhalten Logins
-      stets vom Admin mit generiertem Initialpasswort (member: nur lokale
-      row, kein Login).
-   d) **WS-Status-Anzeige**: global UI → Status pro Site in der
-      Sites-Liste; lokale UI → Statusanzeige in der App-Bar. (noch nicht
-      implementiert)
-   e) E-Mail-Versand der Einrichtungsgeheimnisse (sobald Mailkanal
-      existiert).
-9. **Site-Editor/Roadmap**: Site bearbeiten/löschen, OTP-/Setup-Regenerierung
-   (Regenerate-Button), Mitgliedschaften-Ansicht je Site; gleiches Passwort
-   global/lokal wurde bewusst abgelehnt (Pepper-Sharing-Risiko) — lokale
-   Instanzen bleiben bei separaten Initialpasswörtern.
-10. **Key-Rotation hinweis (Verschlüsselung)**: Der AES-Key für
-    `initialAdminPasswordEncrypted` wird aus `siteSetupEncryptionKey`
-    (`config/passwords.yaml`) abgeleitet. Bei einer Key-Rotation müssen
-    bestehende (noch nicht übertragene) verschlüsselte Werte neu
-    verschlüsselt werden — vor Produktivbetrieb klären.
+8. **Stufe 2 — Enrollment/WS umgesetzt (2026-09-25)**; verbleibende
+   Stufen (Stufe 3):
+   a) **Membership-Sync über den Method-Stream**: neue/entfernte globale
+      `SiteMembership`-Events in die lokale `members`-Tabelle (Regel:
+      lokale Rows führen `globalAuthUserId` — Austausch- und Tür-ID),
+      Staff-Wechsel → lokales LOGIN analog Admin-Setup (bereits aus
+      verifizierten Global-Logins, dann Scope-Zuweisung beim lokalen
+      Admin) — und Rollen/Status rückgemeldet (site-device-beschränkte
+      Endpoints).
+   b) **Live-Status-Push** an die Admin-Clients (message central) statt
+      30s-Polling in der globalen Sites-Liste.
+   c) **Lokaler Schutz**: Admin-UI-Login (local-admin) für die lokale
+      App — aktuell offen (Setup-Maske ungeschützt).
+   d) **Verschlüsselung-at-rest** der lokalen `site_connections.row`
+      (Session-Key) — vor Produktivbetrieb.
+   e) SITEPOD_PASSWORD_serverSideSessionKeyHashPepper in CI (tests.yml)
+      ergänzen + Serverpod-CLI-Versionen in CI vereinheitlichen (siehe
+      Punkt 2).
+ 9. **Site-Editor/Roadmap**: Site bearbeiten/löschen, Mitgliedschaften-
+    Ansicht je Site; Hinweis Login gleiches Passwort global + lokal
+    (gewünscht) — Umsetzung: lokale Kopie entsteht bei dem verifizierten
+    Global-Login (Selbstheilung bei Passwort-Änderung = To-do).
+10. **Ansatz/Entscheidungen (2026-09-25)**: keine lokale Selbst-
+    Registrierung; Logins entstehen nur aus verifizierten Global-Logins
+    (beim Setup des Admins / später bei Angestellten durch den lokalen
+    Admin); Device-Credential = non-rotating SAS-Session-Key
+    (`site-device`, Streuung über `serverSideSessionKeyHashPepper`),
+    verbindungs-Status chips via `lastSeenAt`.
 
 ## Fortsetzung / nächste Schritte
 
 Die Richtung ist: ERP-Ausbau der lokalen Instanz bei autarkem Betrieb,
 Synchronisation mit der globalen Instanz so schlank wie möglich. Nächste
-konkrete Schritte stehen unter „To-dos"; die fachlich größte offene
-Frage ist das lokale User-/Login-Modell (Punkt 4).
+konkrete Schritte stehen unter „To-dos"; der wichtigste fehlende Block ist
+der Membership-Sync über den Stream (Punkt 8a) plus der lokale Admin-Login
+(Punkt 8c).

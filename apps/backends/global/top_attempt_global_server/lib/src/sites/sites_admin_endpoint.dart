@@ -3,17 +3,15 @@ import 'package:serverpod_auth_idp_server/core.dart';
 
 import '../auth/scopes.dart';
 import '../generated/protocol.dart';
-import 'secret_generator.dart';
-import 'site_setup_crypto.dart';
+import 'site_device_authentication.dart';
 
 /// Admin endpoint for creating and viewing sites ("Betriebe").
 ///
 /// Access is enforced declaratively via [requiredScopes] (`global-admin`).
 ///
-/// Stage 2 will add: the enrollment endpoint the local instance calls with
-/// the one-time password (burns the OTP, issues the device credential,
-/// delivers the initial admin password and marks the site registered), plus
-/// WS connection handling.
+/// Enrollment with the global credentials happens in
+/// [SiteEnrollmentEndpoint]; the persistent device connection uses
+/// [SiteConnectionEndpoint].
 class SitesAdminEndpoint extends Endpoint {
   /// Maximum sites per page (the client asks about 50; the server clamps).
   static const int pageSize = 50;
@@ -21,12 +19,11 @@ class SitesAdminEndpoint extends Endpoint {
   @override
   Set<Scope> get requiredScopes => {const Scope(kGlobalAdminScope)};
 
-  /// Creates a site, generates the one-time password for the local
-  /// instance's enrollment and the initial password for the local admin
-  /// (the local AuthUser is created at first connect with it), seeds the
-  /// site admin membership and returns everything in plain text exactly
-  /// once ([CreatedSiteInfo]).
-  Future<CreatedSiteInfo> createSite(
+  /// Creates a site and seeds the `siteAdmin` membership for the chosen
+  /// first admin. Enrollment (linking the local instance) happens in a
+  /// separate step — the admin enters their global credentials at the local
+  /// setup mask, no secrets are generated here.
+  Future<Site> createSite(
     final Session session, {
     required final String name,
     required final String street,
@@ -53,9 +50,6 @@ class SitesAdminEndpoint extends Endpoint {
       );
     }
 
-    final oneTimePassword = SecretGenerator.generateOneTimePassword();
-    final initialAdminPassword = SecretGenerator.generateInitialAdminPassword();
-
     final site = await Site.db.insertRow(
       session,
       Site(
@@ -66,13 +60,6 @@ class SitesAdminEndpoint extends Endpoint {
         country: countryValue,
         companyEmail: emailValue,
         firstAdminId: firstAdminId,
-        oneTimePasswordHash: SiteSetupCrypto.oneTimePasswordHash(
-          oneTimePassword,
-        ),
-        initialAdminPasswordEncrypted: await SiteSetupCrypto.encrypt(
-          session: session,
-          plaintext: initialAdminPassword,
-        ),
       ),
     );
 
@@ -85,11 +72,7 @@ class SitesAdminEndpoint extends Endpoint {
       ),
     );
 
-    return CreatedSiteInfo(
-      siteId: site.id!,
-      oneTimePassword: oneTimePassword,
-      initialAdminPassword: initialAdminPassword,
-    );
+    return site;
   }
 
   /// Lists sites, newest first, paginated. [query] filters by name,
@@ -142,6 +125,28 @@ class SitesAdminEndpoint extends Endpoint {
     final site = await Site.db.findById(session, siteId);
     if (site == null) {
       throw SiteAdminException(message: 'Site wurde nicht gefunden.');
+    }
+    return site;
+  }
+
+  /// Ends the device credential for the local instance (e.g. to force a
+  /// new enrollment: the next local setup must re-verify global
+  /// credentials). Site data/memberships are kept.
+  Future<Site> revokeSiteConnection(
+    final Session session, {
+    required final int siteId,
+  }) async {
+    final site = await getSite(session, siteId: siteId);
+    final deviceSessions = await SiteDeviceSession.db.find(
+      session,
+      where: (t) => t.siteId.equals(siteId),
+    );
+    for (final row in deviceSessions) {
+      await SiteDeviceAuthentication.sessions.revokeSession(
+        session,
+        serverSideSessionId: row.serverSideSessionId,
+      );
+      await SiteDeviceSession.db.deleteRow(session, row);
     }
     return site;
   }

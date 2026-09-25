@@ -33,8 +33,6 @@ abstract class Site implements _is.TableRow<int?>, _is.ProtocolSerialization {
     _i3pb1w5u.SiteSetupStatus? status,
     required this.firstAdminId,
     this.firstAdmin,
-    this.oneTimePasswordHash,
-    this.initialAdminPasswordEncrypted,
     this.registeredAt,
     this.lastSeenAt,
     DateTime? createdAt,
@@ -52,8 +50,6 @@ abstract class Site implements _is.TableRow<int?>, _is.ProtocolSerialization {
     _i3pb1w5u.SiteSetupStatus? status,
     required _is.UuidValue firstAdminId,
     _iacs.AuthUser? firstAdmin,
-    String? oneTimePasswordHash,
-    String? initialAdminPasswordEncrypted,
     DateTime? registeredAt,
     DateTime? lastSeenAt,
     DateTime? createdAt,
@@ -81,9 +77,6 @@ abstract class Site implements _is.TableRow<int?>, _is.ProtocolSerialization {
           : _in02tfqf.Protocol().deserialize<_iacs.AuthUser>(
               jsonSerialization['firstAdmin'],
             ),
-      oneTimePasswordHash: jsonSerialization['oneTimePasswordHash'] as String?,
-      initialAdminPasswordEncrypted:
-          jsonSerialization['initialAdminPasswordEncrypted'] as String?,
       registeredAt: jsonSerialization['registeredAt'] == null
           ? null
           : _is.DateTimeJsonExtension.fromJson(
@@ -130,14 +123,6 @@ abstract class Site implements _is.TableRow<int?>, _is.ProtocolSerialization {
   /// (authoritative linkage is the `SiteMembership` with role siteAdmin).
   _iacs.AuthUser? firstAdmin;
 
-  /// Hash of the one-time password the local instance uses to register.
-  String? oneTimePasswordHash;
-
-  /// Initial password for the local admin AuthUser; deliverable at first
-  /// connect, cleared immediately after transfer. Encrypted at rest (key
-  /// from `passwords.yaml`).
-  String? initialAdminPasswordEncrypted;
-
   /// When the local instance registered at the global instance.
   DateTime? registeredAt;
 
@@ -164,8 +149,6 @@ abstract class Site implements _is.TableRow<int?>, _is.ProtocolSerialization {
     _i3pb1w5u.SiteSetupStatus? status,
     _is.UuidValue? firstAdminId,
     _iacs.AuthUser? firstAdmin,
-    String? oneTimePasswordHash,
-    String? initialAdminPasswordEncrypted,
     DateTime? registeredAt,
     DateTime? lastSeenAt,
     DateTime? createdAt,
@@ -184,10 +167,6 @@ abstract class Site implements _is.TableRow<int?>, _is.ProtocolSerialization {
       'status': status.toJson(),
       'firstAdminId': firstAdminId.toJson(),
       if (firstAdmin != null) 'firstAdmin': firstAdmin?.toJson(),
-      if (oneTimePasswordHash != null)
-        'oneTimePasswordHash': oneTimePasswordHash,
-      if (initialAdminPasswordEncrypted != null)
-        'initialAdminPasswordEncrypted': initialAdminPasswordEncrypted,
       if (registeredAt != null) 'registeredAt': registeredAt?.toJson(),
       if (lastSeenAt != null) 'lastSeenAt': lastSeenAt?.toJson(),
       'createdAt': createdAt.toJson(),
@@ -256,8 +235,6 @@ class _SiteImpl extends Site {
     _i3pb1w5u.SiteSetupStatus? status,
     required _is.UuidValue firstAdminId,
     _iacs.AuthUser? firstAdmin,
-    String? oneTimePasswordHash,
-    String? initialAdminPasswordEncrypted,
     DateTime? registeredAt,
     DateTime? lastSeenAt,
     DateTime? createdAt,
@@ -272,8 +249,6 @@ class _SiteImpl extends Site {
          status: status,
          firstAdminId: firstAdminId,
          firstAdmin: firstAdmin,
-         oneTimePasswordHash: oneTimePasswordHash,
-         initialAdminPasswordEncrypted: initialAdminPasswordEncrypted,
          registeredAt: registeredAt,
          lastSeenAt: lastSeenAt,
          createdAt: createdAt,
@@ -294,8 +269,6 @@ class _SiteImpl extends Site {
     _i3pb1w5u.SiteSetupStatus? status,
     _is.UuidValue? firstAdminId,
     Object? firstAdmin = _Undefined,
-    Object? oneTimePasswordHash = _Undefined,
-    Object? initialAdminPasswordEncrypted = _Undefined,
     Object? registeredAt = _Undefined,
     Object? lastSeenAt = _Undefined,
     DateTime? createdAt,
@@ -313,12 +286,6 @@ class _SiteImpl extends Site {
       firstAdmin: firstAdmin is _iacs.AuthUser?
           ? firstAdmin
           : this.firstAdmin?.copyWith(),
-      oneTimePasswordHash: oneTimePasswordHash is String?
-          ? oneTimePasswordHash
-          : this.oneTimePasswordHash,
-      initialAdminPasswordEncrypted: initialAdminPasswordEncrypted is String?
-          ? initialAdminPasswordEncrypted
-          : this.initialAdminPasswordEncrypted,
       registeredAt: registeredAt is DateTime?
           ? registeredAt
           : this.registeredAt,
@@ -372,19 +339,6 @@ class SiteUpdateTable extends _is.UpdateTable<SiteTable> {
     _is.UuidValue value,
   ) => _is.ColumnValue(
     table.firstAdminId,
-    value,
-  );
-
-  _is.ColumnValue<String, String> oneTimePasswordHash(String? value) =>
-      _is.ColumnValue(
-        table.oneTimePasswordHash,
-        value,
-      );
-
-  _is.ColumnValue<String, String> initialAdminPasswordEncrypted(
-    String? value,
-  ) => _is.ColumnValue(
-    table.initialAdminPasswordEncrypted,
     value,
   );
 
@@ -443,14 +397,6 @@ class SiteTable extends _is.Table<int?> {
       'firstAdminId',
       this,
     );
-    oneTimePasswordHash = _is.ColumnString(
-      'oneTimePasswordHash',
-      this,
-    );
-    initialAdminPasswordEncrypted = _is.ColumnString(
-      'initialAdminPasswordEncrypted',
-      this,
-    );
     registeredAt = _is.ColumnDateTime(
       'registeredAt',
       this,
@@ -492,14 +438,6 @@ class SiteTable extends _is.Table<int?> {
   /// (authoritative linkage is the `SiteMembership` with role siteAdmin).
   _iacs.AuthUserTable? _firstAdmin;
 
-  /// Hash of the one-time password the local instance uses to register.
-  late final _is.ColumnString oneTimePasswordHash;
-
-  /// Initial password for the local admin AuthUser; deliverable at first
-  /// connect, cleared immediately after transfer. Encrypted at rest (key
-  /// from `passwords.yaml`).
-  late final _is.ColumnString initialAdminPasswordEncrypted;
-
   /// When the local instance registered at the global instance.
   late final _is.ColumnDateTime registeredAt;
 
@@ -533,8 +471,6 @@ class SiteTable extends _is.Table<int?> {
     companyEmail,
     status,
     firstAdminId,
-    oneTimePasswordHash,
-    initialAdminPasswordEncrypted,
     registeredAt,
     lastSeenAt,
     createdAt,

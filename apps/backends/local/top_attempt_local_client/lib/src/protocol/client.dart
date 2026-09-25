@@ -21,6 +21,10 @@ import 'package:top_attempt_local_client/src/protocol/greetings/greeting.dart'
     as _idpqzm9k;
 import 'package:top_attempt_local_client/src/protocol/profile/profile_details.dart'
     as _iqp6yj66;
+import 'package:top_attempt_local_client/src/protocol/site/site_connection_info.dart'
+    as _ix9ptic0;
+import 'package:top_attempt_local_client/src/protocol/site/site_setup_result.dart'
+    as _izs9pdss;
 import 'protocol.dart' as _il2as5qe;
 
 /// By extending [EmailIdpBaseEndpoint], the email identity provider endpoints
@@ -303,6 +307,47 @@ class EndpointProfileDetails extends _isc.EndpointRef {
   );
 }
 
+/// Local setup endpoint: connects this instance to its site's global
+/// instance by verifying with the **global credentials of the site admin**
+/// (the one chosen at site creation). Fills the local `members` row for the
+/// admin (identity: their global authUserId) and creates the local
+/// `local-admin` login with the same password.
+/// {@category Endpoint}
+class EndpointSiteSetup extends _isc.EndpointRef {
+  EndpointSiteSetup(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'siteSetup';
+
+  /// Verifies the entered global credentials against the global backend,
+  /// stores the enrollment and starts the connection worker.
+  ///
+  /// When the global user is site admin of several sites the first call
+  /// returns `requiresSiteSelection` with the candidates; retry with the
+  /// chosen [siteId].
+  _ida.Future<_izs9pdss.SiteSetupResult> enterSetup({
+    required String email,
+    required String password,
+    int? siteId,
+  }) => caller.callServerEndpoint<_izs9pdss.SiteSetupResult>(
+    'siteSetup',
+    'enterSetup',
+    {
+      'email': email,
+      'password': password,
+      'siteId': siteId,
+    },
+  );
+
+  /// The current local connection state (App-Bar chip in the admin UI).
+  _ida.Future<_ix9ptic0.SiteConnectionInfo> connectionStatus() =>
+      caller.callServerEndpoint<_ix9ptic0.SiteConnectionInfo>(
+        'siteSetup',
+        'connectionStatus',
+        {},
+      );
+}
+
 class Modules {
   Modules(Client client) {
     serverpod_auth_idp = _iaic.Caller(client);
@@ -345,6 +390,7 @@ class Client extends _isc.ServerpodClientShared {
     jwtRefresh = EndpointJwtRefresh(this);
     greeting = EndpointGreeting(this);
     profileDetails = EndpointProfileDetails(this);
+    siteSetup = EndpointSiteSetup(this);
     modules = Modules(this);
   }
 
@@ -356,6 +402,8 @@ class Client extends _isc.ServerpodClientShared {
 
   late final EndpointProfileDetails profileDetails;
 
+  late final EndpointSiteSetup siteSetup;
+
   late final Modules modules;
 
   @override
@@ -364,6 +412,7 @@ class Client extends _isc.ServerpodClientShared {
     'jwtRefresh': jwtRefresh,
     'greeting': greeting,
     'profileDetails': profileDetails,
+    'siteSetup': siteSetup,
   };
 
   @override

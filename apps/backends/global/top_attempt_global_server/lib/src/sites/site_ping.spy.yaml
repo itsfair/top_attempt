@@ -1,0 +1,7 @@
+### Either a ping from the local instance (client to server) or an
+### acknowledgement (server to client) on the site connection stream.
+class: SitePing
+fields:
+
+  ### Millisecond timestamp of the senders send time (round trip debugging).
+  sentAtMs: int

@@ -26,10 +26,16 @@ import 'package:top_attempt_global_client/src/protocol/greetings/greeting.dart'
     as _i3comy50;
 import 'package:top_attempt_global_client/src/protocol/profile/profile_details.dart'
     as _ibs1lgmn;
-import 'package:top_attempt_global_client/src/protocol/sites/created_site_info.dart'
-    as _ipl3mql7;
 import 'package:top_attempt_global_client/src/protocol/sites/site.dart'
     as _i2twafne;
+import 'package:top_attempt_global_client/src/protocol/sites/site_admin_membership_candidate.dart'
+    as _iuvex5bp;
+import 'package:top_attempt_global_client/src/protocol/sites/site_enrollment_info.dart'
+    as _ijyrw7m6;
+import 'package:top_attempt_global_client/src/protocol/sites/site_event.dart'
+    as _i5yzheg4;
+import 'package:top_attempt_global_client/src/protocol/sites/site_ping.dart'
+    as _iw03l0j7;
 import 'protocol.dart' as _il2as5qe;
 
 /// Admin endpoint for viewing and managing users of the global instance.
@@ -446,14 +452,108 @@ class EndpointProfileDetails extends _isc.EndpointRef {
   );
 }
 
+/// Device connection endpoint for the local instance.
+///
+/// The local instance opens a long-lived method stream on [connect] and
+/// keeps sending [SitePing]s. Each ping refreshes `site.lastSeenAt` (the
+/// per-site connection chip in the admin UI derives its state from that).
+/// The site is resolved from the enrolled `SiteDeviceSession` mapping via
+/// the SAS session id (`session.authenticated!.authId`).
+///
+/// Live status broadcast to admin clients (Serverpod message central) is a
+/// To-do; the admin list currently polls.
+/// {@category Endpoint}
+class EndpointSiteConnection extends _isc.EndpointRef {
+  EndpointSiteConnection(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'siteConnection';
+
+  /// The device connection stream. Pings keep the connection and the site
+  /// freshness alive; the stream stays open until the client closes it or
+  /// an error occurs (client handles reconnects; if the credential was
+  /// revoked, a reconnect fails with an auth error and the local instance
+  /// switches to `needsReSetup`).
+  _ida.Stream<_i5yzheg4.SiteEvent> connect(
+    _ida.Stream<_iw03l0j7.SitePing> pings,
+  ) =>
+      caller.callStreamingServerEndpoint<
+        _ida.Stream<_i5yzheg4.SiteEvent>,
+        _i5yzheg4.SiteEvent
+      >(
+        'siteConnection',
+        'connect',
+        {},
+        {'pings': pings},
+      );
+}
+
+/// Public endpoint for the local instance enrollment.
+///
+/// The local instance verifies here with the **global credentials of the
+/// site admin** (chosen at site creation). Neither one-time passwords nor
+/// transferred passwords are involved:
+///
+/// - Fresh setup: the site flips to `registered`, the local instance
+///   receives site/admin data plus the device session key (SAS session,
+///   `method: 'device'`, token-level scope `site-device`, non-rotating,
+///   write-once on the local side).
+/// - Recovery: same verification path; the previously issued device
+///   session is revoked and replaced. The transfer data is omitted — the
+///   local instance keeps its already stored admin/member data.
+///
+/// Rate limiting and blocked-user handling come for free with the email
+/// IdP verification (no info leak on wrong credentials).
+/// {@category Endpoint}
+class EndpointSiteEnrollment extends _isc.EndpointRef {
+  EndpointSiteEnrollment(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'siteEnrollment';
+
+  /// Lists the active `siteAdmin` memberships of a verified user — used by
+  /// the local setup mask when the admin runs more than one site.
+  _ida.Future<List<_iuvex5bp.SiteAdminMembershipCandidate>>
+  listSiteAdminCandidates({
+    required String email,
+    required String password,
+  }) => caller.callServerEndpoint<List<_iuvex5bp.SiteAdminMembershipCandidate>>(
+    'siteEnrollment',
+    'listSiteAdminCandidates',
+    {
+      'email': email,
+      'password': password,
+    },
+  );
+
+  /// Enrolls the local instance for the site of the verified site admin.
+  ///
+  /// Without [siteId] this resolves the site automatically when the admin
+  /// has exactly one active `siteAdmin` membership. If they own several,
+  /// the response comes back with `requiresSiteSelection = true` and the
+  /// candidates to pick from.
+  _ida.Future<_ijyrw7m6.SiteEnrollmentInfo> enroll({
+    required String email,
+    required String password,
+    int? siteId,
+  }) => caller.callServerEndpoint<_ijyrw7m6.SiteEnrollmentInfo>(
+    'siteEnrollment',
+    'enroll',
+    {
+      'email': email,
+      'password': password,
+      'siteId': siteId,
+    },
+  );
+}
+
 /// Admin endpoint for creating and viewing sites ("Betriebe").
 ///
 /// Access is enforced declaratively via [requiredScopes] (`global-admin`).
 ///
-/// Stage 2 will add: the enrollment endpoint the local instance calls with
-/// the one-time password (burns the OTP, issues the device credential,
-/// delivers the initial admin password and marks the site registered), plus
-/// WS connection handling.
+/// Enrollment with the global credentials happens in
+/// [SiteEnrollmentEndpoint]; the persistent device connection uses
+/// [SiteConnectionEndpoint].
 /// {@category Endpoint}
 class EndpointSitesAdmin extends _isc.EndpointRef {
   EndpointSitesAdmin(_isc.EndpointCaller caller) : super(caller);
@@ -461,12 +561,11 @@ class EndpointSitesAdmin extends _isc.EndpointRef {
   @override
   String get name => 'sitesAdmin';
 
-  /// Creates a site, generates the one-time password for the local
-  /// instance's enrollment and the initial password for the local admin
-  /// (the local AuthUser is created at first connect with it), seeds the
-  /// site admin membership and returns everything in plain text exactly
-  /// once ([CreatedSiteInfo]).
-  _ida.Future<_ipl3mql7.CreatedSiteInfo> createSite({
+  /// Creates a site and seeds the `siteAdmin` membership for the chosen
+  /// first admin. Enrollment (linking the local instance) happens in a
+  /// separate step — the admin enters their global credentials at the local
+  /// setup mask, no secrets are generated here.
+  _ida.Future<_i2twafne.Site> createSite({
     required String name,
     required String street,
     required String zipCode,
@@ -474,7 +573,7 @@ class EndpointSitesAdmin extends _isc.EndpointRef {
     required String country,
     required String companyEmail,
     required _isc.UuidValue firstAdminId,
-  }) => caller.callServerEndpoint<_ipl3mql7.CreatedSiteInfo>(
+  }) => caller.callServerEndpoint<_i2twafne.Site>(
     'sitesAdmin',
     'createSite',
     {
@@ -518,6 +617,16 @@ class EndpointSitesAdmin extends _isc.EndpointRef {
       caller.callServerEndpoint<_i2twafne.Site>(
         'sitesAdmin',
         'getSite',
+        {'siteId': siteId},
+      );
+
+  /// Ends the device credential for the local instance (e.g. to force a
+  /// new enrollment: the next local setup must re-verify global
+  /// credentials). Site data/memberships are kept.
+  _ida.Future<_i2twafne.Site> revokeSiteConnection({required int siteId}) =>
+      caller.callServerEndpoint<_i2twafne.Site>(
+        'sitesAdmin',
+        'revokeSiteConnection',
         {'siteId': siteId},
       );
 }
@@ -566,6 +675,8 @@ class Client extends _isc.ServerpodClientShared {
     userProfileEdit = EndpointUserProfileEdit(this);
     greeting = EndpointGreeting(this);
     profileDetails = EndpointProfileDetails(this);
+    siteConnection = EndpointSiteConnection(this);
+    siteEnrollment = EndpointSiteEnrollment(this);
     sitesAdmin = EndpointSitesAdmin(this);
     modules = Modules(this);
   }
@@ -582,6 +693,10 @@ class Client extends _isc.ServerpodClientShared {
 
   late final EndpointProfileDetails profileDetails;
 
+  late final EndpointSiteConnection siteConnection;
+
+  late final EndpointSiteEnrollment siteEnrollment;
+
   late final EndpointSitesAdmin sitesAdmin;
 
   late final Modules modules;
@@ -594,6 +709,8 @@ class Client extends _isc.ServerpodClientShared {
     'userProfileEdit': userProfileEdit,
     'greeting': greeting,
     'profileDetails': profileDetails,
+    'siteConnection': siteConnection,
+    'siteEnrollment': siteEnrollment,
     'sitesAdmin': sitesAdmin,
   };
 

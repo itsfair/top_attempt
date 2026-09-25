@@ -1,0 +1,16 @@
+### Result of a site enrollment attempt by the local instance.
+class: SiteEnrollmentInfo
+fields:
+
+  ### True when the site admin holds `siteAdmin` memberships for more than
+  ### one site: the local setup mask must pick a site and call enroll again
+  ### with the chosen [candidates]-siteId. All other fields are empty.
+  requiresSiteSelection: bool, defaultModel=false
+
+  ### The memberships that match (filled only with
+  ### [requiresSiteSelection]).
+  candidates: List<SiteAdminMembershipCandidate>
+
+  ### Present when the enrollment succeeded (fresh setup or recovery). The
+  ### local instance stores this and opens the connection with it.
+  transfer: SiteTransferInfo?

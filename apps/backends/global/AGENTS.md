@@ -35,6 +35,13 @@ dart pub get
 dart bin/main.dart   # Start-Skript mit --apply-migrations: siehe pubspec (serverpod.scripts.start)
 ```
 
+`serverpod start` startet Docker, Server und zusätzlich automatisch die
+Plattform-Admin-App (`serverpod: flutter_apps:` in der Server-pubspec,
+`device: chrome`). `--no-flutter` unterdrückt den Autostart; Apps lassen
+sich im Start-TUI jederzeit per Ctrl+R nachstarten. Die Enduser-App ist
+bewusst nicht konfiguriert — sie läuft separat auf einem physischen
+Android-Gerät.
+
 ## Endpoints (eigener Code)
 
 | Endpoint | Zweck |
@@ -47,31 +54,53 @@ dart bin/main.dart   # Start-Skript mit --apply-migrations: siehe pubspec (serve
 | `sitesAdmin` (`src/sites/sites_admin_endpoint.dart`) | Plattform-Admin, Sites ("Betriebe"): `createSite` (Validierung, One-Time-Passwort + initiales Admin-Passwort inkl. Ab-, Zustand für erste Verbindung), `listSites`/`countSites` (50/Seite, Suche), `getSite` |
 | `greeting` (`src/greetings/…`) | Serverpod-Beispiel-Endpoint |
 
-### Site-Einrichtung / Secrets (2026-09-25)
+### Site-Einrichtung / Enrollment (Stand 2026-09-25)
 
 - Modelle: `Site` (Tabelle `sites`: Adresse, `companyEmail`,
-  `status`-Enum `pendingSetup|registered`, `firstAdmin`-Relation als
-  Anlage-Komfortverweis) sowie die serverOnly-Felder
-  `oneTimePasswordHash` und `initialAdminPasswordEncrypted` (nie Richtung
-  Client). `SiteMembership` (Tabelle `site_memberships`: site + authUser +
-  `role`-Enum `member|staff|siteAdmin` + `active` bool) — globales
-  Quellverzeichnis der Mitgliedschaften; die lokale Instanz leitet daraus
-  ihre lokale Repräsentation ab (Stufe 2-Sync).
-- Secrets-Lifecycle bei `createSite`: One-Time-Passwort (32 Zeichen
-  alfanumerisch) wird als SHA-256-Hash gespeichert; initiales Admin-Passwort
-  (16 Zeichen, alle Zeichenklassen, passwort-policy-kompatibel) wird
-  **AES-256-GCM verschlüsselt** abgelegt (Key `siteSetupEncryptionKey` in
-  `config/passwords.yaml` unter `development`, AES-Key = SHA-256 des
-  Secrets). Die Klartextwerte werden via `CreatedSiteInfo` genau einmal an
-  die UI zurückgegeben und nie wieder versendet. Nach der ersten Verbindung
-  der lokalen Instanz (Stufe 2) wird `initialAdminPasswordEncrypted`
-  **gelöscht**; das OTP wird bei der Registrierung verbrannt und das eine
-  device credential siehe To-dos aus.
-- Selbstschutz/Validierung: gesperrte Admin-Nutzer werden abgelehnt,
-  Firmenmail wird per Regex validiert, Fehler → `SiteAdminException`.
+  `status`-Enum `pendingSetup|registered`, `firstAdmin`-Relation,
+  `registeredAt`/`lastSeenAt`), `SiteMembership` (Tabelle
+  `site_memberships`: site + authUser + `role`-Enum
+  `member|staff|siteAdmin` + `active`) — globales Quellverzeichnis der
+  Mitgliedschaften. `SiteDeviceSession` (Tabelle `site_device_sessions`:
+  site ↔ SAS-Session-Id, eine aktive Session je Site).
+- `createSite` generiert **keine Secrets mehr**: Der Site-Admin richtet
+  die lokale Instanz vor Ort mit seinen **globalen Anmeldedaten** ein
+  (alte OTP- / Initialpasswort-Mechanik wurde entfernt).
+- `SiteEnrollmentEndpoint` (public): `listSiteAdminCandidates` +
+  `enroll({email, password, siteId?})` — verifiziert die globalen
+  Zugangsdaten über die E-Mail-IdP-Logik (Rate-Limit/Sperr-Checks
+  geerbt, Login-Session wird von dort nicht angelegt), löst die
+  aktive `siteAdmin`-Membership auf (bei mehreren →
+  `requiresSiteSelection` + Kandidaten für den Site-Picker in der
+  lokalen Maske), setzt dann:
+  - frisches Setup: Site → `registered` + `registeredAt`, Transfer
+    (Site + Admin-E-Mail/-Name + `adminAuthUserId` — **Austausch-ID für
+    die lokale Members-Tabelle, später Schlüssel der Türfreigabe**) und
+    der Device-Session-Key.
+  - Recovery: wie frisches Setup, ohne Transfer-Daten; vorherige
+    `SiteDeviceSession` wird revoked + ersetzt. Der lokale Admin kann
+    damit allein re-setup-en.
+  - Device-Credential: SAS-Session (`method: 'device'`, token-level
+    Scope `site-device`, `AuthStrategy.session`, non-rotating,
+    write-once lokal; kein Julius-Ablauf). Key in
+    `serverSideSessionKeyHashPepper` (passwords.yaml, dev+test).
+  - `sitesAdmin.revokeSiteConnection(siteId)`: widerruft die
+    Geräteanmeldung (Site bleibt erhalten).
+- `SiteConnectionEndpoint` (`requiredScopes: {site-device}`):
+  Method-Stream `connect(Stream<SitePing>)→Stream<SiteEvent>`: jede
+  Ping-Aktualität frischt `lastSeenAt` auf (Site aus der Mapping-Row via
+  `session.authenticated!.authId`). Sperr-Hygiene:
+  `usersAdmin.setBlocked` revokiert zusätzlich alle `device`-Sessions
+  des Users (SAS-Verification prüft `blocked` nicht pro Request).
+- IdentityProvider-Zugriff: `AuthServices.getIdentityProvider<EmailIdp>()`
+  (aus `providers/email.dart`); Passwortverify ohne Token-Issue über
+  `emailIdp.utils.authentication.authenticate`.
+- Authservices-Registrierung: zweiter TokenManagerBuilder
+  (`SiteDeviceAuthentication.config`) neben JWT; Pepper
+  `serverSideSessionKeyHashPepper` in passwords.yaml (dev/test; CI über
+  SERVERPOD_PASSWORD_* env To-do).
 
 ### Admin-Scopes (2026-09-24)
-
 - `kGlobalAdminScope = 'global-admin'` (`src/auth/scopes.dart`); Admin-Endpoints
   erzwingen ihn **deklarativ** über `Endpoint.requiredScopes` (Serverpod
   Dispatch prüft `session.authenticated.scopes` aus dem JWT).
@@ -123,15 +152,13 @@ CORS am Bucket aktivieren, wenn Flutter-Web direkt auf Dateien zugreift.
   Nutzerliste 50/Seite mit E-Mail/Name-Suche, Blocked- und
   Global-Admin-Toggles inkl. Token-Revocation; Selbstschutz gegen
   Aussperren). Bedient die Members-Seite der Plattform-Admin-App.
-- 2026-09-25: Site-Anlage fertig (`sitesAdmin`, Modelle `sites` +
-  `site_memberships`, One-Time-Passwort + initiales Admin-Passwort,
-  Secrets-Lifecycle siehe Abschnitt oben). Migration
-  `20260925122822442`.
-- Nächste Schritte (Stufe 2/3, Details in apps/AGENTS.md → To-dos):
-  Registrierungsprotokoll der lokalen Instanz (OTP verbrauchen, device
-  credential ausstellen), WS-Verbindungsmanagement + Heartbeat
-  (`lastSeenAt`), Erstverbindungs-Übertragung (SiteMembership-Sync:
-  member → lokale Members-Zeile ohne Login; staff/siteAdmin → verknüpfter
-  lokaler AuthUser mit `local-admin`-Scope), WS-Status pro Site in der
-  Sites-Liste der globalen UI, Site edit/delete + OTP-Regenerierung,
-  E-Mail-Versand der Einrichtungsgeheimnisse.
+- 2026-09-25: Site-Anlage + Enrollment fertig (`sitesAdmin.createSite`
+  ohne Secrets, `siteEnrollment` (glo. Anmeldedaten-Verify, Site-Picker,
+  Device-Session-Issuance SAS `method: 'device'`, Scope
+  `site-device` token-level), `SiteConnectionEndpoint`-Stream,
+  `SiteDeviceSession`-Mapping, Migrationen `20260925122822442` +
+  `20260925150857366`).
+- Nächste Schritte (Stufe 3, Details in apps/AGENTS.md → To-dos):
+  Membership-Sync über die WS-Verbindung (neue/reingelöschte Member
+  propagieren), Live-Status-Push an die Admin-Clients (message central),
+  Mitglieder-/Angestellten-Ausbau lokal, ESP32-Geräte-Autorisierung.

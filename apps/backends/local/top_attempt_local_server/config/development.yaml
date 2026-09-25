@@ -53,6 +53,12 @@ rustFS:
   host: '192.168.1.109'
   port: 9101
 
+# Device connection to the global backend for this site instance (read in
+# lib/src/site/site_connection_config.dart). Use the LAN IP of the machine
+# running the global backend when the setup mask runs on another device.
+siteConnection:
+  globalApiUrl: 'http://localhost:8080'
+
 maxRequestSize: 524288 # The maximum size of requests allowed in bytes
 
 sessionLogs:

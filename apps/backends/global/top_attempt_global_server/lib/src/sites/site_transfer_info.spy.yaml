@@ -1,0 +1,29 @@
+### Transfer data the local instance receives at successful enrollment
+### (fresh setup). Contains no credentials: the device session key is an
+### SAS session key (`AuthStrategy.session`) for the site admin that was
+### issued server-side and has to be stored locally, write-once.
+class: SiteTransferInfo
+fields:
+
+  ### The enrolled site (id and name are enough to boot the connection;
+  ### deeper data comes with the sites details).
+  siteId: int
+
+  ### Name of the site.
+  siteName: String
+
+  ### Email of the site admin (global) — also used as the local admin's
+  ### login email.
+  adminEmail: String?
+
+  ### Global authUserId of the site admin — the exchange key for the local
+  ### members table (`members.globalAuthUserId`), used later for door
+  ### authorization. Local member rows must carry exactly this id.
+  adminAuthUserId: UuidValue
+
+  ### Global full name of the site admin (kept in sync via ProfileDetails).
+  adminFullName: String?
+
+  ### The SAS session key for the device connection. Store securely; there
+  ### is no rotation (write once) and the key cannot be recovered.
+  deviceSessionKey: String

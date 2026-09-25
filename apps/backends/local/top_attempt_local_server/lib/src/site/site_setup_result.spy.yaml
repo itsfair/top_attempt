@@ -1,0 +1,15 @@
+### Result of `siteSetup.enterSetup` in the local admin UI.
+class: SiteSetupResult
+fields:
+
+  ### True when the chosen global user is site admin of several sites — the
+  ### setup mask must show [candidates] and call again with one chosen.
+  requiresSiteSelection: bool, defaultModel=false
+
+  ### The sites to pick from ([requiresSiteSelection] only).
+  candidates: List<SiteCandidateLocal>
+
+  ### The enrolled site (fresh setup or recovery).
+  siteId: int?
+  ### Name of the enrolled site.
+  siteName: String?
