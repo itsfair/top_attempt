@@ -1,0 +1,19 @@
+### DTO used once at site creation: the site id plus both generated secrets
+### in plain text (instance one-time password and the local admin's initial
+### password). Shown once in the UI; the global instance never returns them
+### again (the initial password stays stored encrypted until first connect,
+### then cleared).
+class: CreatedSiteInfo
+fields:
+
+  ### The created site (navigable via the sites detail route).
+  siteId: int
+
+  ### One-time password (plain text, single-use) for the local instance's
+  ### enrollment at the global instance.
+  oneTimePassword: String?
+
+  ### Initial password for the local admin (created at the local instance on
+  ### first connect). Delivered to the local instance via the first
+  ### connection and stored encrypted until then.
+  initialAdminPassword: String?

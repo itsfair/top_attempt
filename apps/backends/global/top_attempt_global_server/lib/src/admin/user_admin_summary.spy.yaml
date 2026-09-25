@@ -1,0 +1,21 @@
+### A single user as shown/edited in the global admin UI.
+class: AdminUserSummary
+fields:
+
+  ### The auth user id (userIdentifier of the authentication system).
+  authUserId: UuidValue
+
+  ### Lowercase e-mail address from the user profile.
+  email: String?
+
+  ### Mirrored full name (kept in sync by ProfileDetailsEndpoint.save).
+  fullName: String?
+
+  ### The scopes assigned to this user (e.g. 'global-admin').
+  scopeNames: List<String>
+
+  ### Whether the user is blocked from signing in.
+  blocked: bool
+
+  ### When the user account was created.
+  createdAt: DateTime

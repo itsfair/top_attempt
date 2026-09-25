@@ -18,10 +18,18 @@ import 'package:serverpod/serverpod.dart' as _is;
 import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
     as _iacs;
 import 'package:serverpod_test/serverpod_test.dart' as _ist;
+import 'package:top_attempt_global_server/src/generated/admin/user_admin_page.dart'
+    as _iv5m7i56;
+import 'package:top_attempt_global_server/src/generated/admin/user_admin_summary.dart'
+    as _ita8o718;
 import 'package:top_attempt_global_server/src/generated/greetings/greeting.dart'
     as _i7mxzk0m;
 import 'package:top_attempt_global_server/src/generated/profile/profile_details.dart'
     as _is6mk0z7;
+import 'package:top_attempt_global_server/src/generated/sites/created_site_info.dart'
+    as _ib8wuf1k;
+import 'package:top_attempt_global_server/src/generated/sites/site.dart'
+    as _ieymp251;
 import 'package:top_attempt_global_server/src/generated/protocol.dart';
 import 'package:top_attempt_global_server/src/generated/endpoints.dart';
 export 'package:serverpod_test/serverpod_test_public_exports.dart';
@@ -150,6 +158,8 @@ void withServerpod(
 }
 
 class TestEndpoints {
+  late final _UsersAdminEndpoint usersAdmin;
+
   late final _EmailIdpEndpoint emailIdp;
 
   late final _JwtRefreshEndpoint jwtRefresh;
@@ -159,6 +169,8 @@ class TestEndpoints {
   late final _GreetingEndpoint greeting;
 
   late final _ProfileDetailsEndpoint profileDetails;
+
+  late final _SitesAdminEndpoint sitesAdmin;
 }
 
 class _InternalTestEndpoints extends TestEndpoints
@@ -168,6 +180,10 @@ class _InternalTestEndpoints extends TestEndpoints
     _is.SerializationManager serializationManager,
     _is.EndpointDispatch endpoints,
   ) {
+    usersAdmin = _UsersAdminEndpoint(
+      endpoints,
+      serializationManager,
+    );
     emailIdp = _EmailIdpEndpoint(
       endpoints,
       serializationManager,
@@ -188,6 +204,159 @@ class _InternalTestEndpoints extends TestEndpoints
       endpoints,
       serializationManager,
     );
+    sitesAdmin = _SitesAdminEndpoint(
+      endpoints,
+      serializationManager,
+    );
+  }
+}
+
+class _UsersAdminEndpoint {
+  _UsersAdminEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_iv5m7i56.AdminUserPage> listUsers(
+    _ist.TestSessionBuilder sessionBuilder, {
+    String? query,
+    required int offset,
+    required int limit,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'usersAdmin',
+            method: 'listUsers',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'usersAdmin',
+          methodName: 'listUsers',
+          parameters: _ist.testObjectToJson({
+            'query': query,
+            'offset': offset,
+            'limit': limit,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_iv5m7i56.AdminUserPage>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ita8o718.AdminUserSummary> getUser(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required _is.UuidValue authUserId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'usersAdmin',
+            method: 'getUser',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'usersAdmin',
+          methodName: 'getUser',
+          parameters: _ist.testObjectToJson({'authUserId': authUserId}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ita8o718.AdminUserSummary>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ita8o718.AdminUserSummary> setBlocked(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required _is.UuidValue authUserId,
+    required bool blocked,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'usersAdmin',
+            method: 'setBlocked',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'usersAdmin',
+          methodName: 'setBlocked',
+          parameters: _ist.testObjectToJson({
+            'authUserId': authUserId,
+            'blocked': blocked,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ita8o718.AdminUserSummary>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ita8o718.AdminUserSummary> setGlobalAdmin(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required _is.UuidValue authUserId,
+    required bool isGlobalAdmin,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'usersAdmin',
+            method: 'setGlobalAdmin',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'usersAdmin',
+          methodName: 'setGlobalAdmin',
+          parameters: _ist.testObjectToJson({
+            'authUserId': authUserId,
+            'isGlobalAdmin': isGlobalAdmin,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ita8o718.AdminUserSummary>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
   }
 }
 
@@ -785,6 +954,161 @@ class _ProfileDetailsEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<_is6mk0z7.ProfileDetails>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
+class _SitesAdminEndpoint {
+  _SitesAdminEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_ib8wuf1k.CreatedSiteInfo> createSite(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required String name,
+    required String street,
+    required String zipCode,
+    required String city,
+    required String country,
+    required String companyEmail,
+    required _is.UuidValue firstAdminId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'sitesAdmin',
+            method: 'createSite',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'sitesAdmin',
+          methodName: 'createSite',
+          parameters: _ist.testObjectToJson({
+            'name': name,
+            'street': street,
+            'zipCode': zipCode,
+            'city': city,
+            'country': country,
+            'companyEmail': companyEmail,
+            'firstAdminId': firstAdminId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ib8wuf1k.CreatedSiteInfo>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<List<_ieymp251.Site>> listSites(
+    _ist.TestSessionBuilder sessionBuilder, {
+    String? query,
+    required int offset,
+    required int limit,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'sitesAdmin',
+            method: 'listSites',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'sitesAdmin',
+          methodName: 'listSites',
+          parameters: _ist.testObjectToJson({
+            'query': query,
+            'offset': offset,
+            'limit': limit,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<List<_ieymp251.Site>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<int> countSites(
+    _ist.TestSessionBuilder sessionBuilder, {
+    String? query,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'sitesAdmin',
+            method: 'countSites',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'sitesAdmin',
+          methodName: 'countSites',
+          parameters: _ist.testObjectToJson({'query': query}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<int>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ieymp251.Site> getSite(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required int siteId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'sitesAdmin',
+            method: 'getSite',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'sitesAdmin',
+          methodName: 'getSite',
+          parameters: _ist.testObjectToJson({'siteId': siteId}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ieymp251.Site>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

@@ -1,0 +1,12 @@
+### Connect status of a site (one operating local instance each).
+enum: SiteSetupStatus
+serialized: byName
+default: pendingSetup
+values:
+
+  ### The site has been created but no local instance has registered yet.
+  - pendingSetup
+
+  ### The local instance has registered at least once (see [Site.lastSeenAt]
+  ### for connectivity, derived per site in the UI).
+  - registered

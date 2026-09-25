@@ -9,6 +9,10 @@ import 'layout.dart';
 import 'screens/greetings_screen.dart';
 import 'screens/sign_in.dart';
 import 'screens/forbidden.dart';
+import 'screens/sites.dart';
+import 'screens/site_detail.dart';
+import 'screens/members.dart';
+import 'screens/member_detail.dart';
 
 /// Sets up a global client object that can be used to talk to the server from
 /// anywhere in our app. The client is generated from your server code
@@ -82,6 +86,26 @@ class _MyAppState extends State<MyApp> {
           GoRoute(
             path: '/forbidden',
             builder: (context, state) => const Forbidden(),
+          ),
+          GoRoute(
+            path: '/members',
+            builder: (context, state) => const MembersScreen(),
+          ),
+          GoRoute(
+            path: '/members/:authUserId',
+            builder: (context, state) => MemberDetailScreen(
+              authUserId: state.pathParameters['authUserId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/sites',
+            builder: (context, state) => const SitesScreen(),
+          ),
+          GoRoute(
+            path: '/sites/:siteId',
+            builder: (context, state) => SiteDetailScreen(
+              siteId: int.parse(state.pathParameters['siteId']!),
+            ),
           ),
         ],
       ),

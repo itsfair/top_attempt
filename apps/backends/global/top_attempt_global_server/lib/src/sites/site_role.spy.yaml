@@ -1,0 +1,16 @@
+### Role of a user at a site ("Betrieb"). Determines the local representation:
+### member = local members row without login; staff/admin = linked local
+### AuthUser with login.
+enum: SiteRole
+serialized: byName
+default: member
+values:
+
+  ### End user without local login.
+  - member
+
+  ### Employee with local login (scope at the local instance).
+  - staff
+
+  ### Site administrator with local login and `local-admin` scope.
+  - siteAdmin

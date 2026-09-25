@@ -12,7 +12,10 @@ dependencies:
   serverpod: 4.0.2
   serverpod_auth_idp_server: 4.0.2
   serverpod_cloud_storage_rustfs: ^1.0.0
+  crypto: ^3.0.3
+  cryptography: ^2.7.0
   yaml: ^3.1.0
+
 
 dev_dependencies:
   lints: '>=3.0.0 <7.0.0'

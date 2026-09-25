@@ -93,6 +93,9 @@ und „BleServer“).
 
 ## Konventionen / Notizen
 
+- **Antwortsprache**: Der Agent antwortet im Chat auf **Englisch**
+  (der Nutzer schreibt auf Deutsch); Dokumentation (AGENTS.md,
+  docs/**) und Code-Kommentare bleiben auf Deutsch.
 - Commits pro Sub-Paket sind fine; keine Cross-Paket-Commits erzwingen.
 - Keine Auto-Commits ohne ausdrückliches OK des Nutzers (siehe
   `doorinterface/AGENTS.md` → „Arbeitsweise“).

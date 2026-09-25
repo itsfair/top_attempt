@@ -1,0 +1,7 @@
+### Exception raised by the sites admin endpoints (validation and state
+### errors, shown to the platform admin).
+exception: SiteAdminException
+fields:
+
+  ### Human-readable description of what went wrong.
+  message: String

@@ -1,3 +1,8 @@
+usersAdmin:
+  - listUsers:
+  - getUser:
+  - setBlocked:
+  - setGlobalAdmin:
 emailIdp:
   - login:
   - startRegistration:
@@ -20,3 +25,8 @@ greeting:
 profileDetails:
   - get:
   - save:
+sitesAdmin:
+  - createSite:
+  - listSites:
+  - countSites:
+  - getSite:

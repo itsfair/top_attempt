@@ -1,0 +1,11 @@
+### Result of the admin user listing: one page of users plus pagination info.
+class: AdminUserPage
+fields:
+
+  ### The users of this page.
+  items: List<AdminUserSummary>
+
+  ### The offset this page starts at (equals the passed offset).
+  offset: int
+  ### Total number of users matching the filter (across all pages).
+  total: int

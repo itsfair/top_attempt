@@ -18,11 +18,94 @@ import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
 import 'package:serverpod_auth_idp_client/serverpod_auth_idp_client.dart'
     as _iaic;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
+import 'package:top_attempt_global_client/src/protocol/admin/user_admin_page.dart'
+    as _iyafgxxo;
+import 'package:top_attempt_global_client/src/protocol/admin/user_admin_summary.dart'
+    as _i6vy2x4g;
 import 'package:top_attempt_global_client/src/protocol/greetings/greeting.dart'
     as _i3comy50;
 import 'package:top_attempt_global_client/src/protocol/profile/profile_details.dart'
     as _ibs1lgmn;
+import 'package:top_attempt_global_client/src/protocol/sites/created_site_info.dart'
+    as _ipl3mql7;
+import 'package:top_attempt_global_client/src/protocol/sites/site.dart'
+    as _i2twafne;
 import 'protocol.dart' as _il2as5qe;
+
+/// Admin endpoint for viewing and managing users of the global instance.
+///
+/// Access is enforced declaratively via [requiredScopes]: only authenticated
+/// users carrying the `global-admin` scope pass endpoint dispatch
+/// (unauthenticated -> unauthenticated, no scope -> insufficient access).
+/// {@category Endpoint}
+class EndpointUsersAdmin extends _isc.EndpointRef {
+  EndpointUsersAdmin(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'usersAdmin';
+
+  /// Lists users, newest first, paginated.
+  ///
+  /// Pass [query] to filter by e-mail or full name (case-insensitive
+  /// substring match). [total] lets the UI warn when more pages exist.
+  _ida.Future<_iyafgxxo.AdminUserPage> listUsers({
+    String? query,
+    required int offset,
+    required int limit,
+  }) => caller.callServerEndpoint<_iyafgxxo.AdminUserPage>(
+    'usersAdmin',
+    'listUsers',
+    {
+      'query': query,
+      'offset': offset,
+      'limit': limit,
+    },
+  );
+
+  /// Returns a single user (used by the detail route/deep links in the UI).
+  _ida.Future<_i6vy2x4g.AdminUserSummary> getUser({
+    required _isc.UuidValue authUserId,
+  }) => caller.callServerEndpoint<_i6vy2x4g.AdminUserSummary>(
+    'usersAdmin',
+    'getUser',
+    {'authUserId': authUserId},
+  );
+
+  /// Blocks or unblocks the given auth user. Blocked users cannot sign in
+  /// and their sessions are revoked.
+  _ida.Future<_i6vy2x4g.AdminUserSummary> setBlocked({
+    required _isc.UuidValue authUserId,
+    required bool blocked,
+  }) => caller.callServerEndpoint<_i6vy2x4g.AdminUserSummary>(
+    'usersAdmin',
+    'setBlocked',
+    {
+      'authUserId': authUserId,
+      'blocked': blocked,
+    },
+  );
+
+  /// Grants (`isGlobalAdmin == true`) or removes the `global-admin` scope.
+  ///
+  /// Because scopes are baked into the tokens, existing sessions are revoked
+  /// so the change takes effect immediately (instead of leaving the old
+  /// scope valid until token expiration).
+  ///
+  /// Revoking one's own admin scope is rejected: the admin would lock
+  /// themselves out of this management UI with no way back through this
+  /// endpoint. Use a second admin account or manual DB intervention instead.
+  _ida.Future<_i6vy2x4g.AdminUserSummary> setGlobalAdmin({
+    required _isc.UuidValue authUserId,
+    required bool isGlobalAdmin,
+  }) => caller.callServerEndpoint<_i6vy2x4g.AdminUserSummary>(
+    'usersAdmin',
+    'setGlobalAdmin',
+    {
+      'authUserId': authUserId,
+      'isGlobalAdmin': isGlobalAdmin,
+    },
+  );
+}
 
 /// By extending [EmailIdpBaseEndpoint], the email identity provider endpoints
 /// are made available on the server and enable the corresponding sign-in widget
@@ -363,6 +446,82 @@ class EndpointProfileDetails extends _isc.EndpointRef {
   );
 }
 
+/// Admin endpoint for creating and viewing sites ("Betriebe").
+///
+/// Access is enforced declaratively via [requiredScopes] (`global-admin`).
+///
+/// Stage 2 will add: the enrollment endpoint the local instance calls with
+/// the one-time password (burns the OTP, issues the device credential,
+/// delivers the initial admin password and marks the site registered), plus
+/// WS connection handling.
+/// {@category Endpoint}
+class EndpointSitesAdmin extends _isc.EndpointRef {
+  EndpointSitesAdmin(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'sitesAdmin';
+
+  /// Creates a site, generates the one-time password for the local
+  /// instance's enrollment and the initial password for the local admin
+  /// (the local AuthUser is created at first connect with it), seeds the
+  /// site admin membership and returns everything in plain text exactly
+  /// once ([CreatedSiteInfo]).
+  _ida.Future<_ipl3mql7.CreatedSiteInfo> createSite({
+    required String name,
+    required String street,
+    required String zipCode,
+    required String city,
+    required String country,
+    required String companyEmail,
+    required _isc.UuidValue firstAdminId,
+  }) => caller.callServerEndpoint<_ipl3mql7.CreatedSiteInfo>(
+    'sitesAdmin',
+    'createSite',
+    {
+      'name': name,
+      'street': street,
+      'zipCode': zipCode,
+      'city': city,
+      'country': country,
+      'companyEmail': companyEmail,
+      'firstAdminId': firstAdminId,
+    },
+  );
+
+  /// Lists sites, newest first, paginated. [query] filters by name,
+  /// company email or city (case-insensitive substring).
+  _ida.Future<List<_i2twafne.Site>> listSites({
+    String? query,
+    required int offset,
+    required int limit,
+  }) => caller.callServerEndpoint<List<_i2twafne.Site>>(
+    'sitesAdmin',
+    'listSites',
+    {
+      'query': query,
+      'offset': offset,
+      'limit': limit,
+    },
+  );
+
+  /// Number of sites matching the given [query] (for the "more available"
+  /// hint in the UI).
+  _ida.Future<int> countSites({String? query}) =>
+      caller.callServerEndpoint<int>(
+        'sitesAdmin',
+        'countSites',
+        {'query': query},
+      );
+
+  /// Returns a single site (detail route/deep links in the UI).
+  _ida.Future<_i2twafne.Site> getSite({required int siteId}) =>
+      caller.callServerEndpoint<_i2twafne.Site>(
+        'sitesAdmin',
+        'getSite',
+        {'siteId': siteId},
+      );
+}
+
 class Modules {
   Modules(Client client) {
     serverpod_auth_idp = _iaic.Caller(client);
@@ -401,13 +560,17 @@ class Client extends _isc.ServerpodClientShared {
              disconnectStreamsOnLostInternetConnection,
          httpClientOverride: httpClientOverride,
        ) {
+    usersAdmin = EndpointUsersAdmin(this);
     emailIdp = EndpointEmailIdp(this);
     jwtRefresh = EndpointJwtRefresh(this);
     userProfileEdit = EndpointUserProfileEdit(this);
     greeting = EndpointGreeting(this);
     profileDetails = EndpointProfileDetails(this);
+    sitesAdmin = EndpointSitesAdmin(this);
     modules = Modules(this);
   }
+
+  late final EndpointUsersAdmin usersAdmin;
 
   late final EndpointEmailIdp emailIdp;
 
@@ -419,15 +582,19 @@ class Client extends _isc.ServerpodClientShared {
 
   late final EndpointProfileDetails profileDetails;
 
+  late final EndpointSitesAdmin sitesAdmin;
+
   late final Modules modules;
 
   @override
   Map<String, _isc.EndpointRef> get endpointRefLookup => {
+    'usersAdmin': usersAdmin,
     'emailIdp': emailIdp,
     'jwtRefresh': jwtRefresh,
     'userProfileEdit': userProfileEdit,
     'greeting': greeting,
     'profileDetails': profileDetails,
+    'sitesAdmin': sitesAdmin,
   };
 
   @override

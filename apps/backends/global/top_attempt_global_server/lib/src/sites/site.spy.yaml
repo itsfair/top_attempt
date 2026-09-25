@@ -1,0 +1,46 @@
+### A site ("Betrieb") at the global instance. One operating local instance
+### per site; the local BackendMeldung enrolls itself with the generated one
+### time password and establishes the connection to this record.
+class: Site
+table: sites
+fields:
+
+  ### Name of the site/company.
+  name: String
+
+  ### Address data (single fields; the UI renders them as one block).
+  street: String
+  zipCode: String
+  city: String
+  country: String
+
+  ### Company email (contact mail of the operating company, for later
+  ### mail-based delivery of setup material).
+  companyEmail: String
+
+  ### Connect status of the site (setup pending / registered).
+  status: SiteSetupStatus, defaultModel=pendingSetup
+
+  ### Creation-time convenience link to the first site administrator
+  ### (authoritative linkage is the `SiteMembership` with role siteAdmin).
+  firstAdmin: module:serverpod_auth_core:AuthUser?, relation
+
+  ### Hash of the one-time password the local instance uses to register.
+  oneTimePasswordHash: String?, scope=serverOnly
+
+  ### Initial password for the local admin AuthUser; deliverable at first
+  ### connect, cleared immediately after transfer. Encrypted at rest (key
+  ### from `passwords.yaml`).
+  initialAdminPasswordEncrypted: String?, scope=serverOnly
+
+  ### When the local instance registered at the global instance.
+  registeredAt: DateTime?
+
+  ### Last heartbeat of the local instance (connectivity display).
+  lastSeenAt: DateTime?
+
+  ### When the site record was created.
+  createdAt: DateTime, defaultModel=now
+indexes:
+  company_email_idx:
+    fields: companyEmail

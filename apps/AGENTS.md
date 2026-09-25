@@ -94,7 +94,14 @@ Redis ist in beiden `development.yaml` derzeit `enabled: false`.
 Zentrale Benutzerverwaltung: E-Mail-IdP (Registrierung/Login/Reset),
 JWT-Auth, `UserProfileEditEndpoint` (E-Mail/User-ID/Bild),
 `ProfileDetailsEndpoint` (Vor-/Nachname, Geburtstag), RustFS-Storage.
-Stand: MVP-Basis, funktionsfähig gegen die Enduser-App.
+Stand: MVP-Basis, funktionsfähig gegen die Enduser-App; seit 2026-09-24
+`usersAdmin`-Endpoint-Set (Nutzerlisten-Paging, Globale-Admin-/Blocked-
+Toggles inkl. Token-Revocation, `global-admin`-Scope via
+`Endpoint.requiredScopes`); seit 2026-09-25 Site-Anlage (`sitesAdmin`:
+`sites`- und `site_memberships`-Tabellen,
+One-Time-Passwort + initiales Admin-Passwort mit verschlüsseltem
+Atrest-Speicher, Membership-Seed `siteAdmin`) für die Sites der
+Plattform-Admin-App.
 
 ### local (`apps/backends/local/`) — Details in [AGENTS.md](backends/local/AGENTS.md)
 
@@ -113,8 +120,14 @@ BLE-Testsession gegen den ESP32. Am weitesten ausgebaut.
 
 ### top_attempt_global_flutter — Details in [AGENTS.md](frontends/top_attempt_global_flutter/AGENTS.md)
 
-**Plattform-Admin-App** (Verwaltung der globalen Instanz). Aktuell noch
-rohes Serverpod-Scaffold (SignIn + Greetings).
+**Plattform-Admin-App** (Verwaltung der globalen Instanz). GoRouter mit
+Auth-/Scope-Guard (nicht eingeloggt → `/sign-in`, ohne
+`global-admin`-Scope → `/forbidden`); Drawer-Layout; Members-Screen (50/
+Seite + Suche + „Weitere laden“, Detail-Editor für
+`Global Admin`/`blocked`) und seit 2026-09-25 Sites-Screen (FAB + Create-
+Dialog mit erster Site-admin-Auswahl, Onboarding-Modal für beide
+Einrichtungsgeheimnisse je genau einmal, Detail-Route `/sites/:id`).
+Bindet den globalen Client ein.
 
 ### top_attempt_local_flutter — Details in [AGENTS.md](frontends/top_attempt_local_flutter/AGENTS.md)
 
@@ -171,6 +184,43 @@ Rekonstruktion aus Git:
    Blocker für das Mitglieder-/Berechtigungsmodell im lokalen Backend.
 5. **Local-Frontend-Inhalte**: Site-Admin-UI (Geräte, Mitglieder,
    Zugangsrechte) aufbauen, sobald das lokale Backend-Modell steht.
+6. **Members-Feature Hartening** (2026-09-24 erstes Set): Integrations-Tests
+   für `usersAdmin`-Endpoints, Bestätigungsdialog beim Sperren,
+   `usersAdmin`-Nutzer konsequent hinter `requiredScopes` halten
+   (Scope-Guard-Fehler → `UserAdminException`/`AccessDeniedException`
+   clientseitig abfangen).
+7. **Registrierung im global-Admin-Frontend abschalten** (nicht dringend):
+   Versuche 2026-09-25 (Texte leeren + `EmailAuthController`-Subclass)
+   wirkten nicht — Details und Ansätze für später in
+   [`frontends/top_attempt_global_flutter/AGENTS.md`](frontends/top_attempt_global_flutter/AGENTS.md)
+   → „Nächste Schritte“, Punkt 5.
+8. **Stufe 2 — Site-Aufsicht / lokale Instanz (2026-09-25 entschieden)**:
+   a) Registrierungsprotokoll lokale Instanz: Einmalpasswort verifizieren
+      (SHA-256-Hash), als verbraucht markieren, device credential
+      ausstellen + Revokation, Site → `registered`.
+   b) WS-Anbindung lokale Instanz → global (Client-Tunnel, Reconnect/
+      Wiederherstellung bei kurzen Ausfällen), Heartbeat → `lastSeenAt`.
+   c) **Erstverbindung**: lokale `members`-Zeile für den Site-Admin +
+      lokaler AuthUser mit dem übertragenen initialen Passwort (lokal
+      argon2-gehashed, danach global `initialAdminPasswordEncrypted`
+      löschen) + `local-admin`-Scope. Konsistenzregel (chef-Entscheid):
+      **keine lokale Registrierung** — Admins/Angestellte erhalten Logins
+      stets vom Admin mit generiertem Initialpasswort (member: nur lokale
+      row, kein Login).
+   d) **WS-Status-Anzeige**: global UI → Status pro Site in der
+      Sites-Liste; lokale UI → Statusanzeige in der App-Bar. (noch nicht
+      implementiert)
+   e) E-Mail-Versand der Einrichtungsgeheimnisse (sobald Mailkanal
+      existiert).
+9. **Site-Editor/Roadmap**: Site bearbeiten/löschen, OTP-/Setup-Regenerierung
+   (Regenerate-Button), Mitgliedschaften-Ansicht je Site; gleiches Passwort
+   global/lokal wurde bewusst abgelehnt (Pepper-Sharing-Risiko) — lokale
+   Instanzen bleiben bei separaten Initialpasswörtern.
+10. **Key-Rotation hinweis (Verschlüsselung)**: Der AES-Key für
+    `initialAdminPasswordEncrypted` wird aus `siteSetupEncryptionKey`
+    (`config/passwords.yaml`) abgeleitet. Bei einer Key-Rotation müssen
+    bestehende (noch nicht übertragene) verschlüsselte Werte neu
+    verschlüsselt werden — vor Produktivbetrieb klären.
 
 ## Fortsetzung / nächste Schritte
 
