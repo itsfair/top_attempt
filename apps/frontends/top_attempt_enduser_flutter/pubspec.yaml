@@ -29,6 +29,8 @@ dependencies:
   cupertino_icons: ^1.0.5
   flutter:
     sdk: flutter
+  top_attempt_shared:
+    path: ../shared
   top_attempt_global_client:
     path: ../../backends/global/top_attempt_global_client
   serverpod_flutter: 4.0.2

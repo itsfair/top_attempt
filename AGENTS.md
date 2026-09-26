@@ -1,146 +1,148 @@
-# AGENTS.md — top_attempt (Monorepo-Root)
+# AGENTS.md — top_attempt (monorepo root)
 
-Dieses Repo ist ein Monorepo: ESP32-Firmware + Serverpod-Backends +
-Flutter-Clients. Jede Instanz (Backend/Frontend) hat eine eigene
-AGENTS.md mit den Instanz-Details (Stand, Verantwortlichkeiten, offene
-Fragen). Diese Root-Datei hält die **globale Struktur** fest — egal wo
-eine Session startet, hier ist der Einstieg.
+This repo is a monorepo: ESP32 firmware + Serverpod backends + Flutter
+clients. Every instance (backend/frontend) has its own AGENTS.md with the
+instance details (state, responsibilities, open questions). This root file
+holds the **global structure** — wherever a session starts, this is the
+entry point.
 
-„Globale Instanz“ = zentrale Serverpod-Instanz (`global`); „lokale
-Instanz“ = eine Serverpod-Instanz pro Standort/Türanlage (`local`).
-Namen mit `global_`/`local_` im Paketnamen beziehen sich auf diese
-Instanz-Ebene, nicht darauf, wo der Code läuft.
+"Global instance" = the central Serverpod instance (`global`); "local
+instance" = one Serverpod instance per site/door installation (`local`).
+The `global_`/`local_` package name prefixes refer to these instance
+levels, not to where code runs.
 
-## Was ist top_attempt? (Kurzfassung)
+## What is top_attempt? (short version)
 
-Digitale Türzugangslösung (Selbsteinlass über NUKI-Schlösser via ESP32,
-BLE für Smartphone-Clients), die zu einem ERP-System für Betriebe
-ausgebaut wird.
+Digital door access solution (self-entry via NUKI locks controlled by an
+ESP32, BLE for smartphone clients), being extended into an ERP system for
+businesses.
 
-- **Globale Instanz** — zentrale Benutzerkonten/Profile; Enduser
-  registrieren sich hier. Plattform-Ebene.
-- **Lokale Instanz** (eine pro Betrieb/Standort) — bildet einen Betrieb
-  ab: Türzugang (Selbsteinlass), später Kurse, Angestellte, Schichtplan.
-  Autark-fähig bei kurzer Internettrennung.
-- **Zusammenspiel** — Mitglied eines Betriebs wird man global (Registrierung)
-  und lokal (Einschreiben bei Instanz); die lokale Instanz bekommt die
-  nötigen Nutzerdaten synchronisiert. Genauer Daten-/Login-Flow: siehe
-  `apps/AGENTS.md` → „Instanz-Zwecke und Synchronisation“.
+- **Global instance** — central user accounts/profiles; end users
+  register here. Platform level.
+- **Local instance** (one per business/site) — represents a business:
+  door access (self-entry), later courses, employees, shift scheduling.
+  Works autonomously during short internet outages.
+- **Interplay** — you become a member of a business globally
+  (registration) and locally (enrollment at an instance); the local
+  instance receives the necessary user data synchronized. For details on
+  the data/login flow see `apps/AGENTS.md` → "Instance purposes and
+  synchronization".
 
-Ziel-Ablauf „Selbsteinlass“ (Zustand: Enduser-Mitglied einer lokalen
-Instanz): QR-Code an der Location scannen → OTP abfragen → OTP über BLE an
-den ESP32 → ESP32 reicht an lokale Instanz → Instanz prüft Zugangsdaten →
-Tür schaltet. Türzugang funktioniert **ohne Cloud-Roundtrip** (BLE + lokale
-Instanz reicht; der langfristige Zielzustand ist die Absicherung darüber).
+Target flow "self-entry" (state: end user is a member of a local
+instance): scan the QR code at the location → request OTP → send OTP over
+BLE to the ESP32 → ESP32 forwards to the local instance → the instance
+checks the access data → door unlocks. Door access works **without a
+cloud round trip** (BLE + local instance suffice; the long-term goal is
+securing that path).
 
-## Layout — Instanzen und ihre Zwecke
+## Layout — instances and their purposes
 
-Zwecke je Instanz (Kontext oben); Details in den verlinkten AGENTS.md:
+Purposes per instance (context above); details in the linked AGENTS.md:
 
-| Pfad | Was | Zweck | Eigenes AGENTS.md |
+| Path | What | Purpose | Own AGENTS.md |
 |---|---|---|---|
-| `doorinterface/` | ESP32-Firmware (PlatformIO/Arduino) | Türsteuerung: NUKI-BLE, WLAN-Setup, Web-UI, BLE-Peripheral für Enduser-App | [`doorinterface/AGENTS.md`](doorinterface/AGENTS.md) |
-| `apps/backends/global/top_attempt_global_server` | Serverpod-Backend „global“ | Zentrale Benutzerverwaltung: Registrierung, Auth, Profile, später globale Entitäten (z. B. Kurskatalog) | [`apps/backends/global/AGENTS.md`](apps/backends/global/AGENTS.md) |
-| `apps/backends/global/top_attempt_global_client` | Serverpod-Client für „global“ | Generiertes Client-Paket; von Frontends gegen die globale Instanz genutzt | — (generiert, Doku im Backend) |
-| `apps/backends/local/top_attempt_local_server` | Serverpod-Backend „local“ | Betrieb vor Ort: Geräte-/Mitglieder-/Berechtigungsmodell (geplant), Autarkie bei Internetausfall | [`apps/backends/local/AGENTS.md`](apps/backends/local/AGENTS.md) |
-| `apps/backends/local/top_attempt_local_client` | Serverpod-Client für „local“ | Generiertes Client-Paket; von Frontends gegen die lokale Instanz genutzt | — (generiert, Doku im Backend) |
-| `apps/frontends/top_attempt_global_flutter` | Flutter-App „global“ | **Plattform-Admin-App**: Verwaltung der globalen Instanz (Nutzerkonten/Profile, später mehr) | [`apps/frontends/top_attempt_global_flutter/AGENTS.md`](apps/frontends/top_attempt_global_flutter/AGENTS.md) |
-| `apps/frontends/top_attempt_local_flutter` | Flutter-App „local“ | **Site-Admin-App**: Geräte, Nutzer vor Ort, Zugangsrechte; ERP-Ausbau (Kurse, Angestellte, Schichtplan) | [`apps/frontends/top_attempt_local_flutter/AGENTS.md`](apps/frontends/top_attempt_local_flutter/AGENTS.md) |
-| `apps/frontends/top_attempt_enduser_flutter` | Flutter-App (Enduser) | Enduser-App: Login (global), Profil, QR-Scan, BLE-Test gegen ESP32 | [`apps/frontends/top_attempt_enduser_flutter/AGENTS.md`](apps/frontends/top_attempt_enduser_flutter/AGENTS.md) |
-| `apps/frontends/top_attempt_flutter` | Flutter-App (Vorlage) | **Rohes Serverpod-Grundgerüst als Kopiervorlage** für künftige Frontends; kein eigener Zweck | [`apps/frontends/top_attempt_flutter/AGENTS.md`](apps/frontends/top_attempt_flutter/AGENTS.md) |
+| `doorinterface/` | ESP32 firmware (PlatformIO/Arduino) | Door control: NUKI BLE, Wi-Fi setup, web UI, BLE peripheral for the end-user app | [`doorinterface/AGENTS.md`](doorinterface/AGENTS.md) |
+| `apps/backends/global/top_attempt_global_server` | Serverpod backend "global" | Central user management: registration, auth, profiles, later global entities (e.g. course catalog) | [`apps/backends/global/AGENTS.md`](apps/backends/global/AGENTS.md) |
+| `apps/backends/global/top_attempt_global_client` | Serverpod client for "global" | Generated client package; used by frontends against the global instance | — (generated, docs in backend) |
+| `apps/backends/local/top_attempt_local_server` | Serverpod backend "local" | On-site business: device/member/permission model, autonomous operation during internet outage | [`apps/backends/local/AGENTS.md`](apps/backends/local/AGENTS.md) |
+| `apps/backends/local/top_attempt_local_client` | Serverpod client for "local" | Generated client package; used by frontends against the local instance | — (generated, docs in backend) |
+| `apps/frontends/top_attempt_global_flutter` | Flutter app "global" | **Platform admin app**: manage the global instance (user accounts/profiles, sites, more later) | [`apps/frontends/top_attempt_global_flutter/AGENTS.md`](apps/frontends/top_attempt_global_flutter/AGENTS.md) |
+| `apps/frontends/top_attempt_local_flutter` | Flutter app "local" | **Site admin app**: devices, on-site users, access rights; ERP extension (courses, employees, shift scheduling) | [`apps/frontends/top_attempt_local_flutter/AGENTS.md`](apps/frontends/top_attempt_local_flutter/AGENTS.md) |
+| `apps/frontends/top_attempt_enduser_flutter` | Flutter app (end user) | End-user app: login (global), profile, QR scan, BLE test against the ESP32 | [`apps/frontends/top_attempt_enduser_flutter/AGENTS.md`](apps/frontends/top_attempt_enduser_flutter/AGENTS.md) |
+| `apps/frontends/top_attempt_flutter` | Flutter app (template) | **Raw Serverpod scaffold as a copy template** for future frontends; no purpose of its own | [`apps/frontends/top_attempt_flutter/AGENTS.md`](apps/frontends/top_attempt_flutter/AGENTS.md) |
 
-Alle App-Instanzen sind in einem Dart-Workspace (`apps/pubspec.yaml`)
-zusammengefasst; Details in [`apps/AGENTS.md`](apps/AGENTS.md).
+All app instances live in a Dart workspace (`apps/pubspec.yaml`); details
+in [`apps/AGENTS.md`](apps/AGENTS.md).
 
 ## Workflows (`.github/workflows/`)
 
-| Datei | Zweck | Trigger |
+| File | Purpose | Trigger |
 |---|---|---|
-| `firmware.yml` | Baut die Firmware bei Tag-Push `fw-v*` und erstellt ein GitHub-Release mit `firmware.bin` (OTA-Quelle); auch manuell (`workflow_dispatch`) | Tag-Push `fw-v*` / manuell |
-| `analyze.yml` | `dart analyze --fatal-infos` für beide Serverpod-Backends | Push/PR auf `main`, das `apps/**` toucht |
-| `format.yml` | `dart format --set-exit-if-changed .` für beide Backends | Push/PR auf `main`, das `apps/**` toucht |
-| `tests.yml` | `dart test` gegen beide Backends (mit Docker-Compose für Postgres/Redis/RustFS) | Push/PR auf `main`, das `apps/**` toucht |
+| `firmware.yml` | Builds the firmware on tag push `fw-v*` and creates a GitHub release with `firmware.bin` (OTA source); also manual (`workflow_dispatch`) | Tag push `fw-v*` / manual |
+| `analyze.yml` | `dart analyze --fatal-infos` for both Serverpod backends | Push/PR to `main` touching `apps/**` |
+| `format.yml` | `dart format --set-exit-if-changed .` for both backends | Push/PR to `main` touching `apps/**` |
+| `tests.yml` | `dart test` against both backends (Docker compose for Postgres/Redis/RustFS) | Push/PR to `main` touching `apps/**` |
 
-Soll später eine weitere CI-Instanz hinzukommen oder sollen CI-Gates pro
-Instanz ergänzt werden (z. B. Frontends), nur die Dateien anpassen — keine
-neuen Workflows ohne Absprache.
+If another CI instance should be added later or per-instance gates are
+wanted (e.g. frontends), adapt these files — no new workflows without
+agreement.
 
-Die Firmware selbst zieht das neueste `fw-v*`-Release per OTA
-(`doorinterface/src/Updater.cpp`); Details siehe
-`doorinterface/AGENTS.md` → „Monorepo-Kontext“.
+The firmware pulls the latest `fw-v*` release via OTA itself
+(`doorinterface/src/Updater.cpp`); details in
+`doorinterface/AGENTS.md` → "Monorepo context".
 
-## Toolchain-Voraussetzungen (Stand 2026-09-23)
+## Toolchain requirements (as of 2026-09-23)
 
-- **Firmware**: PlatformIO (`pio` CLI) — siehe `doorinterface/AGENTS.md`.
-- **Apps (Dart/Flutter)**: Dart SDK `^3.12.2` (pubspec-Constraint; lokal
-  installiert ist 3.13.4), Flutter 3.47.5, **Serverpod 4.0.2**
-  (Serverpod-CLI global ebenfalls 4.0.2).
-- **Für Backend-Tests lokal**: Docker (Postgres + Redis + RustFS via
-  docker-compose je Backend).
-- Lokal installierte Versionen prüfen (`dart --version`,
+- **Firmware**: PlatformIO (`pio` CLI) — see `doorinterface/AGENTS.md`.
+- **Apps (Dart/Flutter)**: Dart SDK `^3.12.2` (pubspec constraint; locally
+  installed is 3.13.4), Flutter 3.47.5, **Serverpod 4.0.2**
+  (Serverpod CLI globally 4.0.2 as well).
+- **For local backend tests**: Docker (Postgres + Redis + RustFS via
+  docker-compose per backend).
+- Check locally installed versions before work (`dart --version`,
   `flutter --version`, `serverpod --version`).
 
-## Schnittstellen-Specs
+## Interface specs
 
-| Pfad | Was | Status |
+| Path | What | State |
 |---|---|---|
-| [`doorinterface/docs/ble_interface.md`](doorinterface/docs/ble_interface.md) | BLE-GATT-Schnittstelle ESP ↔ Enduser-Smartphone-App (Prototyp, gemockte Backend-Antwort) | in Arbeit |
-| `doorinterface/docs/interfaces.md` | HTTP-API / NVS / BLE-GATT-Komplett-Spec (alt, veraltet) | TODO |
+| [`doorinterface/docs/ble_interface.md`](doorinterface/docs/ble_interface.md) | BLE GATT interface ESP ↔ end-user smartphone app (prototype, mocked backend response) | in progress (German) |
+| `doorinterface/docs/interfaces.md` | Full HTTP API / NVS / BLE GATT spec (old, outdated) | TODO |
 
-Wer eine App gegen das Doorinterface baut, startet beim Lesen dieser Specs
-und der `doorinterface/AGENTS.md` (speziell „Architektur-Entscheidungen“
-und „BleServer“).
+Anyone building an app against the DoorInterface starts by reading these
+specs plus `doorinterface/AGENTS.md` (especially "Architecture decisions"
+and "BleServer").
 
-## Konventionen / Notizen
+## Conventions / notes
 
-- **Antwortsprache**: Der Agent antwortet im Chat auf **Englisch**
-  (der Nutzer schreibt auf Deutsch); Dokumentation (AGENTS.md,
-  docs/**) und Code-Kommentare bleiben auf Deutsch.
-- Commits pro Sub-Paket sind fine; keine Cross-Paket-Commits erzwingen.
-- Keine Auto-Commits ohne ausdrückliches OK des Nutzers (siehe
-  `doorinterface/AGENTS.md` → „Arbeitsweise“).
-- **File-Storage**: Dateien (u. a. Profilbilder) liegen im RustFS-Bucket
-  `top-attempt` (S3-API, Web-Konsole je nach Backend auf :9001 bzw. :9101,
-  Credentials rustfsadmin / rustfsadmin_secret) — nicht mehr als Blobs in
-  der DB. Adapter: `serverpod_cloud_storage_rustfs`; registriert in
-  `lib/server.dart` **beider** Backends; der Endpoint (scheme/host/port)
-  kommt pro Stage aus dem `rustFS:`-Block der jeweiligen
-  `config/<runMode>.yaml` (Dev: LAN-IP des Entwicklungsrechners, wichtig
-  für Tests am echten Gerät). **Kein `publicHost` setzen** —
-  Upstream-Bug im publicHost-Zweig von `buildPublicUri` (Paket v1.0.0)
-  erzeugt ungültige URLs. Für Flutter-Web-Tests muss CORS am Bucket
-  aktiviert sein (RustFS-Konsole).
-- **User-Profil**: E-Mail/User-ID/Bild kommen aus dem eingebauten
-  `UserProfile` des Auth-Moduls (`userProfileEdit`-Endpoint, nur global),
-  Vor-/Nachname und Geburtstag liegen in eigener Tabelle `profile_details`
-  (`ProfileDetailsEndpoint`, in beiden Backends). Pflichtfelder: Name +
-  Geburtstag; Bild optional.
+- **Answer language**: agents answer in chat in **English** (the user
+  writes German). **All AGENTS.md files: English** (per decision
+  2026-09-25). Documentation under `docs/**` and code comments stay in
+  German.
+- Commits per sub-package are fine; do not force cross-package commits.
+- No auto-commits without explicit user OK (see
+  `doorinterface/AGENTS.md` → "Working rules").
+- **File storage**: files (among others profile images) live in the RustFS
+  bucket `top-attempt` (S3 API, web console per backend on :9001 resp.
+  :9101, credentials rustfsadmin / rustfsadmin_secret) — no longer blobs
+  in the DB. Adapter: `serverpod_cloud_storage_rustfs`; registered in
+  `lib/server.dart` of **both** backends; the endpoint (scheme/host/port)
+  comes per stage from the `rustFS:` block of the respective
+  `config/<runMode>.yaml` (dev: LAN IP of the dev machine, important for
+  tests on real devices). **Do not set `publicHost`** — upstream bug in
+  the publicHost branch of `buildPublicUri` (package v1.0.0) produces
+  invalid URLs. For Flutter web tests CORS must be enabled on the bucket
+  (RustFS console).
+- **User profile**: email/user ID/image come from the built-in
+  `UserProfile` of the auth module (`userProfileEdit` endpoint, global
+  only); first/last name and birthday live in the own table
+  `profile_details` (`ProfileDetailsEndpoint`, in both backends).
+  Required fields: name + birthday; image optional.
 
-## Serverpod-Upgrade 3.4.12 → 4.0.2 (2026-09-23)
+## Serverpod upgrade 3.4.12 → 4.0.2 (2026-09-23)
 
-Beide Backends wurden nach der offiziellen Anleitung
-(https://docs.serverpod.dev/upgrading/upgrade-to-four) aktualisiert.
-Wichtig für Fehlersuche in der Zukunft:
+Both backends were upgraded following the official guide
+(https://docs.serverpod.dev/upgrading/upgrade-to-four). Important for
+future troubleshooting:
 
-- SDK-Constraint des Dart-Workspaces hochgezogen auf `^3.12.2`
-  (`apps/pubspec.yaml` + beide Backend-pubspecs).
-- „Repaired local backend for upgrade“ (Commit `fc2574b`): lokales
-  Backend initialisiert und an globales angeglichen; dafür **Migrations
-  gelöscht und DB neu erstellt** — die lokalen Migrations-Ordner
-  (`20260222122319691`) wurden gelöscht und durch eine frische
-  Basismigration (`20260923104843538`) ersetzt; beides mal entstanden
-  je ein Upgrade-Migrationsordner `*-upgrade-4-0`.
-- In beiden `docker-compose.yaml` wurde `container_name: rustfs_server`
-  entfernt (Namenskollision, wenn beide Compose-Stacks gleichzeitig
-  laufen).
-- Die generierten Dateien (`src/generated/…`, Client-`protocol/…`) und
-  `test_tools/serverpod_test_tools.dart` wurden neu generiert.
-- Bisher keine Fehler bekannt; falls nach dem Upgrade Auffälligkeiten
-  auftreten, zuerst Generate/DB-Migrationsstand prüfen.
+- Dart workspace SDK constraint bumped to `^3.12.2`
+  (`apps/pubspec.yaml` + both backend pubspecs).
+- "Repaired local backend for upgrade" (commit `fc2574b`): local backend
+  initialized and aligned with the global one; for this **migrations were
+  deleted and the DB recreated** — the old local migration folder
+  (`20260222122319691`) was removed and replaced by a fresh base migration
+  (`20260923104843538`); both backends got an `*-upgrade-4-0` migration
+  folder.
+- `container_name: rustfs_server` was removed from both
+  `docker-compose.yaml` files (name collision when both stacks run).
+- Generated files (`src/generated/…`, client `protocol/…`) and
+  `test_tools/serverpod_test_tools.dart` were regenerated.
+- No issues known so far; if anomalies appear after the upgrade, first
+  check generate/DB migration state.
 
-## Fortsetzung
+## Continuation
 
-- Firmware-Seite: siehe `doorinterface/AGENTS.md` → „Fortsetzung“.
-- Apps-Seite: siehe [`apps/AGENTS.md`](apps/AGENTS.md) → „Fortsetzung /
-  offene Baustellen“ — die Richtung (ERP-Ziel, Instanz-Sync,
-  Login-Modell) ist dort beschrieben.
+- Firmware side: see `doorinterface/AGENTS.md` → "Continuation".
+- Apps side: see [`apps/AGENTS.md`](apps/AGENTS.md) → "Continuation /
+  open work items" — the direction (ERP goal, instance sync, login
+  model) is described there.

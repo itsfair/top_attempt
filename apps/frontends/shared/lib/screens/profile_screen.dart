@@ -3,27 +3,42 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-// Imported with a prefix to keep the auth extension in ../main.dart unambiguous.
+// Imported with a prefix to keep the auth extension on the client
+// unambiguous in the host apps.
 import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
     as auth_core;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:top_attempt_global_client/top_attempt_client.dart';
 
-import '../main.dart';
 import '../profile_state.dart';
 
 /// Lets the user edit their own profile: first name, last name, birthday,
-/// an optional profile image, plus read-only email, user id and its QR code.
+/// an optional profile image, plus read-only email, user id and its QR
+/// code.
+///
+/// Lives in `apps/frontends/shared` and is consumed by the end-user app
+/// and the global admin app identically — changes here apply to both.
+/// After saving, the host app is navigated to `/` (both routers define
+/// home there).
 class ProfileScreen extends StatefulWidget {
+  final Client client;
   final ProfileState profileState;
 
-  const ProfileScreen({required this.profileState, super.key});
+  const ProfileScreen({
+    required this.client,
+    required this.profileState,
+    super.key,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  Client get client => widget.client;
+
+  ProfileState get profileState => widget.profileState;
+
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _imagePicker = ImagePicker();
@@ -35,13 +50,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    widget.profileState.addListener(_onProfileChanged);
-    _seedFormFields(widget.profileState.details);
+    profileState.addListener(_onProfileChanged);
+    _seedFormFields(profileState.details);
   }
 
   @override
   void dispose() {
-    widget.profileState.removeListener(_onProfileChanged);
+    profileState.removeListener(_onProfileChanged);
     _firstNameController.dispose();
     _lastNameController.dispose();
     super.dispose();
@@ -49,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Fill the form fields once the profile has been loaded from the server.
   void _onProfileChanged() {
-    _seedFormFields(widget.profileState.details);
+    _seedFormFields(profileState.details);
     if (mounted) setState(() {});
   }
 
@@ -81,7 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final updated = await client.userProfileEdit.removeUserImage();
-      widget.profileState.update(profile: updated);
+      profileState.update(profile: updated);
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -108,25 +123,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _saving = true);
 
     try {
+      // Send the UTC-midnight sentinel: the client serialization is
+      // toUtc(), so a local-midnight value would drift one day back.
+      final normalizedBirthday = _birthday == null
+          ? null
+          : DateTime.utc(_birthday!.year, _birthday!.month, _birthday!.day);
+
       final details = await client.profileDetails.save(
         firstName: firstName,
         lastName: lastName,
-        birthday: birthday,
+        birthday: normalizedBirthday ?? DateTime.utc(2000),
       );
 
-      var profile = widget.profileState.profile!;
+      var profile = profileState.profile!;
       if (_pickedImage != null) {
         profile = await client.userProfileEdit.setUserImage(
           ByteData.sublistView(_pickedImage!),
         );
       }
 
-      widget.profileState.update(details: details, profile: profile);
+      profileState.update(details: details, profile: profile);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil gespeichert.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profil gespeichert.')));
       context.go('/');
     } catch (error) {
       if (mounted) {
@@ -151,13 +172,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (selected != null) {
-      setState(() => _birthday = selected);
+      // Keep the date as a UTC-midnight sentinel so the client-side
+      // DateTime serialization (toUtc()) cannot shift the calendar day
+      // (local midnight in UT+1 would become the previous day in UTC).
+      setState(
+        () => _birthday = DateTime.utc(
+          selected.year,
+          selected.month,
+          selected.day,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final profile = widget.profileState.profile;
+    final profile = profileState.profile;
 
     if (profile == null) {
       return const Center(child: CircularProgressIndicator());
@@ -190,19 +220,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildImageSection() {
-    final imageUrl = widget.profileState.profile?.imageUrl;
+    final imageUrl = profileState.profile?.imageUrl;
 
-    final ImageProvider? preview = switch ((
-      _pickedImage,
-      imageUrl,
-    )) {
+    final ImageProvider? preview = switch ((_pickedImage, imageUrl)) {
       (final bytes, _) when bytes != null => MemoryImage(bytes),
       (_, final url?) => NetworkImage(url.toString()),
       _ => null,
     };
 
     final hasRemovableImage =
-        _pickedImage != null || widget.profileState.profile?.imageUrl != null;
+        _pickedImage != null || profileState.profile?.imageUrl != null;
 
     return Column(
       children: [
@@ -231,10 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ],
         ),
-        const Text(
-          '(optional)',
-          style: TextStyle(fontSize: 12),
-        ),
+        const Text('(optional)', style: TextStyle(fontSize: 12)),
         const SizedBox(height: 16),
       ],
     );
@@ -269,7 +293,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           decoration: const InputDecoration(
             labelText: 'Nachname',
             border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.badge_outlined),
+            prefixIcon: Icon(Icons.cake_outlined),
           ),
         ),
         const SizedBox(height: 12),

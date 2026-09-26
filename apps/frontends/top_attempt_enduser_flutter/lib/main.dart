@@ -1,3 +1,5 @@
+import 'package:top_attempt_shared/profile_state.dart';
+import 'package:top_attempt_shared/screens/profile_screen.dart';
 import 'package:top_attempt_global_client/top_attempt_client.dart';
 import 'package:flutter/material.dart';
 import 'package:serverpod_flutter/serverpod_flutter.dart';
@@ -6,10 +8,8 @@ import 'package:go_router/go_router.dart';
 
 import 'layout.dart';
 
-import 'profile_state.dart';
 import 'screens/ble_test.dart';
 import 'screens/home.dart';
-import 'screens/profile.dart';
 import 'screens/qr_reader.dart';
 import 'screens/sign_in.dart';
 
@@ -102,7 +102,7 @@ class _MyAppState extends State<MyApp> {
           GoRoute(
             path: '/profile',
             builder: (context, state) =>
-                ProfileScreen(profileState: profileState),
+                ProfileScreen(client: client, profileState: profileState),
           ),
         ],
       ),

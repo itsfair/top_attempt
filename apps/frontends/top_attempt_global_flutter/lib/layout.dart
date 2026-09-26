@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
+import 'package:top_attempt_shared/widgets/account_dropdown.dart';
 
 import 'main.dart';
 
+/// Shell layout of the global admin app.
+///
+/// The account dropdown comes from `apps/frontends/shared`
+/// (`AccountDropdown`) and is consumed identically by the
+/// `top_attempt_enduser_flutter` app — changes apply to both.
 class Layout extends StatefulWidget {
   final Widget child;
 
@@ -15,6 +21,7 @@ class Layout extends StatefulWidget {
 
 class _LayoutState extends State<Layout> {
   bool _isSignedIn = false;
+
   @override
   void initState() {
     super.initState();
@@ -42,21 +49,16 @@ class _LayoutState extends State<Layout> {
         backgroundColor: Colors.blue[900],
         foregroundColor: Colors.white,
         actions: [
-          if (_isSignedIn)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Abmelden',
-              onPressed: () async {
-                client.auth.signOutDevice();
-                context.go('/');
-              },
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.login),
-              tooltip: 'Anmelden',
-              onPressed: () => context.go('/sign-in'),
-            ),
+          AccountDropdown(
+            profileState: profileState,
+            isSignedIn: _isSignedIn,
+            onLogin: (context) => context.go('/sign-in'),
+            onLogout: () => client.auth.signOutDevice(),
+            onProfile: (context) => context.go('/profile'),
+            onSignedOut: () {
+              if (mounted) context.go('/');
+            },
+          ),
         ],
       ),
       drawer: Drawer(
@@ -66,10 +68,7 @@ class _LayoutState extends State<Layout> {
               decoration: BoxDecoration(color: Colors.blue),
               child: Text(
                 'Navigation',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 24),
               ),
             ),
             ListTile(

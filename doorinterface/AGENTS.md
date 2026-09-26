@@ -1,10 +1,10 @@
-# DoorInterface — Projekt-Handoff
+# DoorInterface — project handoff
 
-ESP32-Firmware (PlatformIO + Arduino-Framework) zur Steuerung von Türöffnern
-(Relais + NUKI Smart Locks über BLE), mit W-LAN-Einrichtung per Captive Portal,
-gesicherter Weboberfläche und API/Websocket für lokales Backend.
+ESP32 firmware (PlatformIO + Arduino framework) for controlling door
+openers (relay + NUKI smart locks via BLE), with Wi-Fi setup via captive
+portal, web interface and API/WebSocket for the local backend.
 
-## Build & Flash — WICHTIG FÜR ALLE AGENTEN
+## Build & flash — IMPORTANT FOR ALL AGENTS
 
 ```bash
 pio run                 # build
@@ -12,418 +12,433 @@ pio run -t upload       # flash
 pio device monitor      # serial @ 115200
 ```
 
-> **DRAKONISCH REGEL FÜR ALLE AGENTEN (gilt auch für Sub-Agenten):**
+> **DRAKONIAN RULE FOR ALL AGENTS (also applies to sub-agents):**
 >
-> 1. **Kein Build nach jeder kleinen Code-Änderung.** Ein `pio run` dauert
->    20–60 s und verbraucht massiv Kontextzeit. Baut nur auf ausdrücklichen
->    Wunsch des Nutzers **oder** bei tiefergehenden Refactorings, bei denen
->    Syntaxfehler nicht offensichtlich sind. Wenn die Änderung trivial ist
->    (z.B. eine String-Konstante, eine Log-Zeile, eine JS-HTML-Snippet-Anpassung),
->    vertraut auf sorgfältiges Lesen des Diffs — der Nutzer kompiliert und
->    flasht ohnehin selbst.
-> 2. **Änderungen VORHER erklären, nicht einfach in Dateien schreiben.**
->    Der Agent schlägt jeden Häppchen-Schritt als Code-Snippet + kurze
->    Erklärung vor und wartet auf das „Okay" des Nutzers, bevor die Dateien
->    tatsächlich angefasst werden. Ausnahme: reine Dokumentations-Updates
->    (AGENTS.md, docs/*.md), die keine Code-Semantik ändern.
+> 1. **No build after every small code change.** A `pio run` takes
+>    20–60 s and massively consumes context time. Build only on explicit
+>    request of the user **or** for deeper refactorings where syntax
+>    errors are not obvious. If the change is trivial (e.g. a string
+>    constant, a log line, a JS/HTML snippet adjustment), trust a careful
+>    reading of the diff — the user compiles and flashes anyway.
+> 2. **Explain changes BEFORE writing files.** The agent proposes every
+>    bite-size step as code snippet + short explanation and waits for the
+>    user's "okay" before actually touching files. Exception: pure
+>    documentation updates (AGENTS.md, docs/*.md) that do not change code
+>    semantics.
 >
-> Missachtet ein Agent diese Regeln, beeinträchtigt das die
->    Arbeitsgeschwindigkeit erheblich — die Regeln sind nicht optional.
+> Agents ignoring these rules impair working speed considerably — the
+> rules are not optional.
 
-PlatformIO-Konfiguration: `platformio.ini`, env `esp32dev`, `monitor_speed = 115200`.
+PlatformIO configuration: `platformio.ini`, env `esp32dev`,
+`monitor_speed = 115200`.
 
-> Hinweis: `pio` ist nicht im PATH. PlatformIO liegt unter
+> Note: `pio` is not in the PATH. PlatformIO lives at
 > `C:\Users\Simon\.platformio\penv\Scripts\platformio.exe`.
 
-> Hinweis zur lokalen Installation (vorgefallen): Das ESP32-Framework-Paket
-> `framework-arduinoespressif32` war unvollständig installiert (fehlender
-> `variants/`-Ordner) und das Python-Modul `intelhex` fehlte für `esptool`.
-> Beides wurde manuell behoben (`intelhex` per `pip install` ins PIO-Python-Env).
-> Falls der Build auf einem anderen Rechner fehlschlägt, zuerst prüfen:
+> Note on the local installation (happened before): the ESP32 framework
+> package `framework-arduinoespressif32` was incompletely installed
+> (missing `variants/` folder) and the Python module `intelhex` was
+> missing for `esptool`. Both were fixed manually (`intelhex` installed
+> via `pip install` into the PIO Python environment). If the build fails
+> on another machine, first check:
 > `Test-Path "$env:USERPROFILE\.platformio\packages\framework-arduinoespressif32\variants"`
 
-## Monorepo-Kontext
+## Monorepo context
 
-Dieses Firmware-Verzeichnis ist Teil des Monorepos `top_attempt`:
+This firmware directory is part of the `top_attempt` monorepo:
 
 ```
 top_attempt/
-├── apps/             → Serverpod-Backends + Flutter-Clients (eigene AGENTS.md)
-├── doorinterface/    → dieses Projekt
+├── apps/             → Serverpod backends + Flutter clients (own AGENTS.md)
+├── doorinterface/    → this project
 ├── .github/workflows/
-│   ├── firmware.yml  → Build + GitHub-Release bei Tag-Push `fw-v*`
-│   ├── analyze.yml   → Dart-Analyse für apps/
-│   ├── format.yml    → dart format-Check für apps/
-│   └── tests.yml     → dart test für apps/
+│   ├── firmware.yml  → build + GitHub release on tag push `fw-v*`
+│   ├── analyze.yml   → Dart analyze for apps/
+│   ├── format.yml    → dart format check for apps/
+│   └── tests.yml     → dart test for apps/
 └── README.md
 ```
 
-- Die ursprünglichen OTA-Workflows (`dev-manifest.yml`, `release.yml`)
-  wurden entfernt; stattdessen baut `firmware.yml` bei Tag-Push `fw-v*`
-  und erstellt ein GitHub-Release mit `firmware.bin` — die Firmware
-  (`src/Updater.cpp`) zieht dieses Release per OTA auf das Gerät.
-- Der alte Firmware-Code mit `Update()` / `update_manager.*` /
-  `partitions/ota.csv` / `firmware/manifest-*.json` wurde komplett
-  verworfen. Die aktuelle Firmware nutzt eine Custom-Partition-Table
-  (`partitions.csv`, 2 OTA-Slots, Flash-Auslastung ~72 %).
+- The original OTA workflows (`dev-manifest.yml`, `release.yml`) were
+  removed; instead `firmware.yml` builds on tag push `fw-v*` and creates
+  a GitHub release with `firmware.bin` — the firmware (`src/Updater.cpp`)
+  pulls this release via OTA.
+- The old firmware code with `Update()` / `update_manager.*` /
+  `partitions/ota.csv` / `firmware/manifest-*.json` was fully discarded.
+  The current firmware uses a custom partition table (`partitions.csv`,
+  2 OTA slots, flash usage ~72 %).
 
-## Code-Struktur (Stand jetzt)
+## Code structure (current)
 
 ```
 platformio.ini
 src/
   config.h              -> FW_VERSION "0.1.0"
-  main.cpp              -> instanziiert WifiManager, NukiManager, WebInterface
-  WifiManager.h/.cpp    -> WLAN-STA-Versuch + AP-Fallback + Captive Portal + Hostname
-  WebInterface.h/.cpp   -> Haupt-Webserver (STA-Modus): Dashboard, Setup, API
-  NukiManager.h/.cpp    -> NUKI BLE: Pairing, Lock/Unlock, Status-Querying
-  BleServer.h/.cpp      -> BLE Peripheral (GATT-Server) für Smartphone-App, s. docs/ble_interface.md
-  Updater.h/.cpp       -> OTA-Update über GitHub-Releases-Pull (WiFiClientSecure + Update-Lib)
+  main.cpp              -> instantiates WifiManager, NukiManager, WebInterface
+  WifiManager.h/.cpp    -> WLAN STA attempt + AP fallback + captive portal + hostname
+  WebInterface.h/.cpp   -> main webserver (STA mode): dashboard, setup, API
+  NukiManager.h/.cpp    -> NUKI BLE: pairing, lock/unlock, status querying
+  BleServer.h/.cpp      -> BLE peripheral (GATT server) for smartphone app, see docs/ble_interface.md
+  Updater.h/.cpp        -> OTA update via GitHub release pull (WiFiClientSecure + Update lib)
   web/
-    portal_html.h       -> Captive-Portal-HTML (PROGMEM)
-    portal_css.h        -> Captive-Portal-CSS (PROGMEM)
-    portal_js.h         -> Captive-Portal-JS  (PROGMEM)
-    main_html.h         -> Dashboard-HTML (PROGMEM)
-    main_css.h          -> Dashboard + Setup CSS (PROGMEM)
-    main_js.h           -> Dashboard-JS: Status-Poll, Lock/Unlock-Buttons
-    setup_html.h        -> Setup-Seite-HTML (PROGMEM)
-    setup_js.h          -> Setup-JS: Hostname, NUKI-Pairing, Test-Buttons
+    portal_html.h       -> captive portal HTML (PROGMEM)
+    portal_css.h        -> captive portal CSS (PROGMEM)
+    portal_js.h         -> captive portal JS  (PROGMEM)
+    main_html.h         -> dashboard HTML (PROGMEM)
+    main_css.h          -> dashboard + setup CSS (PROGMEM)
+    main_js.h           -> dashboard JS: status poll, lock/unlock buttons
+    setup_html.h        -> setup page HTML (PROGMEM)
+    setup_js.h          -> setup JS: hostname, NUKI pairing, test buttons
 lib/
-  nuki_ble/             -> Gepatchter Fork von AzonInc/NukiBleEsp32 (idf-Branch)
-                           7 NimBLE-API-Patches für NimBLE-Arduino 1.4.x
-                           Eigene Preferences.h/.cpp entfernt (Arduino-Framework genutzt)
+  nuki_ble/             -> patched fork of AzonInc/NukiBleEsp32 (idf branch)
+                           7 NimBLE API patches for NimBLE-Arduino 1.4.x
+                           Own Preferences.h/.cpp removed (Arduino framework used)
 docs/
-  ble_interface.md      -> Spec der BLE-Schnittstelle ESP<->Smartphone-App (Prototyp)
+  ble_interface.md      -> spec of the BLE interface ESP↔smartphone app (prototype)
 ```
 
-## Architektur-Entscheidungen
+## Architecture decisions
 
-- **Webinhalte als PROGMEM-Strings**, nicht als Filesystem (LittleFS).
-  Grund: späteres OTA-Update (per GitHub-Push generiertes Binary) soll die
-  Webinhalte automatisch mitliefern — eine Daten-Partition via OTA separat
-  zu updaten wäre fehleranfälliger. Dateien unter `src/web/`, header-only,
-  je ein PROGMEM-String pro Datei.
-- **Trennung nach Bereich und Typ**: `portal_*.h` für Captive Portal,
-  `main_*.h`/`setup_*.h` für die Haupt-Weboberfläche. Pro Bereich je eine
-  Datei für html/css/js.
-- **WifiManager als eigenes Modul** (`src/WifiManager.cpp`), `main.cpp`
-  bleibt schlank.
-- **WebInterface als eigenes Modul** (`src/WebInterface.cpp`), startet wenn
-  STA verbunden + AP zu. Nimmt `WifiManager&` und `NukiManager&` per Referenz.
-- **NukiManager als eigenes Modul** (`src/NukiManager.cpp`), kapselt BLE-Scanner
-  + NukiLock. Event-Handler für Status-Updates. Credentials in NVS (Namespace
-  = Gerätename, verwaltet von NukiBleEsp32-Lib).
-- **Debug-Logging** über `Serial.print*` mit Präfixen: `[WifiManager]`,
+- **Web content as PROGMEM strings**, not on a filesystem (LittleFS).
+  Reason: later OTA updates (generated binary via GitHub push) should
+  deliver web content automatically — updating a data partition
+  separately via OTA would be more error-prone. Files under `src/web/`,
+  header-only, one PROGMEM string per file.
+- **Separation by area and type**: `portal_*.h` for the captive portal,
+  `main_*.h`/`setup_*.h` for the main web interface. One file per area
+  for html/css/js.
+- **WifiManager as own module** (`src/WifiManager.cpp`), `main.cpp`
+  stays lean.
+- **WebInterface as own module** (`src/WebInterface.cpp`), starts when
+  STA connected + AP off. Takes `WifiManager&` and `NukiManager&` by
+  reference.
+- **NukiManager as own module** (`src/NukiManager.cpp`), encapsulates
+  BLE scanner + NukiLock. Event handler for status updates. Credentials
+  in NVS (namespace = device name, managed by the NukiBleEsp32 lib).
+- **Debug logging** via `Serial.print*` with prefixes: `[WifiManager]`,
   `[HTTP]`, `[NUKI]`, `[BLE]`.
-- **BLE-Start verzögert**: `nuki.begin()` wird **nicht** in `setup()`
-  aufgerufen, sondern in `loop()` erst, wenn `wifi.isConnected() &&
-  !wifi.isApActive()`. Grund: der ESP32 teilt sich ein 2.4 GHz-Radio
-  für WiFi und Bluetooth — initialisiert man BLE parallel zum aktiven
-  Setup-AP,_BLOCKIERT das den AP. Im STA-Modus funktioniert WiFi/BT
-  Coexistence (Time-Slicing). Entsprechend startet auch `WebInterface`
-  erst nach erfolgreicher STA-Verbindung; `main.cpp` hält die
-  `_started`-Flags dafür.
-- **BleServer startet vor NukiManager**: `BleServer.begin()` ruft als
-  Erstes `NimBLEDevice::init(name)` auf — dieser Aufruf ist nur beim
-  ersten Mal wirksam, danach No-Op. NimBLE heißt also = ESP-Hostname.
-  `NukiManager.begin()` (das `init()` intern nochmal aufruft) läuft erst
-  danach. BleServer nutzt bewusst **keine eigenen Member-Pointer** auf
-  Service/Characteristic, sondern holt sie per `NimBLEDevice::getServer()`
-  /`getServiceByUUID()` zurück — das verhindert Stale-Pointer-Probleme
-  falls NimBLE intern reorganisiert und ist mit nur einem Service
-  ausreichend schnell.
-- **BleServer = Peripheral, NukiManager = Central** an demselben NimBLE-
-  Stack. NimBLE erlaubt per Default max. 3 Verbindungen + alle Rollen.
-  BleServer hat genau eine Smartphone-Verbindung, NukiManager eine
-  Central-Verbindung zum Lock — beide laufen gleichzeitig (Time-Slicing
-  im Controller). Stabilität bei parallelem Connect muss beobachtet
-  werden; ggf. später Connection-Params des Clients anpassen.
-- **Protokoll**: JSON über GATT (Write auf Request-Char, Notify auf
-  Response-Char), keine Verschlüsselung im Prototyp. Spec in
+- **BLE start deferred**: `nuki.begin()` is **not** called in `setup()`
+  but in `loop()` only when `wifi.isConnected() && !wifi.isApActive()`.
+  Reason: the ESP32 shares one 2.4 GHz radio for Wi-Fi and Bluetooth —
+  initializing BLE parallel to an active setup AP **blocks the AP**. In
+  STA mode Wi-Fi/BT coexistence works (time slicing). Accordingly,
+  `WebInterface` also starts only after a successful STA connection;
+  `main.cpp` keeps the `_started` flags for this.
+- **BleServer starts before NukiManager**: `BleServer.begin()` calls
+  `NimBLEDevice::init(name)` first — this call only takes effect the
+  first time, afterwards it is a no-op. NimBLE is thus named = ESP
+  hostname. `NukiManager.begin()` (which calls `init()` internally
+  again) runs after that. BleServer deliberately uses **no own member
+  pointers** to service/characteristics but fetches them via
+  `NimBLEDevice::getServer()` / `getServiceByUUID()` — that prevents
+  stale pointer issues if NimBLE reorganizes internally and is fast
+  enough with only one service.
+- **BleServer = peripheral, NukiManager = central** on the same NimBLE
+  stack. NimBLE allows max. 3 connections and all roles by default.
+  BleServer holds exactly one smartphone connection, NukiManager one
+  central connection to the lock — both work simultaneously (time
+  slicing in the controller). Stability under parallel connects must be
+  observed; if needed adjust connection params of the client later.
+- **Protocol**: JSON over GATT (write on request characteristic, notify
+  on response characteristic), no encryption in the prototype. Spec in
   `docs/ble_interface.md`.
 
-## NUKI BLE Integration — wichtige Details
+## NUKI BLE integration — important details
 
-- **Bibliothek**: `lib/nuki_ble/` = gepatchter Fork von
-  `https://github.com/AzonInc/NukiBleEsp32.git` (idf-Branch).
-  Unterstützt **alle NUKI-Modelle**: Smart Lock 1.0–4.0, 5.0 Pro, Ultra, Go,
+- **Library**: `lib/nuki_ble/` = patched fork of
+  `https://github.com/AzonInc/NukiBleEsp32.git` (idf branch).
+  Supports **all NUKI models**: Smart Lock 1.0–4.0, 5.0 Pro, Ultra, Go,
   Opener, Keypad.
-- **7 NimBLE-API-Patches** für Kompatibilität mit `NimBLE-Arduino @ ^1.4.1`:
+- **7 NimBLE API patches** for compatibility with `NimBLE-Arduino @ ^1.4.1`:
   1. `onDisconnect(BLEClient*, int reason)` → `onDisconnect(BLEClient*)`
   2. `onResult(const BLEAdvertisedDevice*)` → `onResult(BLEAdvertisedDevice*)`
   3. `NimBLERemoteCharacteristic::notify_callback` → `notify_callback`
-  4. `NimBLEDevice::isInitialized()` Aufrufe entfernt (nicht in 1.4.x)
+  4. `NimBLEDevice::isInitialized()` calls removed (not in 1.4.x)
   5. `NimBLEDevice::setPower(int)` → `setPower(esp_power_level_t)`
   6. `NimBLEBeacon::setData(uint8_t*, uint8_t)` → `setData(std::string)`
   7. `BLEAddress::getVal()` → `BLEAddress::getNative()`
-8. **`NukiBle.cpp onResult` — Edge-Detection für Status-Updated-Flag.**
-   Original feuert `eventHandler->notify(KeyTurnerStatusUpdated)` bei jedem
-   Advertising-Paket, in dem das Status-Bit gesetzt ist — d.h. fortlaufend
-   alle paar hundert Millisekunden. Patch: `if (!statusUpdated && eventHandler)`
-   als Gate, so dass das Event nur bei echter Flanke (false→true) einmalig
-   feuert. `statusUpdated=true` wird intern weiterhin gesetzt; der Reset-Zweig
-   (Flag gelöscht) setzt `statusUpdated=false` zurück und Feuer
-   `KeyTurnerStatusReset`. Behebt permanentes State-Request-Loop im
-   NukiManager, das NUKI alle 30s aktiv connected und Batterie verbraucht.
-- **Preferences-Konflikt gelöst**: Die idf-Branch hat eine eigene
-  `Preferences.h/.cpp` mit `std::string`-API, die mit der Arduino-Framework-
-  `Preferences` (mit `String`-API) kollidiert. Lösung: eigene Dateien
-  **gelöscht**, die Arduino-Framework-Version ist ein Drop-in Replacement.
-- **Kein Framework-Wechsel**: `framework = arduino` (kein espidf), keine
-  sdkconfig.defaults, keine partitions.csv nötig.
+- **`NukiBle.cpp onResult` — edge detection for the status-updated flag.**
+  The original fires `eventHandler->notify(KeyTurnerStatusUpdated)` on
+  every advertising packet with the status bit set — i.e. continuously
+  every few hundred milliseconds. Patch: `if (!statusUpdated && eventHandler)`
+  as gate so the event only fires once on a real edge (false→true).
+  `statusUpdated=true` is still set internally; the reset branch (flag
+  cleared) sets `statusUpdated=false` back and fires
+  `KeyTurnerStatusReset`. Fixes a permanent state-request loop in
+  NukiManager that connected to NUKI actively every 30 s and drained the
+  battery.
+- **Preferences conflict solved**: the idf branch ships its own
+  `Preferences.h/.cpp` with a `std::string` API that collides with the
+  Arduino-framework `Preferences` (with `String` API). Solution: own
+  files **deleted**; the Arduino framework version is a drop-in
+  replacement.
+- **No framework switch**: `framework = arduino` (no espidf), no
+  sdkconfig.defaults, no partitions.csv needed.
 - **Dependencies**: `NimBLE-Arduino @ ^1.4.1`, `BleScanner` (I-Connect),
   `Crc16` (vinmenn).
-- **Ultra/5th-Gen PIN**: Für Smart Lock Ultra/5th Gen/Go/Pro muss vor dem
-  Pairing die 6-stellige PIN gesetzt werden (`saveUltraPincode()`).
-  Standard-Locks (1.0–4.0) brauchen keine PIN.
-  TODO: PIN-Eingabe in der Setup-Seite.
-- **Ultra-Support Forschung**: Platform-Upgrade auf Arduino Core 3.x
-  (ESP-IDF 5.x) mit `framework = arduino, espidf` wurde getestet, scheiterte
-  aber an Python-Dependency-Problemen in PlatformIO. Die gepatchte Fork-Lösung
-  umgeht das vollständig.
+- **Ultra/5th-gen PIN**: for Smart Lock Ultra/5th Gen/Go/Pro the 6-digit
+  PIN must be set before pairing (`saveUltraPincode()`). Standard locks
+  (1.0–4.0) need no PIN. TODO: PIN input in the setup page.
+- **Ultra support research**: platform upgrade to Arduino Core 3.x
+  (ESP-IDF 5.x) with `framework = arduino, espidf` was tested but failed
+  on Python dependency problems in PlatformIO. The patched-fork solution
+  bypasses that completely.
 
-## Captive Portal — implementierter Ablauf
+## Captive portal — implemented flow
 
-1. `begin()`: NVS-Hostname (Namespace `"system"`) + Credentials (Namespace
-   `"wifi"`) laden. Hostname-Default: `doorinterface-XXXX` (letzte 2 MAC-Bytes).
-2. Falls SSID vorhanden: STA-Versuch (`tryConnect`), 15 s Timeout.
-   `WiFi.setHostname()` wird vor jedem `WiFi.begin()` aufgerufen.
-3. `startFallbackAp()`: `setAutoReconnect(false)` + `disconnect(false)` →
-   STA-Radio frei für Scan. Modus `WIFI_AP_STA`, AP-Name `DoorSetup-AP`.
+1. `begin()`: load NVS hostname (namespace `"system"`) + credentials
+   (namespace `"wifi"`). Default hostname: `doorinterface-XXXX` (last 2
+   MAC bytes).
+2. If SSID present: STA attempt (`tryConnect`), 15 s timeout.
+   `WiFi.setHostname()` is called before every `WiFi.begin()`.
+3. `startFallbackAp()`: `setAutoReconnect(false)` + `disconnect(false)`
+   → free the STA radio for scanning. Mode `WIFI_AP_STA`, AP name
+   `DoorSetup-AP`.
 4. `startPortal()`:
-   - `DNSServer` Catch-All (`*` -> AP-IP).
-   - Routen: `/`, `/portal.css`, `/portal.js`, `/scan`, `/save`, `/status`,
-     `/config`, `/close`.
-   - `UriGlob("*")` + `HTTP_ANY` als Catch-All → kein `log_e`-Spam mehr.
-   - `onNotFound` als defensive fallback.
-5. `/scan` (GET): `WiFi.scanNetworks()` blockierend, JSON-Array.
-6. `/save` (POST): SSID/Pass + optional Hostname in NVS, `WiFi.begin()`,
-   antwortet sofort `{"status":"connecting"}`.
-   **Validierung**: Ist ein Hostname angegeben, wird `setHostname()`
-   geprüft (nur `a-z`, `0-9`, `-`; 1–63 Zeichen; nicht mit `-` beginnen/
-   enden). Bei ungültigem Namen liefert `/save` HTTP 400 +
-   `{"error":"Hostname ungültig (nur a-z, 0-9, -; nicht mit - beginnen/enden)"}`
-   und bricht den Save-Flow ab — die WLAN-Daten werden nicht gespeichert.
-   Das Frontend zeigt den Fehler im Status-Bereich an.
-7. `/config` (GET): JSON `{hostname}` für Portal-Frontend.
-8. `/close` (POST): AP sofort schließen (Button im Overlay nach erfolgtem
-   Connect). Frontend kopiert STA-IP ins Clipboard + schließt AP.
-9. Portal-State-Machine in `loop()`:
-   - `_shutdownRequested` Flag → `shutdownAp()` (vom Button und 30s-Timer).
-   - `PORTAL_CONNECTING` → `PORTAL_CONNECTED` → 30s Timer → `shutdownAp()`.
-   - `shutdownAp()`: `setAutoReconnect(true)` für reinen STA-Betrieb.
+   - `DNSServer` catch-all (`*` → AP IP).
+   - Routes: `/`, `/portal.css`, `/portal.js`, `/scan`, `/save`,
+     `/status`, `/config`, `/close`.
+   - `UriGlob("*")` + `HTTP_ANY` as catch-all → no more `log_e` spam.
+   - `onNotFound` as defensive fallback.
+5. `/scan` (GET): `WiFi.scanNetworks()` blocking, JSON array.
+6. `/save` (POST): SSID/password + optional hostname to NVS,
+   `WiFi.begin()`, responds immediately `{"status":"connecting"}`.
+   **Validation**: if a hostname is provided, `setHostname()` is checked
+   (only `a-z`, `0-9`, `-`; 1–63 chars; must not start/end with `-`).
+   On an invalid name `/save` returns HTTP 400 +
+   `{"error":"Hostname invalid (only a-z, 0-9, -; must not start/end with -)"}`
+   and aborts the save flow — Wi-Fi data is not stored. The frontend
+   shows the error in the status area.
+7. `/config` (GET): JSON `{hostname}` for the portal frontend.
+8. `/close` (POST): close the AP immediately (button in the overlay
+   after a successful connect). Frontend copies the STA IP to the
+   clipboard + closes the AP.
+9. Portal state machine in `loop()`:
+   - `_shutdownRequested` flag → `shutdownAp()` (button and 30 s timer).
+   - `PORTAL_CONNECTING` → `PORTAL_CONNECTED` → 30 s timer →
+     `shutdownAp()`.
+   - `shutdownAp()`: `setAutoReconnect(true)` for pure STA operation.
 
-## Frontend (Captive Portal)
+## Frontend (captive portal)
 
-- HTML/CSS/JS inline als PROGMEM in `src/web/portal_*.h`.
-- Select für gescannte Netzwerke + manuelles SSID-Feld.
-- Gerätename-Feld (geladen via `/config`).
-- Overlay mit Spinner + Status-Polling.
-- Bei `connected`: Adresse + „Adresse kopieren & Setup beenden"-Button.
+- HTML/CSS/JS inline as PROGMEM in `src/web/portal_*.h`.
+- Select for scanned networks + manual SSID field.
+- Device name field (loaded via `/config`).
+- Overlay with spinner + status polling.
+- On `connected`: address + "copy address & finish setup" button.
 
-## Haupt-Weboberfläche (STA-Modus)
+## Main web interface (STA mode)
 
-- **WebInterface** startet wenn `wifi.isConnected() && !wifi.isApActive()`.
-- mDNS mit dynamischem Hostnamen (`MDNS.begin(hostname)`).
-- Routen: `/`, `/main.css`, `/main.js`, `/setup`, `/setup.js`,
+- **WebInterface** starts when `wifi.isConnected() && !wifi.isApActive()`.
+- mDNS with dynamic hostname (`MDNS.begin(hostname)`).
+- Routes: `/`, `/main.css`, `/main.js`, `/setup`, `/setup.js`,
   `/api/status`, `/api/hostname` (GET+POST), `/api/nuki/pair`,
   `/api/nuki/cancel`, `/api/nuki/unlock`, `/api/nuki/lock`.
 - `/api/status` JSON: `{wifi, relay, locks, firmware}`.
   `locks`: `{available, count, paired, pairing, lockState, batteryPct,
   batteryCritical, rssi}`.
-- Dashboard (`main_js.h`): 3 Karten (WLAN, Türöffner, Firmware).
-  - WLAN: Badge + SSID/RSSI/IP, Poll alle 3s.
-  - Türöffner: „nicht eingerichtet" + Setup-Link, oder Lock-State-Badge +
-    Akku/RSSI + „Öffnen"/„Sperren"-Buttons.
-  - ⚙-Dropdown oben rechts → `/setup`.
-- Setup-Seite (`setup_js.h`):
-  - Gerätename ändern (→ Reboot).
-  - NUKI Pairing: Anleitung + „Pairing starten"/„Pairing abbrechen".
-  - Test-Buttons (Öffnen/Sperren) bei gepaartem Lock.
-  - Poll alle 2s.
+- Dashboard (`main_js.h`): 3 cards (Wi-Fi, door opener, firmware).
+  - Wi-Fi: badge + SSID/RSSI/IP, poll every 3 s.
+  - Door opener: "not set up" + setup link, or lock-state badge +
+    battery/RSSI + "open"/"lock" buttons.
+  - ⚙ dropdown top right → `/setup`.
+- Setup page (`setup_js.h`):
+  - Change device name (→ reboot).
+  - NUKI pairing: instructions + "start pairing"/"cancel pairing".
+  - Test buttons (open/lock) with a paired lock.
+  - Poll every 2 s.
 
-## NUKI Pairing-Flow
+## NUKI pairing flow
 
-1. Nuki-App: Bluetooth Pairing aktivieren (Settings → Features & Configuration
-   → Button and LED).
-2. Nuki-Taste 10s drücken (LED-Ring leuchtet).
-3. Setup-Seite → „Pairing starten" → `POST /api/nuki/pair`.
+1. Nuki app: enable Bluetooth pairing (Settings → Features &
+   Configuration → Button and LED).
+2. Press the NUKI button 10 s (LED ring lights up).
+3. Setup page → "start pairing" → `POST /api/nuki/pair`.
 4. `NukiManager::startPairing()` → `_pairingRequested = true`.
-5. `loop()` ruft `pairNuki()` auf bis Success oder 10-Min-Timeout.
-6. Bei Success: `requestKeyTurnerState()` → Status im Dashboard.
-7. „Pairing abbrechen" → `POST /api/nuki/cancel` → `_pairingRequested = false`.
-8. Credentials (ECDH-Key, Auth-ID) in NVS gespeichert (von Lib verwaltet).
-   Bei Neustart: kein Re-Pairing nötig.
+5. `loop()` calls `pairNuki()` until success or 10 min timeout.
+6. On success: `requestKeyTurnerState()` → status in the dashboard.
+7. "cancel pairing" → `POST /api/nuki/cancel` → `_pairingRequested = false`.
+8. Credentials (ECDH key, auth ID) stored in NVS (managed by the lib).
+   After restart: no re-pairing needed.
 
-## Bisherige Häppchen-Schritte
+## Completed bite-size steps
 
-1. Grundgerüst `WifiManager` (STA + AP-Fallback).
-2. Captive Portal (HTML/CSS/JS, DNS, Routen, Scan, Save, Status, State-Machine).
-3. NVS-Fix + Captive-Detection-Pfade.
-4. Scan-Fix (`setAutoReconnect(false)` + `disconnect`).
-5. `UriGlob("*")`-Catch-All gegen Log-Spam.
-6. Portal-Finish-Button (Adresse kopieren + AP schließen).
-7. `config.h` mit `FW_VERSION`.
-8. `WebInterface`-Modul (Dashboard + mDNS).
-9. Hostname-Feature: NVS `"system"`, unique Default, editierbar im Portal +
-   Setup-Seite, `WiFi.setHostname()` vor `WiFi.begin()`.
-10. NUKI BLE Integration: gepatchter Fork (idf-Branch), `NukiManager`,
-    Pairing, Lock/Unlock, Status, Dashboard-Buttons, Setup-Seite.
-11. Pairing-Abbruch (`/api/nuki/cancel`).
-12. Hostname-Validierung im Portal: `setHostname()`-Rückgabewert wird in
-    `handleSave()` geprüft; bei ungültigem Name -> HTTP 400 + JSON-Error,
-    Frontend zeigt Meldung im Status-Bereich.
-13. BLE-Start **deferred**: `nuki.begin()` aus `setup()` in `loop()`
-    verschoben, erst wenn `wifi.isConnected() && !wifi.isApActive()`.
-    Behebt „AP nicht erreichbar nach BLE-Init“ (Radio-Konflikt auf ESP32).
-    `WebInterface` startet ebenfalls erst danach.
-14. **BleServer-Prototyp**: neues Modul `src/BleServer.cpp` (NimBLE
-    Peripheral). GATT-Service mit Request-Char (Write) + Response-Char
-    (Notify). Smartphone schickt JSON, ESP loggt und antwortet gemockt.
-    BleServer startet vor `NukiManager` (nimmt `NimBLEDevice::init` vorweg
-    → Advertising-Name = Hostname). Deferred in `loop()` analog zu Nuki.
-    Spec: `docs/ble_interface.md`. Noch ohne Backend / ohne Verschlüsselung.
-15. **NUKI Ultra-/Go-PIN-Eingabe**: Setup-Seite um PIN-Feld ergänzt
-    (`/api/nuki/pin` GET/POST), `NukiManager::setUltraPin()` ruft
-    `saveUltraPincode()` auf (Lib speichert selbst im NVS). Status-Endpoint
-    liefert `locks.hasUltraPin`. Notwendig für Smart Lock Go (2025) /
-    Ultra / 5.0 / Pro — ohne PIN verweigert `NukiBle` das Pairing
-    (`No pairing PIN code set`). Standard-Locks (1.0–4.0) brauchen keine PIN.
-16. **OTA-Update** über GitHub-Releases: neues Modul `src/Updater.cpp`
-    pollt `api.github.com/repos/itsfair/top_attempt/releases/latest`,
-    vergleicht `tag_name` (ohne `fw-v`-Präfix) mit `FW_VERSION`, lädt
-    `firmware.bin` herunter und flasht per `Update`-Lib in den inaktiven
-    OTA-Slot. Setup-Seite: „Firmware-Update"-Sektion mit Button +
-    Fortschrittsanzeige. Dashboard-Menü: „Neustart"-Button via
-    `/api/reboot`. Neue `partitions.csv` mit 2 OTA-Slots je 1.875 MB.
-    GitHub-Action `firmware.yml` triggert nur noch auf Tag-Push `fw-v*`,
-    erstellt GitHub-Release. Version wird per `${sysenv.FW_VERSION_FLAGS}`
-    in den Build injiziert (lokal: `0.0.0-dev` Fallback). Flash-Stand
-    nach OTA-Integration: 72.1 %.
-17. **NUKI-Pairing-Name = Hostname**: `NukiLock` wird erst in
-    `NukiManager::begin(deviceName)` erzeugt (Heap-Pointer statt Member,
-    main.cpp übergibt `wifi.getHostname()`), Name = konfigurierter
-    Hostname statt festem „DoorInterface". Name wird auf 32 Zeichen
-    gekürzt (die Lib memcpy't den Namen beim Pairing in einen festen
-    32-Byte-Puffer ohne Clamp). **Achtung**: Der Name ist zugleich der
-    NVS-Namespace der NUKI-Credentials (Lib-intern `preferencesId`) —
-    nach Hostname-Änderung ist Re-Pairing nötig, der alte Namespace
-    bleibt als Leiche im NVS, am Lock bleibt der alte Authorization-
-    Entry stehen. Zwei ESPs mit gleichem Namen: technisch unkritisch
-    (Lock unterscheidet Pairings intern per Authorization-ID), aber
-    zwei identische Entrys in der NUKI-App.
+1. Basic `WifiManager` scaffold (STA + AP fallback).
+2. Captive portal (HTML/CSS/JS, DNS, routes, scan, save, status, state
+   machine).
+3. NVS fix + captive detection paths.
+4. Scan fix (`setAutoReconnect(false)` + `disconnect`).
+5. `UriGlob("*")` catch-all against log spam.
+6. Portal finish button (copy address + close AP).
+7. `config.h` with `FW_VERSION`.
+8. `WebInterface` module (dashboard + mDNS).
+9. Hostname feature: NVS `"system"`, unique default, editable in portal
+   + setup page, `WiFi.setHostname()` before `WiFi.begin()`.
+10. NUKI BLE integration: patched fork (idf branch), `NukiManager`,
+    pairing, lock/unlock, status, dashboard buttons, setup page.
+11. Pairing cancellation (`/api/nuki/cancel`).
+12. Hostname validation in the portal: `setHostname()` return value is
+    checked in `handleSave()`; on invalid name → HTTP 400 + JSON error,
+    frontend shows the message in the status area.
+13. BLE start **deferred**: `nuki.begin()` moved out of `setup()` into
+    `loop()`, only when `wifi.isConnected() && !wifi.isApActive()`.
+    Fixes "AP unreachable after BLE init" (radio conflict on ESP32).
+    `WebInterface` also starts only after that.
+14. **BleServer prototype**: new module `src/BleServer.cpp` (NimBLE
+    peripheral). GATT service with request char (write) + response char
+    (notify). Smartphone sends JSON, ESP logs and answers mocked.
+    BleServer starts before `NukiManager` (does `NimBLEDevice::init`
+    first → advertising name = hostname). Deferred in `loop()` like
+    NUKI. Spec: `docs/ble_interface.md`. Still without backend /
+    without encryption.
+15. **NUKI Ultra/Go PIN input**: setup page extended with a PIN field
+    (`/api/nuki/pin` GET/POST), `NukiManager::setUltraPin()` calls
+    `saveUltraPincode()` (lib stores itself in NVS). Status endpoint
+    provides `locks.hasUltraPin`. Required for Smart Lock Go (2025) /
+    Ultra / 5.0 / Pro — without a PIN `NukiBle` refuses pairing
+    (`No pairing PIN code set`). Standard locks (1.0–4.0) need no PIN.
+16. **OTA update** via GitHub releases: new module `src/Updater.cpp`
+    polls `api.github.com/repos/itsfair/top_attempt/releases/latest`,
+    compares `tag_name` (without `fw-v` prefix) with `FW_VERSION`,
+    downloads `firmware.bin` and flashes into the inactive OTA slot via
+    the `Update` lib. Setup page: "firmware update" section with button
+    + progress display. Dashboard menu: "reboot" button via
+    `/api/reboot`. New `partitions.csv` with 2 OTA slots of 1.875 MB
+    each. GitHub action `firmware.yml` only triggers on tag push
+    `fw-v*`, creates a GitHub release. Version is injected into the
+    build via `${sysenv.FW_VERSION_FLAGS}` (local: `0.0.0-dev`
+    fallback). Flash usage after OTA integration: 72.1 %.
+17. **NUKI pairing name = hostname**: `NukiLock` is only created in
+    `NukiManager::begin(deviceName)` (heap pointer instead of member;
+    `main.cpp` passes `wifi.getHostname()`); name = configured hostname
+    instead of fixed "DoorInterface". Name is truncated to 32 chars
+    (the lib memcpys the name into a fixed 32-byte buffer during
+    pairing without clamping). **Attention**: the name is also the NVS
+    namespace of the NUKI credentials (lib-internal `preferencesId`) —
+    after a hostname change re-pairing is required, the old namespace
+    stays orphaned in NVS and the lock keeps the old authorization
+    entry. Two ESPs with the same name: technically uncritical (the
+    lock distinguishes pairings internally via authorization id), but
+    two identical entries in the NUKI app.
 
-## Arbeitsweise
+## Working rules
 
-- Kleine Häppchen, jeder Schritt als Code-Snippet vorgeschlagen + erklärt,
-  erst auf "okay" in Dateien geschrieben. **Keine Ausnahmen** — auch nicht
-  bei „nur mal eben einer Kleinigkeit".
-- Schritte werden vor dem Anlegen erklärt, nicht automatisch committed.
-- `git commit` nur auf ausdrücklichen Wunsch.
-- **Kein Build-Test nach jeder kleinen Änderung.** Der Nutzer kompiliert/flasht
-  selbst und gibt Bescheid bei Problemen. Builds nur auf ausdrücklichen Wunsch
-  oder bei tiefergehenden Refactorings. **Gilt auch wenn der Agent „sicher
-  gerade sein will" — der Build kostet 20–60 s Kontextzeit und ist ASA-Regel
-  aus dem vorherigen Abschnitt unter „Build & Flash" eh verboten.**
+- Small bites, each step proposed as code snippet + explained, only
+  written to files after "okay". **No exceptions** — not even for "just
+  one tiny thing".
+- Steps are explained before being created, not auto-committed.
+- `git commit` only on explicit request.
+- **No build test after every small change.** The user compiles/flashes
+  themselves and reports problems. Builds only on explicit request or
+  for deeper refactorings. **Applies even when the agent "really thinks
+  it should be safe"** — the build costs 20–60 s of context time and is
+  forbidden anyway as a hard rule from the "Build & Flash" section.
 
-## Offene TODOs (Reihenfolge grob nach Priorität)
+## Open TODOs (roughly ordered by priority)
 
 ### NUKI
-- [ ] PIN-Eingabe für Ultra/5th Gen/Go/Pro in der Setup-Seite
-        (`saveUltraPincode()` vor Pairing).
-- [ ] Unpair-Funktion (`unPairNuki()` + Setup-Button).
-- [ ] Mehrere Locks parallel (Liste von NukiLock-Instanzen am selben Scanner).
-- [ ] Keypad-Verwaltung, Auth-Entries, Time-Control.
-- [ ] Event-Log (benötigt PIN).
+- [ ] PIN input for Ultra/5th Gen/Go/Pro in the setup page
+        (`saveUltraPincode()` before pairing).
+- [ ] Unpair function (`unPairNuki()` + setup button).
+- [ ] Several locks in parallel (list of NukiLock instances on the same
+        scanner).
+- [ ] Keypad management, auth entries, time control.
+- [ ] Event log (requires PIN).
 
-### WLAN / Setup
-- [ ] AP-Passwort für Setup-AP konfigurierbar (aktuell offen).
-- [ ] Reset-Möglichkeit der gespeicherten WLAN-Credentials (Taster/Erase-Flag).
-- [ ] Reconnect-Logik bei STA-Verbindungsabbruch.
+### Wi-Fi / setup
+- [ ] Configurable AP password for the setup AP (currently open).
+- [ ] Reset option for stored Wi-Fi credentials (button/erase flag).
+- [ ] Reconnect logic on STA connection loss.
 
-### Weboberfläche
-- [ ] Login / Session-Auth (z. B. Basic-Auth, Token, Session-Cookie).
-- [ ] Relais-Konfiguration (Pin, Pegel) in Setup-Seite.
-- [ ] SSID-Escaping im Status-JSON.
+### Web interface
+- [ ] Login / session auth (e.g. basic auth, token, session cookie).
+- [ ] Relay configuration (pin, level) in the setup page.
+- [ ] SSID escaping in the status JSON.
 
-### Backend-Anbindung
-- [ ] Entscheidung: ESP als WS-Client (Empfehlung bei mehreren ESPs) oder
-        WS-Server auf ESP. Serverpod-Backend noch nicht begonnen.
-- [ ] Gesicherte Verbindung ESP↔Backend (TLS? Mutual Auth?).
-- [ ] Authentifizierung des Backends gegenüber dem ESP (API-Token).
+### Backend connection
+- [ ] Decision: ESP as WS client (recommendation for multiple ESPs) or
+        WS server on ESP. Serverpod backend not started yet.
+- [ ] Secure connection ESP↔backend (TLS? mutual auth?).
+- [ ] Authentication of the backend against the ESP (API token).
 
-### Relais
-- [ ] GPIO-Ansteuerung (Pin, Timing, Entstörung). Braucht Hardware-Info.
+### Relay
+- [ ] GPIO control (pin, timing, interference suppression). Needs
+        hardware info.
 
-### Türsensor
-- [ ] **Option A — NUKI-eigener Türsensor:** Das im
-        `Keyturner States (0x000C)`-Frame der Nuki-API enthaltene Feld
-        `Door sensor state` (uint8: 0x00 unavailable, 0x02 closed, 0x03 opened,
-        0x10 uncalibrated, 0xF0 tampered, 0xFF unknown) auswerten und im
-        Dashboard anzeigen. Setzt voraus, dass ein NUKI-Türsensor gekoppelt
-        ist. Updates nur im Poll-Intervall (`locks.pollInterval`).
-- [ ] **Option B — Eigener Reed-/Magnetsensor am ESP-GPIO:** Reed-Schalter
-        am Türblatt (Magnet am Rahmen) an einem GPIO-Pin mit internem
-        Pull-up, Firmware pollt Pin und feuert Event bei Flanke.
-        Real-time (unabhängig vom NUKI-Poll-Intervall), neue Klasse etwa
-        `DoorSensor.h/.cpp` im `src/`. Pin in Setup-Seite konfigurierbar
-        (wie Poll-Intervall). Braucht Hardware-Info (welcher GPIO).
+### Door sensor
+- [ ] **Option A — NUKI's own door sensor:** evaluate the field
+        `Door sensor state` (uint8: 0x00 unavailable, 0x02 closed,
+        0x03 opened, 0x10 uncalibrated, 0xF0 tampered, 0xFF unknown)
+        contained in the NUKI API's `Keyturner States (0x000C)` frame
+        and display it in the dashboard. Requires a paired NUKI door
+        sensor. Updates only in the poll interval (`locks.pollInterval`).
+- [ ] **Option B — own reed/magnetic sensor on the ESP GPIO:** reed
+        switch on the door leaf (magnet on the frame) on a GPIO pin
+        with internal pull-up, firmware polls the pin and fires an
+        event on edge. Real-time (independent of the NUKI poll
+        interval), new class e.g. `DoorSensor.h/.cpp` in `src/`. Pin
+        configurable in the setup page (like the poll interval). Needs
+        hardware info (which GPIO).
 
-### OTA / GitHub-Workflow
-- [x] **OTA per GitHub-Releases-Pull** implementiert: `src/Updater.cpp`
-        fragt `https://api.github.com/repos/itsfair/top_attempt/releases/latest`
-        ab, vergleicht Version, lädt `firmware.bin` herunter und flasht
-        per `Update`-Lib. TLS via `WiFiClientSecure::setInsecure` (ohne
-        CA-Bundle, kann später mit eingebettetem Bundle verbessert werden).
-- [x] **GitHub-Action** (`.github/workflows/firmware.yml`) baut bei
-        Tag-Push `fw-v*` und erstellt ein GitHub-Release mit
-        `firmware.bin` als Asset. Version wird aus Tag extrahiert
-        (`fw-v0.2.0` → `0.2.0`) und per `FW_VERSION_FLAGS` in den Build
-        injiziert (`platformio.ini` `${sysenv.FW_VERSION_FLAGS}`).
-        Lokaler Build ohne CI → Fallback `0.0.0-dev` (via `config.h`).
-- [x] **Web-UI Update-Sektion** in Setup-Seite (/setup → „Firmware-Update"):
-        Button „Nach Update suchen", Fortschrittsanzeige während Download,
-        Status `DONE` → separater „Neustart"-Button (`/api/reboot`).
-- [x] **Reboot-Endpoint** `/api/reboot` + Dashboard-Menü „Neustart".
-- [x] **Partition-Tabelle** `doorinterface/partitions.csv` mit 2 OTA-Slots
-        (1.875 MB je), NVS (16 KB), otadata (8 KB). Flash-Auslastung ~72 %.
-        **Wichtig**: Wechsel der Partition-Tabelle löscht NVS beim ersten
-        Flash — WLAN/NUKI-Credentials/Hostname müssen neu konfiguriert werden.
-- [x] **OTA-Recovery-Falle: Wenn OTA eine Firmware installiert, die nicht
-        lauffähig ist (z.B. Crash im Boot, oder fehlerhaftes Verhalten wie
-        hier beim Redirect-Bug), schreibt die Lib den anderen Slot in
-        `otadata` als „beim naechsten Start aktiv". Ein anschliessendes
-        `pio run -t upload` schreibt zwar den Fix in Slot 0, aber der
-        Bootloader startet weiterhin den (defekten) Slot 1, bis die
-        `otadata`-Partition gelöscht wird. **Loesung in diesem Fall**:
-        `pio run -t erase` → `pio run -t upload` (löscht den gesamten
-        Flash, auch `otadata`; der Bootloader defaultet auf Slot 0).
-- [ ] ESP prüft periodisch GitHub auf neue Version (z. Zt. nur manuell über
-        Setup-Seite, später Auto-Poll hintergrundlich).
+### OTA / GitHub workflow
+- [x] **OTA via GitHub release pull** implemented: `src/Updater.cpp`
+        queries `https://api.github.com/repos/itsfair/top_attempt/releases/latest`,
+        compares version, downloads `firmware.bin` and flashes via the
+        `Update` lib. TLS via `WiFiClientSecure::setInsecure` (no CA
+        bundle; can later be improved with an embedded bundle).
+- [x] **GitHub action** (`.github/workflows/firmware.yml`) builds on
+        tag push `fw-v*` and creates a GitHub release with
+        `firmware.bin` as asset. Version extracted from the tag
+        (`fw-v0.2.0` → `0.2.0`) and injected into the build via
+        `FW_VERSION_FLAGS` (`platformio.ini`
+        `${sysenv.FW_VERSION_FLAGS}`). Local build without CI →
+        fallback `0.0.0-dev` (via `config.h`).
+- [x] **Web UI update section** in the setup page (/setup → "Firmware
+        update"): button "check for update", progress display during
+        download, status `DONE` → separate "reboot" button
+        (`/api/reboot`).
+- [x] **Reboot endpoint** `/api/reboot` + dashboard menu "reboot".
+- [x] **Partition table** `doorinterface/partitions.csv` with 2 OTA
+        slots (1.875 MB each), NVS (16 KB), otadata (8 KB). Flash usage
+        ~72 %. **Important**: switching the partition table deletes NVS
+        on first flash — Wi-Fi/NUKI credentials/hostname must be
+        reconfigured.
+- [x] **OTA recovery trap: when OTA installs a firmware that does not
+        run (e.g. crash at boot, or broken behaviour like the redirect
+        bug here), the lib writes the other slot to `otadata` as
+        "active on next boot". A subsequent `pio run -t upload` writes
+        the fix to slot 0, but the bootloader keeps starting the
+        (broken) slot 1 until the `otadata` partition is erased.
+        **Solution in that case**: `pio run -t erase` → `pio run -t
+        upload` (erases the entire flash including `otadata`; the
+        bootloader defaults to slot 0).
+- [ ] ESP periodically checks GitHub for a new version (currently only
+        manually via the setup page; automatic background poll later).
 
-### Logging / Robustheit
-- [ ] Zentrales Debug-Makro (`#define DEBUG_SERIAL` + `LOGI/LOGW/LOGE`).
+### Logging / robustness
+- [ ] Central debug macro (`#define DEBUG_SERIAL` + `LOGI/LOGW/LOGE`).
 
-### Doku
-- [x] **BLE-Schnittstelle ESP↔Smartphone-App** in `docs/ble_interface.md`
-        (Prototyp-Stand, gemockte Backend-Antwort).
-- [ ] `docs/interfaces.md` neu schreiben, sobald HTTP-API / NVS / BLE-GATT
-        des aktuellen Stands stabil sind (die alte Spec aus der Vor-Version
-        wurde beim Setup-Reset der Firmware gelöscht und ist veraltet).
+### Docs
+- [x] **BLE interface ESP↔smartphone app** in `docs/ble_interface.md`
+        (prototype state, mocked backend response; German).
+- [ ] Rewrite `docs/interfaces.md` once the HTTP API / NVS / BLE GATT
+        of the current state are stable (the old spec from the previous
+        version was deleted during the firmware setup reset and is
+        outdated).
 
-## Konventionen / Notizen
+## Conventions / notes
 
-- Keine Kommentare im Code (per Absprache).
-- `Serial`-Präfixe: `[WifiManager]`, `[HTTP]`, `[NUKI]`, `[BLE]`.
-- NVS-Namespaces: `"wifi"`, `"system"`, NUKI verwaltet eigene
-  (Namespace = Gerätename).
-- Dateien im `src/`-Verzeichnis, nicht in `lib/` (per Absprache).
-  Ausnahme: `lib/nuki_ble/` = gepatchter Fork (nicht eigenem Code).
+- No comments in the code (by agreement).
+- `Serial` prefixes: `[WifiManager]`, `[HTTP]`, `[NUKI]`, `[BLE]`.
+- NVS namespaces: `"wifi"`, `"system"`; NUKI manages its own (namespace
+  = device name).
+- Files in the `src/` directory, not in `lib/` (by agreement).
+  Exception: `lib/nuki_ble/` = patched fork (not own code).
 
-## Forsetzung
+## Continuation
 
-Nächster empfohlener Schritt:
-**BleServer: Anbindung ans lokale Backend** (ersetzt die gemockte Antwort
-durch echte Credential-Prüfung via HTTP/WS) oder **Verschlüsselung /
-Pairing der BLE-Verbindung** (`*_ENC`-Flags + NimBLE-Security-Callbacks)
- oder **Relais-GPIO** — je nach Priorität.
+Next recommended step:
+**BleServer: connection to the local backend** (replaces the mocked
+answer with real credential checking via HTTP/WS) or **encryption /
+pairing of the BLE connection** (`*_ENC` flags + NimBLE security
+callbacks) or **relay GPIO** — depending on priority.

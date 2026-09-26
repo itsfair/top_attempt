@@ -1,125 +1,137 @@
-# AGENTS.md — Serverpod-Backend „local“
+# AGENTS.md — Serverpod backend "local"
 
-Lokale Serverpod-Instanz des Monorepos `top_attempt`: **eine Instanz pro
-Betrieb/Standort (Türanlage)**. Soll den Betrieb vor Ort abbilden —
-Selbsteinlass (Türzugang) und später ERP-Features (Kursverwaltung,
-Angestelltenverwaltung, Schichtplan) — und bei kurzer Internettrennung
-autark weiterlaufen. Teil des Dart-Workspaces `apps/` — Kontext und
-Instanz-Modell: [`apps/AGENTS.md`](../../AGENTS.md), Monorepo-Struktur:
-[Root-AGENTS.md](../../../AGENTS.md).
+Local Serverpod instance of the `top_attempt` monorepo: **one instance
+per business/site (door installation)**. Represents the on-site
+operation — self-entry (door access) and later ERP features (course
+management, employee management, shift scheduling) — and must keep
+running autonomously during short internet outages. Part of the `apps/`
+Dart workspace — context and instance model: [`apps/AGENTS.md`](../../AGENTS.md),
+monorepo structure: [Root AGENTS.md](../../../AGENTS.md).
 
-## Zweck (Zielbild)
+## Purpose (target picture)
 
-- Autorisierung des Türzugangs: ESP32 reicht (per BLE von der Enduser-App
-  empfangene) Zugangsdaten an diese Instanz weiter; hier wird geprüft und
-  die Tür geschaltet. **Ohne Cloud-Roundtrip** — die lokale Instanz muss
-  dafür genug Daten lokal halten (Synchronisation von der globalen
-  Instanz, Details offen).
-- Verwaltung von Geräten (ESP32/NUKI), Mitgliedern und Zugangsrechten —
-  Bedienung über die Site-Admin-App (`top_attempt_local_flutter`).
-- ERP-Ausbau Stück für Stück: Kurse, Angestellte, Schichtplan.
+- Door access authorization: the ESP32 forwards (BLE-received from the
+  end-user app) access data to this instance; verification and door
+  control happen here. **Without a cloud round trip** — the local
+  instance must hold enough data locally (synchronization from the
+  global instance, details open).
+- Management of devices (ESP32/NUKI), members and access rights —
+  operated via the site admin app (`top_attempt_local_flutter`).
+- ERP extension step by step: courses, employees, shift scheduling.
 
-## Aktueller Stand (wichtig!)
+## Current state (important!)
 
-Seit 2026-09-25 **Site-Modul** implementiert (kein reiner Spiegel mehr):
+Since 2026-09-25 the **site module** is implemented (no longer a pure
+mirror):
 
-- **Enrollment**: lokale Maske verifiziert mit den **globalen
-  Anmeldedaten des Site-Admins** bei der globalen Instanz
-  (`siteSetup.enterSetup` → `top_attempt_global_client` → globaler
-  `siteEnrollment`-Endpoint; Site-Picker falls der Admin mehrere Sites
-  betreut).
-- ** Mitglieder-Verzeichnis**: Nach dem Enrollment wird der lokale Members-Eintrag
-  des Admins angelegt (`site_connections.adminAuthUserId` —
-  **globalAuthUserId = Austausch-ID**, später auch Türfreigabe-Schlüssel)
-  und ein **lokaler AuthUser** erstellt (E-Mail wie global, **gleiches
-  Passwort**, wie der Admin es gerade genutzt hat; Scope
-  `local-admin` — über `EmailIdp.admin.createEmailAuthentication`
-  verschlüsselt lokal ge-hashed). Keine (!) lokale Selbst-Registrierung:
-  Logins entstehen grundsätzlich nur aus verifizierten Global-Logins
-  (Muster gilt später genauso für Angestellte).
-- **Device-Verbindung**: `GlobalSiteConnection`-Worker (in `server.dart`
-  gestartet): liest die Credentials und die global API URL
-  (`siteConnection.globalApiUrl` in config), Client-Auth mit dem
-  (`siteConnection.globalApiUrl` in config), Client-API-Auth mit dem
-  **non-rotating SAS-Session-Key** (`AuthStrategy.session`), Method-Stream
-  `siteConnection.connect`, Ping alle 30 s → `lastSeenAt` beim globalen
-  Backend frisch; Reconnect mit Backoff (5→60 s), Status-Maschine
-  `noneSetup|connecting|reconnecting|connected|needsReSetup|failure`
-  (`needsReSetup` = Widerrufen/abgelaufen → lokale Maske, Recovery durch
-  erneutes Setup mit globalen Zugangsdaten).
+- **Enrollment**: the local mask verifies with the **global credentials
+  of the site admin** at the global instance (`siteSetup.enterSetup` →
+  `top_attempt_global_client` → global `siteEnrollment` endpoint; site
+  picker if the admin owns several sites).
+- **Members directory**: after enrollment the local member row of the
+  admin is created (`globalAuthUserId` from the transfer — **exchange
+  id**, later also the key for door authorization) and a **local
+  AuthUser** is created (email like global, **same password** the admin
+  just used; scope `local-admin` — hashed locally via
+  `EmailIdp.admin.createEmailAuthentication`). No (!) local
+  self-registration: logins are only ever created from verified global
+  logins (the same pattern applies later for employees).
+- **Device connection**: `GlobalSiteConnection` worker (started in
+  `server.dart`): reads the credential and the global API URL
+  (`siteConnection.globalApiUrl` in config), client auth with the
+  **non-rotating SAS session key** (`AuthStrategy.session`), method
+  stream `siteConnection.connect`, ping every 30 s → `lastSeenAt` stays
+  fresh at the global backend; reconnect with backoff (5→60 s), state
+  machine `noneSetup|connecting|reconnecting|connected|needsReSetup|
+  failure` (`needsReSetup` = revoked/expired → local mask; recovery by
+  re-running setup with global credentials).
 - Config: `siteConnection.globalApiUrl` in `config/development.yaml`
-  (Dev: `http://localhost:8080`; Devices: LAN-IP).
+  (dev: `http://localhost:8080`; devices: LAN IP).
 
-Bis auf das Site-Modul ist das Backend noch der beim Serverpod-4-Upgrade
-angelegte Spiegel des globalen (JWT-Auth + `ProfileDetails`), fertig
-eingerichtete Infrastruktur (Ports/RustFS) siehe unten.
+Apart from the site module, the backend is still the mirror of the
+global one created during the Serverpod-4 upgrade (JWT auth +
+`ProfileDetails`), infrastructure (ports/RustFS) see below.
 
-## Ports / Infrastruktur (Dev)
-
+## Ports / infrastructure (dev)
 - API 8180, Insights 8181, Web 8182 (`config/development.yaml`)
-- Postgres 8190, Redis-Port 8191 (Redis `enabled: false`), DB-Name
+- Postgres 8190, Redis port 8191 (Redis `enabled: false`), DB name
   `top_attempt`
-- RustFS: S3-API 9000, Konsole **9101** (global nutzt 9001 — beide
-  Stacks können gleichzeitig laufen; `container_name: rustfs_server`
-  wurde deshalb entfernt)
-- `top_attempt_local_client`: generiertes Client-Paket; nach
-  Modelländerungen `serverpod generate` im Server-Paket ausführen.
+- RustFS: S3 API 9000, console **9101** (global uses 9001 — both stacks
+  can run simultaneously; `container_name: rustfs_server` was removed
+  for that reason)
+- `top_attempt_local_client`: generated client package; after model
+  changes run `serverpod generate` in the server package.
 
-## Starten (Dev)
+## Running (dev)
 
 ```bash
 cd apps/backends/local/top_attempt_local_server
 docker compose up --build --detach
 dart pub get
-dart bin/main.dart   # Start-Skript mit --apply-migrations: siehe pubspec (serverpod.scripts.start)
+dart bin/main.dart   # start script with --apply-migrations, see pubspec (serverpod.scripts.start)
 ```
 
-`serverpod start` startet Docker, Server und zusätzlich automatisch die
-Site-Admin-App (`serverpod: flutter_apps:` in der Server-pubspec,
-`device: chrome`). `--no-flutter` unterdrückt den Autostart; Apps lassen
-sich im Start-TUI jederzeit per Ctrl+R nachstarten.
+`serverpod start` starts Docker, the server **and** the site admin app
+automatically (`serverpod: flutter_apps:` in the server pubspec,
+`device: chrome`). `--no-flutter` suppresses the autostart; apps can be
+relaunched any time in the start TUI via Ctrl+R.
 
-## Endpoints (eigener Code)
+## Endpoints (own code)
 
-| Endpoint | Zweck |
+| Endpoint | Purpose |
 |---|---|
-| `emailIdp` (`src/auth/email_idp_endpoint.dart`) | E-Mail-IdP: Login lokal (Registrierung/Members-Login ist bewusst aus) |
-| `jwtRefresh` (`src/auth/jwt_refresh_endpoint.dart`) | Access-Token erneuern |
-| `profileDetails` (`src/profile/profile_details_endpoint.dart`) | Vor-/Nachname + Geburtstag (Spiegel von global) |
-| `siteSetup` (`src/site/site_setup_endpoint.dart`) | `enterSetup({email, password, siteId?})` (verifiziert global, verarbeitet Transfer: Members-Zeile + lokaler `local-admin`-Login) und `connectionStatus()` für den App-Bar-Chip |
-| `greeting` (`src/greetings/…`) | Serverpod-Beispiel-Endpoint |
+| `emailIdp` (`src/auth/email_idp_endpoint.dart`) | Email IdP: local login (registration/member self-signup is intentionally off) |
+| `jwtRefresh` (`src/auth/jwt_refresh_endpoint.dart`) | Renew access tokens |
+| `profileDetails` (`src/profile/profile_details_endpoint.dart`) | First/last name + birthday (mirror of global) |
+| `siteSetup` (`src/site/site_setup_endpoint.dart`) | `enterSetup({email, password, siteId?})` (checks against global, processes transfer: members row + local `local-admin` login) and `connectionStatus()` for the App-Bar chip |
+| `greeting` (`src/greetings/…`) | Serverpod sample endpoint |
 
-Kein `userProfileEdit`-Endpoint im eigenen Code (im globalen Backend
-vorhanden) — beim Ausbau des Mitglieder-/Angestellten-Modells klären.
+No `userProfileEdit` endpoint in own code (present in the global
+backend) — clarify when building out the members/employee model.
 
-## Offene Fragen (nächster Ausbau)
+## Data model notes
 
-1. **Membership-Sync über den Stream**: Neue/entfernte globale
-   `SiteMembership`-Events in die lokale `members`-Tabelle propagieren
-   (die WS-Verbindung ist dafür die Transport-Ebene; nach Grad der
-   Daten/O-ID-Regel: `members.globalAuthUserId` = globale Person-ID,
-   Türfreigabe-Schlüssel).
-2. **Angestellte**: Member muss sich vor Ort mit globalen Anmeldedaten
-   verifizieren → lokales Login (gleiches Modell wie der Admin-Setup);
-   Rolle/Status global ändern (über `site-device`-beschränkte Endpoints).
-3. **ESP32-Protokoll**: Wie meldet sich der ESP32 hier an (empfohlen:
-   ausgehender WebSocket-Client mit Geräte-Token, siehe
-   docs/project.md → To-dos)?
-4. **Authentifizierung des lokalen Admin-UI** (`local-admin`): Login-Flow
-   in `top_attempt_local_flutter` (derzeit offen — die Setup-Maske
-   existiert, der Mitglieder/Admin-Bereich braucht eine Schutzschicht).
+- `profile_details` mirrors global. **Birthday as UTC-midnight date
+  sentinel** (2026-09-25, identical to global): the picked date is
+  normalized to `DateTime.utc(year, month, day)` before persistence;
+  validation uses UTC calendar days. Reason: the date picker produces
+  local midnight; the conversion to UTC (wire/DB) in UT+1 would drift
+  the calendar day one back. Client code must always display the UTC
+  calendar day of the returned value.
+  **Second line of defense**: the server normalization alone is not
+  enough — the client serialization is `DateTime.toUtc()`
+  (`serverpod_serialization`), so the calendar day is already shifted at
+  decode time. The shared `ProfileScreen` sends `DateTime.utc(y, m, d)`
+  explicitly (see `apps/frontends/shared/lib/screens/profile_screen.dart`).
+
+## Open questions (next expansion)
+
+1. **Membership sync over the stream**: propagate new/removed global
+   `SiteMembership` events into the local `members` table (the WS
+   connection is the transport layer; rule: `members.globalAuthUserId` =
+   global person id = door authorization key).
+2. **Employees**: the member verifies on site with global credentials →
+   local login (same model as the admin setup); roles/status changed
+   globally via `site-device`-restricted endpoints.
+3. **ESP32 protocol**: how does the ESP32 authenticate here (maybe
+   outgoing WebSocket client with device token, see docs/project.md →
+   TODOs)?
+4. **Local admin UI authentication** (`local-admin`): login flow in
+   `top_attempt_local_flutter` (currently open — the setup mask exists;
+   the member/admin area needs a protection layer).
 
 ## Test / CI
 
-- `dart test` (Integration-Tests mit `test_tools/serverpod_test_tools.dart`).
-- CI: `analyze.yml`, `format.yml`, `tests.yml` (Docker-Compose) —
-  Versionen dort noch alt (Dart 3.8.0 / CLI 3.3.1), To-do siehe
+- `dart test` (integration tests with
+  `test_tools/serverpod_test_tools.dart`).
+- CI: `analyze.yml`, `format.yml`, `tests.yml` (Docker compose) —
+  versions there are still old (Dart 3.8.0 / CLI 3.3.1), TODO see
   apps/AGENTS.md.
 
-## Fortsetzung
+## Continuation
 
-- Nächster Schritt: Membership-Sync über die WS-Verbindung (offene Frage
-  1), danach Mitglieder-/Angestellten-Modell + Admin-UI-Schutz.
-- Migrationen: Basismigration `20260923104843538` +
-  `20260923112557527-upgrade-4-0` + Site-Modul-Migration
+- Next step: membership sync over the WS connection (open question 1),
+  then members/employee model + admin UI protection.
+- Migrations: base migration `20260923104843538` +
+  `20260923112557527-upgrade-4-0` + site module migration
   `20260925151309478` (SiteConnection/Member).

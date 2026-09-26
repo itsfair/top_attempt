@@ -1,240 +1,241 @@
-# AGENTS.md — apps (Dart-Workspace: Backends + Frontends)
+# AGENTS.md — apps (Dart workspace: backends + frontends)
 
-Dieser Ordner fasst alle Dart/Flutter-Pakete in einem Workspace zusammen
-(`apps/pubspec.yaml`, `resolution: workspace`). Die globale Monorepo-
-Struktur steht in der [Root-AGENTS.md](../AGENTS.md) — hier geht es um
-die Details der Backends und Frontends.
+This folder combines all Dart/Flutter packages into one workspace
+(`apps/pubspec.yaml`, `resolution: workspace`). The monorepo structure is
+in the [root AGENTS.md](../AGENTS.md) — this file holds the details of
+the backends and frontends.
 
 ## Workspace
 
-`apps/pubspec.yaml` definiert den Workspace. **Aktuell Mitglied:**
+`apps/pubspec.yaml` defines the workspace. **Current members:**
 
 - `backends/global/top_attempt_global_client`
 - `backends/global/top_attempt_global_server`
 - `backends/local/top_attempt_local_client`
 - `backends/local/top_attempt_local_server`
+- `frontends/shared` (`top_attempt_shared`: ProfileState, AccountDropdown,
+  ProfileScreen shared by end-user + global admin app)
 - `frontends/top_attempt_enduser_flutter`
 
-**Noch NICHT im Workspace** (obwohl `resolution: workspace` gesetzt):
+**Not yet in the workspace** (although `resolution: workspace` is set):
 `frontends/top_attempt_global_flutter`, `frontends/top_attempt_local_flutter`,
-`frontends/top_attempt_flutter`. → To-do, siehe unten. Bis dahin
-funktioniert `dart pub get` auf Workspace-Ebene für die neuen Frontends
-nicht; einzeln auflösen oder Workspace erweitern.
+`frontends/top_attempt_flutter`. → TODO, see below. Until then `dart pub
+get` at workspace level does not work for these frontends; resolve
+individually or extend the workspace.
 
-SDK-Constraint: `^3.12.2` (lokal installiert: Dart 3.13.4, Flutter 3.47.5,
-Serverpod-CLI 4.0.2).
+SDK constraint: `^3.12.2` (locally installed: Dart 3.13.4, Flutter 3.47.5,
+Serverpod CLI 4.0.2).
 
-## Instanz-Modell (fachlich)
+## Instance model (domain)
 
-Zwei Instanz-Ebenen, begrifflich strikt trennen:
+Two instance levels — always keep the terms apart:
 
-- **Globale Instanz** (`global`) — die eine zentrale Plattform-Instanz.
-  Enduser registrieren sich hier (E-Mail-IdP), hier leben Benutzerkonten
-  und Profile. Später ggf. globale Entitäten (z. B. Kurskatalog — offene
-  Frage, siehe unten).
-- **Lokale Instanz** (`local`) — **eine Instanz pro Betrieb/Standort**
-  (Türanlage). Bildet den Betrieb ab: Selbsteinlass (Türzugang), später
-  ERP-Features (Kursverwaltung, Angestelltenverwaltung, Schichtplan).
-  Muss bei kurzer Internettrennung autark weiterlaufen.
+- **Global instance** (`global`) — the single central platform instance.
+  End users register here (email IdP); user accounts and profiles live
+  here. Later possibly global entities (e.g. course catalog — open
+  question, see below).
+- **Local instance** (`local`) — **one instance per business/site**
+  (door installation). Represents the business: self-entry (door access),
+  later ERP features (course management, employee management, shift
+  scheduling). Must keep running autonomously during short internet
+  outages.
 
-**Mitgliedschaft/Flow (Zielbild):**
+**Membership/flow (target picture):**
 
-1. Enduser registriert sich global (E-Mail, Profil mit Name/Geburtstag/Bild).
-2. Enduser schreibt sich bei einer lokalen Instanz als Mitglied ein.
-3. Die lokalen Instanz bekommt die nötigen Nutzerdaten synchronisiert
-   (Details offen, siehe unten).
-4. Site-Admin verwaltet Mitglieder seiner Instanz (Zugangsrechte etc.).
-5. Selbsteinlass: Enduser scannt QR an der Location → OTP abfragen →
-   OTP per BLE an ESP32 → ESP32 an lokale Instanz → Instanz prüft und
-   schaltet Tür über den ESP32/NUKI.
+1. End user registers globally (email, profile with name/birthday/image).
+2. End user enrolls as a member at a local instance.
+3. The local instance receives the required user data synchronized
+   (details below).
+4. Site admin manages members of their instance (access rights etc.).
+5. Self-entry: end user scans QR at the location → request OTP → send OTP
+   via BLE to ESP32 → ESP32 forwards to local instance → instance checks
+   and opens door via ESP32/NUKI.
 
-Der Türzugang selbst braucht **keinen Cloud-Roundtrip** (BLE + lokale
-Instanz genügt); die Absicherung darüber (OTP-Herkunft, Synchronisation)
-ist der langfristige Zielzustand.
+Door access itself needs **no cloud round trip** (BLE + local instance
+suffice); securing that path (OTP origin, synchronization) is the
+long-term goal.
 
-### Offene Architekturfragen (noch zu klären)
+### Open architecture questions (still to be clarified)
 
-- **Login-/User-Modell lokal:** Werden globale User 1:1 mit Zugangsdaten
-  übertragen (Attribut `staff` regelt Zugang zur lokalen Verwaltung) oder
-  landen User in separater Tabelle `members` mit lokal neu angelegten
-  Zugangsdaten (verknüpft mit der Members-Tabelle)? → einer der nächsten
-  Klärungspunkte.
-- **Globale vs. lokale Entitäten (z. B. Kurse):** Kurse könnten global
-  angelegt werden (Enduser sieht/bucht sie global) oder lokal und werden
-  global synchronisiert/erreichbar gemacht (WebSocket?). Kurse sind nicht
-  kritisch für den lokalen Betrieb bei Internetausfall.
-- **„Von außen erreichbar":** Wie genau lokale Instanzen über die globale
-  Instanz erreicht werden (technisches Routing vs. nur fachlich zentrale
-  Verwaltung) — noch unbesprochen.
+- **Login/user model local:** Copy global users 1:1 including credentials
+  (attribute `staff` governs access to local administration) **or** put
+  users into a separate `members` table with locally created credentials
+  linked to members? → one of the next clarification points.
+- **Global vs. local entities (e.g. courses):** Courses could be created
+  globally (end user sees/book them globally) or locally and be
+  synchronized/made reachable globally (WebSocket?). Courses are not
+  critical for local operation during an internet outage.
+- **"Reachable from outside":** How exactly local instances are reached
+  via the global instance (technical routing vs. only centrally managed
+  membership) — not discussed yet.
 
-## Ports / Infrastruktur (Dev)
+## Ports / infrastructure (dev)
 
 | | global | local |
 |---|---|---|
-| API-Server | 8080 | 8180 |
+| API server | 8080 | 8180 |
 | Insights | 8081 | 8181 |
-| Web-Server | 8082 | 8182 |
+| Web server | 8082 | 8182 |
 | Postgres | 8090 | 8190 |
 | Redis (disabled) | 8091 | 8191 |
-| RustFS S3-API / Konsole | 9000 / 9001 | 9000 / 9101 |
+| RustFS S3 API / console | 9000 / 9001 | 9000 / 9101 |
 
-Beide Backends haben eigene `docker-compose.yaml` (Postgres + Redis +
-RustFS) und können gleichzeitig laufen (`container_name: rustfs_server`
-wurde deshalb entfernt). DB-Name jeweils `top_attempt`. RustFS-Bucket
-`top-attempt` (Credentials rustfsadmin / rustfsadmin_secret); der
-Endpoint kommt aus dem `rustFS:`-Block der `config/<runMode>.yaml`
-(Dev: LAN-IP des Entwicklungsrechners, wichtig für Tests am echten
-Gerät). **Kein `publicHost` setzen** (Adapter-Bug, siehe Root-AGENTS.md).
-Redis ist in beiden `development.yaml` derzeit `enabled: false`.
+Both backends have their own `docker-compose.yaml` (Postgres + Redis +
+RustFS) and can run simultaneously (`container_name: rustfs_server` was
+removed for that reason). DB name is `top_attempt` in both. RustFS bucket
+`top-attempt` (credentials rustfsadmin / rustfsadmin_secret); the endpoint
+comes from the `rustFS:` block of `config/<runMode>.yaml` (dev: LAN IP of
+the dev machine, important for tests on real devices). **Do not set
+`publicHost`** (adapter bug, see root AGENTS.md). Redis is currently
+`enabled: false` in both `development.yaml` files.
 
 ## Backends
 
-### global (`apps/backends/global/`) — Details in [AGENTS.md](backends/global/AGENTS.md)
+### global (`apps/backends/global/`) — details in [AGENTS.md](backends/global/AGENTS.md)
 
-Zentrale Benutzerverwaltung: E-Mail-IdP (Registrierung/Login/Reset),
-JWT-Auth, `UserProfileEditEndpoint` (E-Mail/User-ID/Bild),
-`ProfileDetailsEndpoint` (Vor-/Nachname, Geburtstag), RustFS-Storage.
-Stand: MVP-Basis, funktionsfähig gegen die Enduser-App; `usersAdmin`
-(2026-09-24: Nutzerlisten-Paging, Globale-Admin-/Blocked-Toggles inkl.
-Token-Revocation, `global-admin`-Scope); **Site-Ebene (2026-09-25)**:
-`sitesAdmin` (createSite ohne Secrets, Site-Verwaltung inkl.
-`revokeSiteConnection`), `siteEnrollment` (globale Anmeldedaten-Verify,
-Site-Picker, Device-Session = SAS `method:'device'`, token-level Scope
-`site-device`, Mapping-Tabelle), `siteConnection` (Method-Stream,
-Ping/Pone aktualisiert `lastSeenAt`) — der lokale Backend verbindet sich
-damit — Details/Offenpunkte im Backend-AGENTS.md. Site-Migrationen:
-`20260923122822442` + `20260925150857366`.
+Central user management: email IdP (registration/login/reset), JWT auth,
+`UserProfileEditEndpoint` (email/user ID/image), `ProfileDetailsEndpoint`
+(first/last name, birthday), RustFS storage. State: MVP base working
+against the end-user app; `usersAdmin` endpoints (2026-09-24: user list
+paging, global-admin/blocked toggles incl. token revocation,
+`global-admin` scope); **site level (2026-09-25)**: `sitesAdmin`
+(createSite without secrets, site management incl.
+`revokeSiteConnection`), `siteEnrollment` (global credential verify,
+site picker, device session = SAS `method:'device'`, token-level scope
+`site-device`, mapping table), `siteConnection` (method stream,
+ping/pong updates `lastSeenAt`) — the local backend connects to this.
+Global clients use this; site migrations `20260925122822442` +
+`20260925150857366`.
 
-### local (`apps/backends/local/`) — Details in [AGENTS.md](backends/local/AGENTS.md)
+### local (`apps/backends/local/`) — details in [AGENTS.md](backends/local/AGENTS.md)
 
-Lokale Instanz eines Betriebs/Standorts. Seit 2026-09-25 **Site-Modul**:
-Enrollment über die globalen Anmeldedaten des Site-Admins
-(`siteSetup.enterSetup` mit globalem Client-Dep), lokales
-Mitglieder-Verzeichnis (`members` mit `globalAuthUserId` als
-Austausch-/Tür-ID), lokaler `local-admin`-Login (gleiches Passwort wie
-global beim Setup), und der Verbindungs-Worker
-(`GlobalSiteConnection`: SAS-Session-Key device cred, long-lived
-Method-Stream + 30s-Ping → `lastSeenAt`, Backoff-Reconnect,
-`needsReSetup`-Status). Keine lokale Selbst-Registrierung — Logins
-entstehen nur aus verifizierten Global-Logins (gilt später für
-Angestellte identisch). Grundverwaltung/Ports: wie global (8180er-Schema).
+Local instance of a business/site. Since 2026-09-25 **site module**:
+enrollment via the global credentials of the site admin
+(`siteSetup.enterSetup` with global client dependency), local members
+directory (`members` with `globalAuthUserId` as exchange/door id), local
+`local-admin` login (same password as globally at setup), and the
+connection worker (`GlobalSiteConnection`: SAS session key device
+credential, long-lived method stream + 30 s ping → `lastSeenAt`, backoff
+reconnect, `needsReSetup` state). No local self-registration — logins
+are only created from verified global logins (same pattern later for
+employees). Basic infrastructure/ports: like global (8180 scheme).
 
 ## Frontends
 
-### top_attempt_enduser_flutter — Details in [AGENTS.md](frontends/top_attempt_enduser_flutter/AGENTS.md)
+### top_attempt_enduser_flutter — details in [AGENTS.md](frontends/top_attempt_enduser_flutter/AGENTS.md)
 
-Enduser-App: Login (global), Profil (Bild/QR/ID), QR-Reader,
-BLE-Testsession gegen den ESP32. Am weitesten ausgebaut.
+End-user app: login (global), profile (image/QR/ID), QR reader,
+BLE test session against ESP32. Most advanced of the four frontends.
 
-### top_attempt_global_flutter — Details in [AGENTS.md](frontends/top_attempt_global_flutter/AGENTS.md)
+### top_attempt_global_flutter — details in [AGENTS.md](frontends/top_attempt_global_flutter/AGENTS.md)
 
-**Plattform-Admin-App** (Verwaltung der globalen Instanz). GoRouter mit
-Auth-/Scope-Guard (nicht eingeloggt → `/sign-in`, ohne
-`global-admin`-Scope → `/forbidden`); Drawer-Layout; Members-Screen (50/
-Seite + Suche + „Weitere laden“, Detail-Editor für
-`Global Admin`/`blocked`) und seit 2026-09-25 Sites-Screen (FAB + Create-
-Dialog mit erster Site-admin-Auswahl, Onboarding-Modal für beide
-Einrichtungsgeheimnisse je genau einmal, Detail-Route `/sites/:id`).
-Bindet den globalen Client ein.
+**Platform admin app** (manage the global instance). GoRouter with
+auth/scope guard (not signed in → `/sign-in`, without `global-admin`
+scope → `/forbidden`); drawer layout; Members screen (50/page + search +
+"load more", detail editor for `Global Admin`/`blocked`) and Sites
+screen (2026-09-25: FAB + create dialog with first site admin selection,
+connection chips per site from `lastSeenAt`, revoke action in detail
+route). Uses the global client.
 
-### top_attempt_local_flutter — Details in [AGENTS.md](frontends/top_attempt_local_flutter/AGENTS.md)
+### top_attempt_local_flutter — details in [AGENTS.md](frontends/top_attempt_local_flutter/AGENTS.md)
 
-**Site-Admin-App** (Verwaltung einer lokalen Instanz: Geräte, Nutzer vor
-Ort, Zugangsrechte; später ERP-Ausbau). Aktuell rohes Serverpod-Scaffold;
-bindet bewusst **beide** Clients ein (global + local), da die App auch
-globale Eigenschaften manipulieren wird (z. B. Kursverwaltung — offen,
-siehe oben).
+**Site admin app** (manage a local instance). GoRouter shell with
+**App-Bar connection chip** (polls local backend
+`siteSetup.connectionStatus` every 10 s) and the
+**Site setup mask** (`siteSetup.enterSetup` with the **global
+credentials** of the site admin; site picker when the admin owns several
+sites). Uses only the local client; the global client dependency is
+commented out until the app will manipulate global properties (e.g.
+course management — open question above).
 
-### top_attempt_flutter — Details in [AGENTS.md](frontends/top_attempt_flutter/AGENTS.md)
+### top_attempt_flutter — details in [AGENTS.md](frontends/top_attempt_flutter/AGENTS.md)
 
-**Kopiervorlage**: rohes Serverpod-Grundgerüst, kein eigener Zweck. Wird
-von den `flutter_build`-Skripten beider Backends noch als Web-App-Quelle
-referenziert (To-do: auf die echten Apps umstellen oder bewusst lassen).
+**Copy template**: raw Serverpod scaffold, no purpose of its own. The
+`flutter_build` scripts of both backends still reference this app as web
+app source (TODO: retarget or remove intentionally).
 
-## Serverpod-Upgrade 3.4.12 → 4.0.2 (2026-09-23, für Fehlersuche)
+## Serverpod upgrade 3.4.12 → 4.0.2 (2026-09-23, for troubleshooting)
 
-Nach offizieller Anleitung (https://docs.serverpod.dev/upgrading/upgrade-to-four).
-Rekonstruktion aus Git:
+Following the official guide
+(https://docs.serverpod.dev/upgrading/upgrade-to-four). Reconstructed
+from git:
 
-- Commits: `103c597` („Serverpod 3.4.12 upgrade, RustFS file storage, user
-  profile feature“ — Vorzustand), dann `106f5b4`/`e5f95b6` (RustFS + Profile
-  ins lokale Backend), dann `fc2574b` („Repaired local backend for upgrade“).
-- `apps/pubspec.yaml` + beide Backend-pubspecs: SDK auf `^3.12.2`,
-  serverpod-Pakete auf `4.0.2` (serverpod, serverpod_auth_idp_server,
-  serverpod_test; Frontends: serverpod_flutter, serverpod_auth_idp_flutter).
-- Lokales Backend wurde dabei initialisiert und an das globale angeglichen
-  (Auth-IdP, ProfileDetails, RustFS, yaml-Config-Reader in `lib/server.dart`).
-- **Migrations gelöscht + DB neu erstellt:** lokale Migration
-  `20260222122319691` entfernt, frische Basismigration
-  `20260923104843538` erzeugt. Globale Registry:
-  `20260222122319691`, `20260827100208475`, `20260923112307048-upgrade-4-0`;
-  lokale Registry: `20260923104843538`, `20260923112557527-upgrade-4-0`.
-  Wenn danach DB-/Schema-Fehler auftreten: Migrationsstand beider Backends
-  und `serverpod --apply-migrations` prüfen.
-- Beide `docker-compose.yaml`: `container_name: rustfs_server` entfernt
-  (Kollision bei gleichzeitigen Stacks).
-- Generierte Dateien neu erzeugt (`src/generated/…`, Client-`protocol/…`,
+- Commits: `103c597` ("Serverpod 3.4.12 upgrade, RustFS file storage,
+  user profile feature" — prior state), then `106f5b4`/`e5f95b6` (RustFS +
+  profile into the local backend), then `fc2574b` ("Repaired local
+  backend for upgrade").
+- `apps/pubspec.yaml` + both backend pubspecs: SDK to `^3.12.2`,
+  serverpod packages to `4.0.2` (serverpod, serverpod_auth_idp_server,
+  serverpod_test; frontends: serverpod_flutter, serverpod_auth_idp_flutter).
+- The local backend was initialized and aligned with the global one
+  (auth IdP, ProfileDetails, RustFS, yaml config reader in
+  `lib/server.dart`).
+- **Migrations deleted + DB recreated:** local migration
+  `20260222122319691` removed, fresh base migration `20260923104843538`
+  created. Global registry: `20260222122319691`, `20260827100208475`,
+  `20260923112307048-upgrade-4-0`; local registry:
+  `20260923104843538`, `20260923112557527-upgrade-4-0`. If DB/schema
+  errors occur afterwards: check migration state of both backends and
+  `--apply-migrations`.
+- Both `docker-compose.yaml`: `container_name: rustfs_server` removed
+  (collision with simultaneous stacks).
+- Generated files regenerated (`src/generated/…`, client `protocol/…`,
   `test_tools/serverpod_test_tools.dart`).
-- Stand jetzt: keine bekannten Fehler. CI pinnt noch CLI `3.3.1`
-  (siehe To-dos).
+- State: no known issues. CI still pins CLI `3.3.1` (see TODOs).
 
-## To-dos / offene Baustellen (apps-übergreifend)
+## TODOs / open work items (cross-app)
 
-1. **Workspace-Membership**: `top_attempt_global_flutter`,
-   `top_attempt_local_flutter` (und `top_attempt_flutter`) in
-   `apps/pubspec.yaml` aufnehmen.
-2. **CI vereinheitlichen**: `analyze.yml`/`format.yml`/`tests.yml`
-   nutzen Dart 3.8.0 bzw. Serverpod-CLI 3.3.1 — auf 3.13/4.0.2 heben
-   (lokale Realität: Dart 3.13.4, Flutter 3.47.5, CLI 4.0.2).
-3. **`flutter_build`-Skripte** beider Backends bauen noch
-   `top_attempt_flutter` als Web-App — Ziel-App festlegen.
-4. **User-/Login-Modell lokal** klären (siehe offene Fragen oben) —
-   Blocker für das Mitglieder-/Berechtigungsmodell im lokalen Backend.
-5. **Local-Frontend-Inhalte**: Site-Admin-UI (Geräte, Mitglieder,
-   Zugangsrechte) aufbauen, sobald das lokale Backend-Modell steht.
-6. **Members-Feature Hartening** (2026-09-24 erstes Set): Integrations-Tests
-   für `usersAdmin`-Endpoints, Bestätigungsdialog beim Sperren,
-   `usersAdmin`-Nutzer konsequent hinter `requiredScopes` halten
-   (Scope-Guard-Fehler → `UserAdminException`/`AccessDeniedException`
-   clientseitig abfangen).
-7. **Registrierung im global-Admin-Frontend abschalten** (nicht dringend):
-   Versuche 2026-09-25 (Texte leeren + `EmailAuthController`-Subclass)
-   wirkten nicht — Details und Ansätze für später in
+1. **Workspace membership**: add `top_attempt_global_flutter`,
+   `top_attempt_local_flutter` (and `top_attempt_flutter`) to
+   `apps/pubspec.yaml`.
+2. **Unify CI**: `analyze.yml`/`format.yml`/`tests.yml` use Dart 3.8.0 /
+   Serverpod CLI 3.3.1 — raise to 3.13/4.0.2 (local reality: Dart
+   3.13.4, Flutter 3.47.5, CLI 4.0.2).
+3. **`flutter_build` scripts** of both backends still build
+   `top_attempt_flutter` as web app — decide the target app.
+4. **Local user/login model** clarified on 2026-09-25 (see local backend
+   AGENTS.md): no local self-registration; logins only from verified
+   global logins (admin at setup; employees later by the local admin).
+5. **Local frontend contents**: site admin UI (devices, members, access
+   rights) once the local backend model + membership sync exist; local
+   app login (`local-admin`) as protection layer.
+6. **Members feature hardening** (first set 2026-09-24): integration
+   tests for `usersAdmin` endpoints, confirmation dialog on block, keep
+   `usersAdmin` strictly behind `requiredScopes` (client handles
+   `UserAdminException`/scope errors).
+7. **Registration in the global admin frontend: disable** (not urgent):
+   attempts on 2026-09-25 (blank texts + `EmailAuthController` subclass)
+   did not work — details and approaches in
    [`frontends/top_attempt_global_flutter/AGENTS.md`](frontends/top_attempt_global_flutter/AGENTS.md)
-   → „Nächste Schritte“, Punkt 5.
-8. **Stufe 2 — Enrollment/WS umgesetzt (2026-09-25)**; verbleibende
-   Stufen (Stufe 3):
-   a) **Membership-Sync über den Method-Stream**: neue/entfernte globale
-      `SiteMembership`-Events in die lokale `members`-Tabelle (Regel:
-      lokale Rows führen `globalAuthUserId` — Austausch- und Tür-ID),
-      Staff-Wechsel → lokales LOGIN analog Admin-Setup (bereits aus
-      verifizierten Global-Logins, dann Scope-Zuweisung beim lokalen
-      Admin) — und Rollen/Status rückgemeldet (site-device-beschränkte
-      Endpoints).
-   b) **Live-Status-Push** an die Admin-Clients (message central) statt
-      30s-Polling in der globalen Sites-Liste.
-   c) **Lokaler Schutz**: Admin-UI-Login (local-admin) für die lokale
-      App — aktuell offen (Setup-Maske ungeschützt).
-   d) **Verschlüsselung-at-rest** der lokalen `site_connections.row`
-      (Session-Key) — vor Produktivbetrieb.
-   e) SITEPOD_PASSWORD_serverSideSessionKeyHashPepper in CI (tests.yml)
-      ergänzen + Serverpod-CLI-Versionen in CI vereinheitlichen (siehe
-      Punkt 2).
- 9. **Site-Editor/Roadmap**: Site bearbeiten/löschen, Mitgliedschaften-
-    Ansicht je Site; Hinweis Login gleiches Passwort global + lokal
-    (gewünscht) — Umsetzung: lokale Kopie entsteht bei dem verifizierten
-    Global-Login (Selbstheilung bei Passwort-Änderung = To-do).
-10. **Ansatz/Entscheidungen (2026-09-25)**: keine lokale Selbst-
-    Registrierung; Logins entstehen nur aus verifizierten Global-Logins
-    (beim Setup des Admins / später bei Angestellten durch den lokalen
-    Admin); Device-Credential = non-rotating SAS-Session-Key
-    (`site-device`, Streuung über `serverSideSessionKeyHashPepper`),
-    verbindungs-Status chips via `lastSeenAt`.
+   → "Next steps", item 5.
+8. **Stage 2 — enrollment/WS done (2026-09-25)**; remaining (stage 3):
+   a) **Membership sync over the method stream**: propagate new/removed
+      global `SiteMembership` events into the local `members` table
+      (rule: local rows carry `globalAuthUserId` — exchange/door id),
+      staff switch → local login analog admin setup, roles/status
+      reported back (site-device-restricted endpoints).
+   b) **Live status push** to the admin clients (message central)
+      instead of 30 s polling in the global sites list.
+   c) **Local protection**: admin UI login (`local-admin`) for the local
+      app — currently open (setup mask unprotected).
+   d) **Encryption at rest** for the local `site_connections` row
+      (session key) — before production.
+   e) Add `SERVERPOD_PASSWORD_serverSideSessionKeyHashPepper` to CI
+      (tests.yml) + unify Serverpod CLI versions in CI (see item 2).
+9. **Site editor/roadmap**: edit/delete site, memberships view per site;
+   note on "same password globally + locally" (desired): the local copy
+   is created at the verified global login; self-healing on password
+   change = TODO.
+10. **Decisions (2026-09-25)**: no local self-registration; logins only
+    from verified global logins (admin at setup; later employees via the
+    local admin); device credential = non-rotating SAS session key
+    (`site-device`, pepper `serverSideSessionKeyHashPepper`),
+    connection status chips via `lastSeenAt`.
 
-## Fortsetzung / nächste Schritte
+## Continuation / next steps
 
-Die Richtung ist: ERP-Ausbau der lokalen Instanz bei autarkem Betrieb,
-Synchronisation mit der globalen Instanz so schlank wie möglich. Nächste
-konkrete Schritte stehen unter „To-dos"; der wichtigste fehlende Block ist
-der Membership-Sync über den Stream (Punkt 8a) plus der lokale Admin-Login
-(Punkt 8c).
+The direction is: ERP extension of the local instance with autonomous
+operation, synchronization with the global instance as lean as possible.
+Concrete next steps are under "TODOs"; the most important missing block
+is the membership sync over the stream (item 8a) plus the local admin
+login (item 8c).

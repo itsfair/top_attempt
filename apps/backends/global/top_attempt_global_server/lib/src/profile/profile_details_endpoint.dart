@@ -33,7 +33,17 @@ class ProfileDetailsEndpoint extends Endpoint {
     final authUserId = session.authenticated!.authUserId;
     final first = _validateName(firstName, 'firstName');
     final last = _validateName(lastName, 'lastName');
-    _validateBirthday(birthday);
+    // Birthdays are date-only values: normalize to UTC midnight so that
+    // no timezone offset (client local -> wire UTC -> DB) can shift the
+    // calendar day. In January (UT+1) a local midnight would otherwise
+    // arrive as the previous day in UTC. See AGENTS.md ("Birthday as
+    // UTC-midnight date sentinel").
+    final normalizedBirthday = DateTime.utc(
+      birthday.year,
+      birthday.month,
+      birthday.day,
+    );
+    _validateBirthday(normalizedBirthday);
 
     await AuthServices.instance.userProfiles.changeFullName(
       session,
@@ -50,7 +60,7 @@ class ProfileDetailsEndpoint extends Endpoint {
       existing
         ..firstName = first
         ..lastName = last
-        ..birthday = birthday;
+        ..birthday = normalizedBirthday;
       return ProfileDetails.db.updateRow(session, existing);
     }
 
@@ -59,7 +69,7 @@ class ProfileDetailsEndpoint extends Endpoint {
       ProfileDetails(
         firstName: first,
         lastName: last,
-        birthday: birthday,
+        birthday: normalizedBirthday,
         authUserId: authUserId,
       ),
     );
@@ -74,12 +84,13 @@ class ProfileDetailsEndpoint extends Endpoint {
   }
 
   void _validateBirthday(DateTime birthday) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    // Calendar-day checks in UTC, matching the UTC-midnight sentinel date.
+    final now = DateTime.timestamp();
+    final today = DateTime.utc(now.year, now.month, now.day);
     if (!birthday.isBefore(today)) {
       throw ArgumentError.value(birthday, 'birthday', 'must be in the past');
     }
-    if (birthday.isBefore(DateTime(1900))) {
+    if (birthday.isBefore(DateTime.utc(1900))) {
       throw ArgumentError.value(birthday, 'birthday', 'is implausibly old');
     }
   }

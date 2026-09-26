@@ -1,3 +1,5 @@
+import 'package:top_attempt_shared/profile_state.dart';
+import 'package:top_attempt_shared/screens/profile_screen.dart';
 import 'package:top_attempt_global_client/top_attempt_client.dart';
 import 'package:flutter/material.dart';
 import 'package:serverpod_flutter/serverpod_flutter.dart';
@@ -25,6 +27,9 @@ late final Client client;
 
 late String serverUrl;
 
+/// Holds the signed-in user's profile data (see [ProfileState]).
+late final ProfileState profileState;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -43,7 +48,9 @@ void main() async {
     ..connectivityMonitor = FlutterConnectivityMonitor()
     ..authSessionManager = FlutterAuthSessionManager();
 
-  client.auth.initialize();
+  await client.auth.initialize();
+
+  profileState = ProfileState(client);
 
   runApp(const MyApp());
 }
@@ -80,6 +87,11 @@ class _MyAppState extends State<MyApp> {
             builder: (context, state) => const GreetingsScreen(),
           ),
           GoRoute(
+            path: '/profile',
+            builder: (context, state) =>
+                ProfileScreen(client: client, profileState: profileState),
+          ),
+          GoRoute(
             path: '/sign-in',
             builder: (context, state) => SignIn(),
           ),
@@ -111,6 +123,28 @@ class _MyAppState extends State<MyApp> {
       ),
     ],
   );
+
+  @override
+  void initState() {
+    super.initState();
+    client.auth.authInfoListenable.addListener(_onAuthChanged);
+    // Handle a restored session from a previous app run.
+    _onAuthChanged();
+  }
+
+  @override
+  void dispose() {
+    client.auth.authInfoListenable.removeListener(_onAuthChanged);
+    super.dispose();
+  }
+
+  void _onAuthChanged() {
+    if (client.auth.isAuthenticated) {
+      profileState.load();
+    } else {
+      profileState.reset();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

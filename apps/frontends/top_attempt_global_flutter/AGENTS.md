@@ -1,87 +1,97 @@
-# AGENTS.md — top_attempt_global_flutter (Plattform-Admin-App)
+# AGENTS.md — top_attempt_global_flutter (platform admin app)
 
-Flutter-App zur **Verwaltung der globalen Instanz** (Plattform-Ebene des
-Monorepos `top_attempt`): Nutzerkonten/Profile der Enduser einsehen und
-verwalten, später weitere globale Verwaltung (z. B. Kurskatalog, sobald
-die Frage global vs. lokal geklärt ist). Kontext: [`apps/AGENTS.md`](../../AGENTS.md),
-Monorepo: [Root-AGENTS.md](../../../AGENTS.md).
+Flutter app for **managing the global instance** (platform level of the
+`top_attempt` monorepo): view/manage end-user accounts/profiles, later
+more global administration (e.g. course catalog once the global-vs-local
+question is settled). Context: [`apps/AGENTS.md`](../../AGENTS.md),
+monorepo: [Root AGENTS.md](../../../AGENTS.md).
 
-## Zweck / Zielgruppe
+## Purpose / audience
 
-- Zielgruppe: Plattform-Betreiber (Super-Admins der zentralen Instanz),
-  **nicht** Enduser und **nicht** Site-Admins (dafür gibt es
+- Audience: platform operators (super-admins of the central instance),
+  **not** end users and **not** site admins (for those there is
   `top_attempt_local_flutter`).
-- Künftige Inhalte: Benutzerverwaltung (Konten, Profile,
-  Verifizierungsstatus), später Verwaltung globaler Entitäten und
-  ggf. Einblick in die Instanzenlandschaft (offen).
+- Future content: user management (accounts, profiles, verification
+  status), later global entity administration and possibly an insight
+  into the instance landscape (open).
 
-## Aktueller Stand
+## Current state
 
-2026-09-23 als Kopie des Serverpod-Scaffolds entstanden (zusammen mit
-`top_attempt_local_flutter`); seither enorm ausgebaut (2026-09-24):
+Created 2026-09-23 as a copy of the Serverpod scaffold (together with
+`top_attempt_local_flutter`); since then heavily expanded (2026-09-24/25):
 
-- GoRouter (`lib/main.dart`) mit Auth-Guard: nicht eingeloggt → `/sign-in`,
-  eingeloggter Nicht-Admin (kein `global-admin`-Scope in
+- GoRouter (`lib/main.dart`) with auth guard: not signed in → `/sign-in`,
+  signed-in non-admin (no `global-admin` scope in
   `client.auth.authInfo.scopeNames`) → `/forbidden`.
-- Drawer-Layout (`lib/layout.dart`) für Home, Members, Sites.
+- Drawer layout (`lib/layout.dart`) for Home, Members, Sites and an
+  **account dropdown in the AppBar** (avatar with profile image or
+  initials; menu: Profil / Einstellungen / Logout). The dropdown, the
+  `ProfileState` and the Profile screen live in the
+  **`frontends/shared` package** (`top_attempt_shared`) and are consumed
+  identically by the end-user app — changes there apply to both apps.
+  The admin app deliberately does not force profile completion (the
+  `isComplete` guard is ignored for admins). Wiring contract of the
+  shared widget: `onLogin`/`onLogout`/`onProfile` are host-injected —
+  `onLogout` MUST perform the real device sign-out
+  (`client.auth.signOutDevice()`); navigation after actions goes via
+  the host callbacks.
 - **Members** (`screens/members.dart` + `screens/member_detail.dart`):
-  Liste aller Nutzer (Backend-Paging, 50/Seite mit „Weitere laden“-Button,
-  Suche nach E-Mail/Name), Detail-Route `/members/:authUserId` mit Toggles
-  (Global Admin / Gesperrt; Selbstschutz-SnackBars wie im Backend).
-- **Sites** (2026-09-25 erweitert, `screens/sites.dart`,
+  list of all users (backend paging, 50/page with "load more" button,
+  email/name search), detail route `/members/:authUserId` with toggles
+  (Global Admin / Blocked; self-protection snack bars mirroring the
+  backend).
+- **Sites** (expanded 2026-09-25, `screens/sites.dart`,
   `screens/create_site_dialog.dart`, `screens/site_detail.dart`):
-  Sites-Liste (Backend-Paging 50/Seite + Suche nach Name/E-Mail/Stadt,
-  **Verbindungs-Chip je Site** abgeleitet aus `lastSeenAt` — Setup offen/
-  Verbunden (frisch, <90 s)/Offline seit …), FAB unten rechts öffnet den
-  Create-Dialog (Adresse + Firmenmail + erster Site-Admin per
-  Such-Dropdown über `usersAdmin.listUsers`). Nach dem Anlegen KEIN
-  Onboarding-Secrets-Modal mehr — Hinweis-Snackbar (Einrichtung vor Ort
-  mit globalen Zugangsdaten) und Übergang zur Detail-Route
-  `/sites/:siteId`: Status-Chip, `lastSeenAt`-Anzeige und Aktion
-  „Verbindung widerrufen" (`sitesAdmin.revokeSiteConnection`).
-- Registrierung im Admin-Frontend ist **bewusst sichtbar und nutzbar**
-   (Stand: Versuch, sie zu unterdrücken, scheiterte an den
-   Serverpod-Auth-Widget-Internals — To-do siehe unten). Kein
-   Sicherheitsrisiko: jeder Nicht-Admin endet im `/forbidden`-Screen
-   (Scope-Guard, serverseitig erzwungen).
-- Serverpod-Flutter-Pakete auf 4.0.2. **Achtung:** Paket fehlt noch in der
-  Workspace-Liste (`apps/pubspec.yaml`) — To-do, siehe apps/AGENTS.md.
+  sites list (backend paging 50/page + search by name/email/city,
+  **connection chip per site** derived from `lastSeenAt` — setup
+  pending / connected (fresh, <90 s) / offline since …), FAB bottom
+  right opens the create dialog (address + company email + first site
+  admin via search dropdown over `usersAdmin.listUsers`). After
+  creation NO onboarding-secrets modal — a hint snack bar (setup happens
+  on site with global credentials) and the detail route `/sites/:siteId`
+  with status chip, `lastSeenAt` display and the action "revoke
+  connection" (`sitesAdmin.revokeSiteConnection`).
+- Registration in the admin frontend is **intentionally visible and
+  usable** (state: suppressing it failed due to Serverpod auth widget
+  internals — TODO below). No security risk: every non-admin lands in
+  the `/forbidden` screen (scope guard, enforced server-side).
+- Serverpod Flutter packages on 4.0.2. **Attention:** package is still
+  missing from the workspace list (`apps/pubspec.yaml`) — TODO, see
+  apps/AGENTS.md.
 
-## Backend / Client
+## Backend / client
 
-- Bindet (wie das Scaffold es mitbringt) den **globalen Client**
-  (`top_attempt_global_client`) ein — korrekt für diese App.
-- Server-URL: `--dart-define=SERVER_URL=…` oder `assets/config.json`
-  (Default `http://localhost:8080/`); bei physischen Geräten LAN-IP des
-  Dev-Rechners.
+- Uses the **global client** (`top_attempt_global_client`) — correct for
+  this app.
+- Server URL: `--dart-define=SERVER_URL=…` or `assets/config.json`
+  (default `http://localhost:8080/`); for physical devices the LAN IP of
+  the dev machine.
 
-## Nächste Schritte (Vorschlag)
+## Next steps (suggestion)
 
-1. Ins Workspace aufnehmen (`apps/pubspec.yaml`).
-2. Scaffold-Reste aufräumen (Greeting-Beispiel ersetzen/entfernen).
-3. Weitere Admin-Features gegen `usersAdmin`/`sitesAdmin`-Erweiterungen:
-   Blockieren bestätigen (Bestätigungsdialog), Profil-Details im Editor,
-   Memberships-Anzeige je Site im Detail (Stufe 2).
-4. **Stufe 2 (Sites, Backend + Frontend)**: WS-Verbindungsstatus pro Site
-   in dieser Liste (globale UI, via `lastSeenAt`-Heartbeats); Statusanzeige
-   in der App-Bar der **lokalen** UI (anderes Frontend); Site edit/delete,
-   OTP-/Setup-Regenerierung, E-Mail-Versand der Einrichtungsgeheimnisse.
-5. **Registrierung im Admin-Frontend abschalten** (To-do, nicht dringend):
-   Die Admin-App soll kein Self-Sign-up anbieten — die Registrierung muss
-   für die Enduser-App aber am globalen Server bleiben (serverseitig
-   deaktivieren wäre falsch; Admin-Zugriff ist ohnehin scope-codiert
-   serverseitig erzwingbar). 2026-09-25 erfolglos versucht wurden:
-   a) „Sign-up“-Texte über `SignInLocalizationProvider`/`EmailSignInTexts
-       .copyWith(dontHaveAnAccount: '', signUp: '')` leeren — Button bleibt
-       als unsichtbarer Hotspot klickbar; die Navigation zum
-       Registration-Screen weiterhin möglich.
-   b) Eigener `EmailAuthController`-Subclass mit geblocktem `navigateTo`
-       auf die Registration-Screens (`startRegistration`,
-       `verifyRegistration`, `completeRegistration`) — wirkte ebenfalls
-       nicht (genaue Ursache ungeklärt; Stand: `screens/sign_in.dart`
-       wurde auf den funktionierenden, Registrierung zeigenden Stand
-       zurückgesetzt).
-   Mögliche Ansätze für später: eigener Login-Screen (LoginForm ohne
-   Sign-up-Zeile selbst bauen, Backend-Aufrufe direkt über
-   `client.emailIdp`/Auth-Controller) oder Upstream-Feature der
-   `serverpod_auth_idp_flutter`-Widgets anfragen.
+1. Add to the workspace (`apps/pubspec.yaml`).
+2. Clean up scaffold leftovers (replace/remove the greeting example).
+3. More admin features against `usersAdmin`/`sitesAdmin` extensions:
+   confirm on block (confirmation dialog), profile details in the
+   editor, memberships display per site in the detail (stage 3).
+4. **Stage 3 (sites)**: live status push (Serverpod message central)
+   instead of polling; site edit/delete.
+5. **Disable registration in the admin frontend** (TODO, not urgent):
+   The admin app should not offer self sign-up — but registration must
+   stay on the global server for the end-user app (server-side disabling
+   would be wrong; admin access is enforced server-side by scopes
+   anyway). Attempts on 2026-09-25 that failed:
+   a) blanking the "Sign-up" texts via
+      `SignInLocalizationProvider`/`EmailSignInTexts.copyWith(
+      dontHaveAnAccount: '', signUp: '')` — the button remains
+      clickable as an invisible hotspot; navigation to the registration
+      screen remains possible.
+   b) own `EmailAuthController` subclass blocking `navigateTo` to the
+      registration screens (`startRegistration`, `verifyRegistration`,
+      `completeRegistration`) — also had no effect (exact cause unclear;
+      state: `screens/sign_in.dart` was reset to the working state with
+      registration).
+   Possible approaches later: own login screen (build the login form
+   without the sign-up row, backend calls directly via
+   `client.emailIdp`/auth controller) or request an upstream feature of
+   the `serverpod_auth_idp_flutter` widgets.
