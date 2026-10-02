@@ -8,15 +8,20 @@ fields:
   ### (e.g. `http://192.168.x.x:8080` in dev, real URL in production).
   globalApiUrl: String
 
-  ### The site we are enrolled at.
+  ### Snapshot of the enrolled site (all properties, fetched at
+  ### enrollment for the "Standort" page). Keep in mind: changes to the
+  ### site made globally later require a re-sync (TODO: membership/site
+  ### sync over the stream).
   siteId: int
   siteName: String
+  siteStreet: String?
+  siteZipCode: String?
+  siteCity: String?
+  siteCountry: String?
+  siteCompanyEmail: String?
 
-  ### Admin identity handed over at enrollment (the site admin acts as the
-  ### connection owner; `member.globalAuthUserId` for this admin uses the
-  ### same id).
-  adminEmail: String?
-  adminFullName: String?
+  ### Admin person identity (pointer key into the members table; email/,
+  ### profile data lives there). No person fields in this row.
   adminAuthUserId: UuidValue?, scope=serverOnly
 
   ### The device credential: non-rotating SAS session key issued by the

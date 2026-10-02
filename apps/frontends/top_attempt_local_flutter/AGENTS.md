@@ -20,53 +20,52 @@ monorepo: [Root AGENTS.md](../../../AGENTS.md).
 
 ## Current state
 
-Expanded 2026-09-25 (originally a scaffold copy from 2026-09-23):
+Reworked 2026-09-26 (first round 2026-09-25; originally a scaffold copy
+from 2026-09-23):
 
-- GoRouter (`lib/main.dart`): `/` home + `/setup` site setup mask;
-  layout shell with drawer and the **App-Bar connection chip** that
-  polls the local backend status (`siteSetup.connectionStatus`, every
-  10 s): `noneSetup|connecting|reconnecting|connected|needsReSetup|
-  failure`.
-- Client in use is the **local client** (`top_attempt_local_client`,
-  default API `localhost:8180`; **always point the app at the LOCAL
-  instance**: the scaffold `assets/config.json` originally contained
-  `8080` (global backend) which caused `ServerpodClientNotFound 404`;
-  fixed on 2026-09-25 — note also that the Serverpod `getServerUrl()`
-  fallback default is `8080` (global) — on devices use
-  `--dart-define=SERVER_URL=http://<LAN-IP>:8180/`).
-- **Setup mask** (`lib/screens/site_setup.dart`): global email/password
-  of the site admin (chosen at site creation) → `siteSetup.enterSetup`
-  → site picker when the admin owns several sites; success → snack bar
-  (connection stored locally + local admin login row created).
-- The old scaffold sign-in/greeting UI was removed — the real local
-  login (with the `local-admin` account) is still missing (see below).
+- **`lib/layout.dart` separated from `lib/main.dart`** (same pattern as
+  the other frontends): drawer navigation (Home / Standort / Profil /
+  Site-Einrichtung) + AppBar with the **per-site connection chip**
+  (polls `siteSetup.connectionStatus` every 10 s and mirrors the state
+  into `connectionStateNotifier` for redirect re-evaluation).
+- **GoRouter redirect** (pattern of the global app): not enrolled
+  (`noneSetup`) → `/setup`; enrolled but not locally signed in →
+  `/sign-in`; signed-in visitor of `/sign-in|/setup` → `/`. After setup
+  completes, the shell lands on `/sign-in`.
+- **Local login is ACTIVE**: `/sign-in` is a hand-written email/password
+  form calling `client.emailIdp.login` (no Serverpod `SignInWidget`:
+  local self-registration is intentionally disabled and the
+  widget-level sign-up suppression attempt failed in the global app —
+  same library).
+- **Setup mask** (`lib/screens/site_setup.dart`): global credentials of
+  the site admin (chosen at site creation) → `siteSetup.enterSetup`
+  (site picker when the admin owns several sites). Success → snack bar
+  + redirect to the local login.
+- **`/profile` (view-only)**: the mirrored person data of the site admin
+  (their `profile_details` row via `siteSetup.adminInfo`); no edit
+  controls.
+- **`/standort`**: **all site properties** (id, name, address, company
+  email, status/registeredAt) + live connection chip.
 
 ## Backend / client
 
-- Currently uses **only the local client** (`top_attempt_local_client`):
-  setup mask + connection chip run against the local instance. The
-  enrollment itself happens server-side in the local backend (the
-  global client lives there).
-- `top_attempt_global_client` is **currently commented out** (pubspec,
-  2026-09-25): removed because unused — deliberately re-add when the app
-  will manipulate global properties (e.g. course management, see
-  apps/AGENTS.md → "Open architecture questions").
-- Server URL: `--dart-define=SERVER_URL=…` or `assets/config.json`;
-  for physical devices the LAN IP of the dev machine. Local backend:
-  API on port 8180.
+- Uses the **local client** (`top_attempt_local_client`, default API
+  `localhost:8180` — **always the LOCAL instance**: the scaffold
+  `assets/config.json` originally pointed at the global backend `8080`
+  and caused `ServerpodClientNotFound 404`, fixed 2026-09-25; note that
+  the Serverpod `getServerUrl()` fallback default is also `8080` — on
+  devices use `--dart-define=SERVER_URL=http://<LAN-IP>:8180/`).
+- The enrollment runs server-side in the local backend (the global
+  client lives there).
 
-## Dependencies (domain)
+## TODOs / open decisions
 
-- The local backend needs the device/member/permission model first (see
-  `apps/backends/local/AGENTS.md` → open questions) — biggest blocker
-  for real admin features.
-- Local login (`local-admin`) decides how site admins sign in here and
-  which rights they see.
-
-## Next steps (suggestion)
-
-1. Add to the workspace (`apps/pubspec.yaml`).
-2. Establish the local login (`local-admin` account) → protect the
-   setup and admin areas (currently open to everyone in the LAN).
-3. Once the local backend model + membership sync exist: UI for the
-   device overview and member management (access rights).
+1. **Local login (`local-admin`) protection is active** — but the
+   member/employee admin areas do not exist yet; when they land, keep
+   them behind the local login as well.
+2. **"Edit profile in enduser app" link**: code-plumbed but **hidden**
+   (`showEditInEndUserApp` constant alongside an `endUserUrl` config
+   field); re-enable when the profile sync design is settled.
+3. Keep the layouts of the two admin frontends (global/local) aligned
+   where screens overlap (drawer/menu), like the shared package does for
+   the end-user + global app account dropdown.

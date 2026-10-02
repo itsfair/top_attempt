@@ -58,19 +58,6 @@ services:
     volumes:
       - top_attempt_files:/data
 
-  # One-shot provisioning of the 'serverpod' bucket (public read).
-  create_buckets:
-    image: minio/mc
-    depends_on:
-      - rustfs
-    entrypoint: >
-      /bin/sh -c "
-      until /usr/bin/mc alias set myrustfs http://rustfs_server:9000 rustfsadmin rustfsadmin_secret; do sleep 2; done;
-      /usr/bin/mc mb myrustfs/top-attempt --ignore-existing;
-      /usr/bin/mc anonymous set public myrustfs/top-attempt;
-      exit 0;
-      "
-
 volumes:
   top_attempt_data:
   top_attempt_test_data:

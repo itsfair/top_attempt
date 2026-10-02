@@ -1,12 +1,26 @@
+### Extended person data of a site person (local mirror of the global
+### profile_details): the identity is the membership row — one profile row
+### per membership, cascade-deleted with it. Email and image URL are
+### mirrored from the global instance (enrollment/sync) and not locally
+### editable; name fields are written by the signed-in person via
+### profileDetails.save.
 class: ProfileDetails
 table: profile_details
 fields:
-  ### The AuthUser this data belongs to.
-  authUser: module:serverpod_auth_core:AuthUser?, relation(onDelete=Cascade)
+
+  ### The membership (person) this data belongs to.
+  membership: Membership?, relation(onDelete=Cascade)
+
+  ### Mirrored from the global account; not locally editable.
+  email: String?
   firstName: String?
   lastName: String?
   birthday: DateTime?
+
+  ### Local public URL of the person's profile image (local RustFS, stored
+  ### at enrollment transfer for the site admin).
+  imageUrl: String?
 indexes:
-  profile_details_auth_user_unique_idx:
-    fields: authUserId
+  profile_details_membership_unique_idx:
+    fields: membershipId
     unique: true

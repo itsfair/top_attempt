@@ -5,12 +5,27 @@
 class: SiteTransferInfo
 fields:
 
-  ### The enrolled site (id and name are enough to boot the connection;
-  ### deeper data comes with the sites details).
+  ### Snapshot of the enrolled site with ALL its properties (the local
+  ### instance caches it for the "Standort" page).
   siteId: int
 
   ### Name of the site.
   siteName: String
+
+  ### Site address data.
+  siteStreet: String?
+  siteZipCode: String?
+  siteCity: String?
+  siteCountry: String?
+
+  ### Contact mail of the operating company.
+  siteCompanyEmail: String?
+
+  ### Setup status at enroll time (pendingSetup|registered).
+  siteStatusName: String?
+
+  ### When the site registered at the global instance.
+  siteRegisteredAt: DateTime?
 
   ### Email of the site admin (global) — also used as the local admin's
   ### login email.
@@ -21,9 +36,20 @@ fields:
   ### authorization. Local member rows must carry exactly this id.
   adminAuthUserId: UuidValue
 
-  ### Global full name of the site admin (kept in sync via ProfileDetails).
-  adminFullName: String?
+  ### Global profile names of the site admin (may be null until the admin
+  ### completed their profile).
+  adminFirstName: String?
+  adminLastName: String?
+
+  ### Global birthday of the site admin (UTC-midnight date sentinel).
+  adminBirthday: DateTime?
+
+  ### Public image URL of the site admin's profile image (global RustFS).
+  ### TODO (security): hand over a short-lived presigned URL instead of
+  ### the raw/eternal object URL (capability URL, see backend AGENTS.md).
+  adminImageUrl: String?
 
   ### The SAS session key for the device connection. Store securely; there
   ### is no rotation (write once) and the key cannot be recovered.
   deviceSessionKey: String
+

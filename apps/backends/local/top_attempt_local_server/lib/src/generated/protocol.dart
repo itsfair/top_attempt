@@ -19,7 +19,8 @@ import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
     as _iais;
 import 'greetings/greeting.dart' as _izw8z7ou;
 import 'profile/profile_details.dart' as _is7ofcfc;
-import 'site/member.dart' as _ixt8mg2q;
+import 'site/local_admin_info.dart' as _isettk53;
+import 'site/membership.dart' as _i3vhq3zw;
 import 'site/site_candidate_local.dart' as _iin2gxgd;
 import 'site/site_connection.dart' as _irwm5040;
 import 'site/site_connection_info.dart' as _i9oolunz;
@@ -28,7 +29,8 @@ import 'site/site_setup_exception.dart' as _imfczqeb;
 import 'site/site_setup_result.dart' as _in5mc098;
 export 'greetings/greeting.dart';
 export 'profile/profile_details.dart';
-export 'site/member.dart';
+export 'site/local_admin_info.dart';
+export 'site/membership.dart';
 export 'site/site_candidate_local.dart';
 export 'site/site_connection.dart';
 export 'site/site_connection_info.dart';
@@ -45,8 +47,8 @@ class Protocol extends _is.DatabaseSerializationManager {
 
   static List<_isp.TableDefinition> get targetTableDefinitions => [
     _isp.TableDefinition(
-      name: 'members',
-      dartName: 'Member',
+      name: 'memberships',
+      dartName: 'Membership',
       schema: 'public',
       module: 'top_attempt_local',
       columns: [
@@ -66,20 +68,8 @@ class Protocol extends _is.DatabaseSerializationManager {
         _isp.ColumnDefinition(
           name: 'localAuthUserId',
           columnType: _isp.ColumnType.uuid,
-          isNullable: false,
-          dartType: 'UuidValue',
-        ),
-        _isp.ColumnDefinition(
-          name: 'email',
-          columnType: _isp.ColumnType.text,
           isNullable: true,
-          dartType: 'String?',
-        ),
-        _isp.ColumnDefinition(
-          name: 'fullName',
-          columnType: _isp.ColumnType.text,
-          isNullable: true,
-          dartType: 'String?',
+          dartType: 'UuidValue?',
         ),
         _isp.ColumnDefinition(
           name: 'role',
@@ -102,19 +92,19 @@ class Protocol extends _is.DatabaseSerializationManager {
       ],
       foreignKeys: [
         _isp.ForeignKeyDefinition(
-          constraintName: 'members_fk_0',
+          constraintName: 'memberships_fk_0',
           columns: ['localAuthUserId'],
           referenceTable: 'serverpod_auth_core_user',
           referenceTableSchema: 'public',
           referenceColumns: ['id'],
           onUpdate: _isp.ForeignKeyAction.noAction,
-          onDelete: _isp.ForeignKeyAction.noAction,
+          onDelete: _isp.ForeignKeyAction.setNull,
           matchType: null,
         ),
       ],
       indexes: [
         _isp.IndexDefinition(
-          indexName: 'global_auth_user_unique_idx',
+          indexName: 'membership_global_auth_user_unique_idx',
           tableSpace: null,
           elements: [
             _isp.IndexElementDefinition(
@@ -127,7 +117,7 @@ class Protocol extends _is.DatabaseSerializationManager {
           isPrimary: false,
         ),
         _isp.IndexDefinition(
-          indexName: 'local_auth_user_unique_idx',
+          indexName: 'membership_local_auth_user_unique_idx',
           tableSpace: null,
           elements: [
             _isp.IndexElementDefinition(
@@ -156,10 +146,16 @@ class Protocol extends _is.DatabaseSerializationManager {
           columnDefault: 'serial',
         ),
         _isp.ColumnDefinition(
-          name: 'authUserId',
-          columnType: _isp.ColumnType.uuid,
+          name: 'membershipId',
+          columnType: _isp.ColumnType.bigint,
           isNullable: false,
-          dartType: 'UuidValue',
+          dartType: 'int',
+        ),
+        _isp.ColumnDefinition(
+          name: 'email',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
         ),
         _isp.ColumnDefinition(
           name: 'firstName',
@@ -179,12 +175,18 @@ class Protocol extends _is.DatabaseSerializationManager {
           isNullable: true,
           dartType: 'DateTime?',
         ),
+        _isp.ColumnDefinition(
+          name: 'imageUrl',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
       ],
       foreignKeys: [
         _isp.ForeignKeyDefinition(
           constraintName: 'profile_details_fk_0',
-          columns: ['authUserId'],
-          referenceTable: 'serverpod_auth_core_user',
+          columns: ['membershipId'],
+          referenceTable: 'memberships',
           referenceTableSchema: 'public',
           referenceColumns: ['id'],
           onUpdate: _isp.ForeignKeyAction.noAction,
@@ -194,12 +196,12 @@ class Protocol extends _is.DatabaseSerializationManager {
       ],
       indexes: [
         _isp.IndexDefinition(
-          indexName: 'profile_details_auth_user_unique_idx',
+          indexName: 'profile_details_membership_unique_idx',
           tableSpace: null,
           elements: [
             _isp.IndexElementDefinition(
               type: _isp.IndexElementDefinitionType.column,
-              definition: 'authUserId',
+              definition: 'membershipId',
             ),
           ],
           type: 'btree',
@@ -241,13 +243,31 @@ class Protocol extends _is.DatabaseSerializationManager {
           dartType: 'String',
         ),
         _isp.ColumnDefinition(
-          name: 'adminEmail',
+          name: 'siteStreet',
           columnType: _isp.ColumnType.text,
           isNullable: true,
           dartType: 'String?',
         ),
         _isp.ColumnDefinition(
-          name: 'adminFullName',
+          name: 'siteZipCode',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'siteCity',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'siteCountry',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'siteCompanyEmail',
           columnType: _isp.ColumnType.text,
           isNullable: true,
           dartType: 'String?',
@@ -313,8 +333,11 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _is7ofcfc.ProfileDetails) {
       return _is7ofcfc.ProfileDetails.fromJson(data) as T;
     }
-    if (t == _ixt8mg2q.Member) {
-      return _ixt8mg2q.Member.fromJson(data) as T;
+    if (t == _isettk53.LocalAdminInfo) {
+      return _isettk53.LocalAdminInfo.fromJson(data) as T;
+    }
+    if (t == _i3vhq3zw.Membership) {
+      return _i3vhq3zw.Membership.fromJson(data) as T;
     }
     if (t == _iin2gxgd.SiteCandidateLocal) {
       return _iin2gxgd.SiteCandidateLocal.fromJson(data) as T;
@@ -341,8 +364,12 @@ class Protocol extends _is.DatabaseSerializationManager {
       return (data != null ? _is7ofcfc.ProfileDetails.fromJson(data) : null)
           as T;
     }
-    if (t == _is.getType<_ixt8mg2q.Member?>()) {
-      return (data != null ? _ixt8mg2q.Member.fromJson(data) : null) as T;
+    if (t == _is.getType<_isettk53.LocalAdminInfo?>()) {
+      return (data != null ? _isettk53.LocalAdminInfo.fromJson(data) : null)
+          as T;
+    }
+    if (t == _is.getType<_i3vhq3zw.Membership?>()) {
+      return (data != null ? _i3vhq3zw.Membership.fromJson(data) : null) as T;
     }
     if (t == _is.getType<_iin2gxgd.SiteCandidateLocal?>()) {
       return (data != null ? _iin2gxgd.SiteCandidateLocal.fromJson(data) : null)
@@ -392,7 +419,8 @@ class Protocol extends _is.DatabaseSerializationManager {
     return switch (type) {
       _izw8z7ou.Greeting => 'Greeting',
       _is7ofcfc.ProfileDetails => 'ProfileDetails',
-      _ixt8mg2q.Member => 'Member',
+      _isettk53.LocalAdminInfo => 'LocalAdminInfo',
+      _i3vhq3zw.Membership => 'Membership',
       _iin2gxgd.SiteCandidateLocal => 'SiteCandidateLocal',
       _irwm5040.SiteConnection => 'SiteConnection',
       _i9oolunz.SiteConnectionInfo => 'SiteConnectionInfo',
@@ -420,8 +448,10 @@ class Protocol extends _is.DatabaseSerializationManager {
         return 'Greeting';
       case _is7ofcfc.ProfileDetails():
         return 'ProfileDetails';
-      case _ixt8mg2q.Member():
-        return 'Member';
+      case _isettk53.LocalAdminInfo():
+        return 'LocalAdminInfo';
+      case _i3vhq3zw.Membership():
+        return 'Membership';
       case _iin2gxgd.SiteCandidateLocal():
         return 'SiteCandidateLocal';
       case _irwm5040.SiteConnection():
@@ -466,8 +496,11 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (dataClassName == 'ProfileDetails') {
       return deserialize<_is7ofcfc.ProfileDetails>(data['data']);
     }
-    if (dataClassName == 'Member') {
-      return deserialize<_ixt8mg2q.Member>(data['data']);
+    if (dataClassName == 'LocalAdminInfo') {
+      return deserialize<_isettk53.LocalAdminInfo>(data['data']);
+    }
+    if (dataClassName == 'Membership') {
+      return deserialize<_i3vhq3zw.Membership>(data['data']);
     }
     if (dataClassName == 'SiteCandidateLocal') {
       return deserialize<_iin2gxgd.SiteCandidateLocal>(data['data']);
@@ -530,8 +563,8 @@ class Protocol extends _is.DatabaseSerializationManager {
     switch (t) {
       case _is7ofcfc.ProfileDetails:
         return _is7ofcfc.ProfileDetails.t;
-      case _ixt8mg2q.Member:
-        return _ixt8mg2q.Member.t;
+      case _i3vhq3zw.Membership:
+        return _i3vhq3zw.Membership.t;
       case _irwm5040.SiteConnection:
         return _irwm5040.SiteConnection.t;
     }

@@ -128,17 +128,34 @@ class SiteEnrollmentEndpoint extends Endpoint {
       ),
     );
 
+    // Full site snapshot + admin profile data for the local instance.
     final adminProfile = await AuthServices.instance.userProfiles
         .maybeFindUserProfileByUserId(session, authUserId);
+    // Server-side read (no login in this session): fetch the admin's
+    // extended profile data directly.
+    final adminDetails = await ProfileDetails.db.findFirstRow(
+      session,
+      where: (t) => t.authUserId.equals(authUserId),
+    );
 
     return SiteEnrollmentInfo(
       candidates: const [],
       transfer: SiteTransferInfo(
         siteId: enrolledSiteId,
         siteName: site.name,
+        siteStreet: site.street,
+        siteZipCode: site.zipCode,
+        siteCity: site.city,
+        siteCountry: site.country,
+        siteCompanyEmail: site.companyEmail,
+        siteStatusName: site.status.name,
+        siteRegisteredAt: site.registeredAt,
         adminEmail: email.trim().toLowerCase(),
         adminAuthUserId: authUserId,
-        adminFullName: adminProfile?.fullName,
+        adminFirstName: adminDetails?.firstName,
+        adminLastName: adminDetails?.lastName,
+        adminBirthday: adminDetails?.birthday,
+        adminImageUrl: adminProfile?.imageUrl?.toString(),
         deviceSessionKey: issued.sessionKey,
       ),
     );

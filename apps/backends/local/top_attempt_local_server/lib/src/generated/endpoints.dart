@@ -383,6 +383,16 @@ class Endpoints extends _is.EndpointDispatch {
               ) async => (endpoints['siteSetup'] as _iq6hjzpz.SiteSetupEndpoint)
                   .connectionStatus(session),
         ),
+        'adminInfo': _is.MethodConnector(
+          name: 'adminInfo',
+          params: {},
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['siteSetup'] as _iq6hjzpz.SiteSetupEndpoint)
+                  .adminInfo(session),
+        ),
       },
     );
     modules['serverpod_auth_idp'] = _iais.Endpoints()

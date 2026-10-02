@@ -10,48 +10,57 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
-    as _iacc;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'package:top_attempt_local_client/src/protocol/protocol.dart'
     as _i3m9u5jf;
+import '../site/membership.dart' as _iijnlsdj;
 
+/// Extended person data of a site person (local mirror of the global
+/// profile_details): the identity is the membership row — one profile row
+/// per membership, cascade-deleted with it. Email and image URL are
+/// mirrored from the global instance (enrollment/sync) and not locally
+/// editable; name fields are written by the signed-in person via
+/// profileDetails.save.
 abstract class ProfileDetails
     implements _isc.SerializableModel, _isc.ProtocolSerialization {
   ProfileDetails._({
     this.id,
-    required this.authUserId,
-    this.authUser,
+    required this.membershipId,
+    this.membership,
+    this.email,
     this.firstName,
     this.lastName,
     this.birthday,
+    this.imageUrl,
   });
 
   factory ProfileDetails({
     int? id,
-    required _isc.UuidValue authUserId,
-    _iacc.AuthUser? authUser,
+    required int membershipId,
+    _iijnlsdj.Membership? membership,
+    String? email,
     String? firstName,
     String? lastName,
     DateTime? birthday,
+    String? imageUrl,
   }) = _ProfileDetailsImpl;
 
   factory ProfileDetails.fromJson(Map<String, dynamic> jsonSerialization) {
     return ProfileDetails(
       id: jsonSerialization['id'] as int?,
-      authUserId: _isc.UuidValueJsonExtension.fromJson(
-        jsonSerialization['authUserId'],
-      ),
-      authUser: jsonSerialization['authUser'] == null
+      membershipId: jsonSerialization['membershipId'] as int,
+      membership: jsonSerialization['membership'] == null
           ? null
-          : _i3m9u5jf.Protocol().deserialize<_iacc.AuthUser>(
-              jsonSerialization['authUser'],
+          : _i3m9u5jf.Protocol().deserialize<_iijnlsdj.Membership>(
+              jsonSerialization['membership'],
             ),
+      email: jsonSerialization['email'] as String?,
       firstName: jsonSerialization['firstName'] as String?,
       lastName: jsonSerialization['lastName'] as String?,
       birthday: jsonSerialization['birthday'] == null
           ? null
           : _isc.DateTimeJsonExtension.fromJson(jsonSerialization['birthday']),
+      imageUrl: jsonSerialization['imageUrl'] as String?,
     );
   }
 
@@ -60,10 +69,13 @@ abstract class ProfileDetails
   /// the id will be null.
   int? id;
 
-  _isc.UuidValue authUserId;
+  int membershipId;
 
-  /// The AuthUser this data belongs to.
-  _iacc.AuthUser? authUser;
+  /// The membership (person) this data belongs to.
+  _iijnlsdj.Membership? membership;
+
+  /// Mirrored from the global account; not locally editable.
+  String? email;
 
   String? firstName;
 
@@ -71,27 +83,35 @@ abstract class ProfileDetails
 
   DateTime? birthday;
 
+  /// Local public URL of the person's profile image (local RustFS, stored
+  /// at enrollment transfer for the site admin).
+  String? imageUrl;
+
   /// Returns a shallow copy of this [ProfileDetails]
   /// with some or all fields replaced by the given arguments.
   @_isc.useResult
   ProfileDetails copyWith({
     int? id,
-    _isc.UuidValue? authUserId,
-    _iacc.AuthUser? authUser,
+    int? membershipId,
+    _iijnlsdj.Membership? membership,
+    String? email,
     String? firstName,
     String? lastName,
     DateTime? birthday,
+    String? imageUrl,
   });
   @override
   Map<String, dynamic> toJson() {
     return {
       '__className__': 'ProfileDetails',
       if (id != null) 'id': id,
-      'authUserId': authUserId.toJson(),
-      if (authUser != null) 'authUser': authUser?.toJson(),
+      'membershipId': membershipId,
+      if (membership != null) 'membership': membership?.toJson(),
+      if (email != null) 'email': email,
       if (firstName != null) 'firstName': firstName,
       if (lastName != null) 'lastName': lastName,
       if (birthday != null) 'birthday': birthday?.toJson(),
+      if (imageUrl != null) 'imageUrl': imageUrl,
     };
   }
 
@@ -100,11 +120,13 @@ abstract class ProfileDetails
     return {
       '__className__': 'ProfileDetails',
       if (id != null) 'id': id,
-      'authUserId': authUserId.toJson(),
-      if (authUser != null) 'authUser': authUser?.toJson(),
+      'membershipId': membershipId,
+      if (membership != null) 'membership': membership?.toJsonForProtocol(),
+      if (email != null) 'email': email,
       if (firstName != null) 'firstName': firstName,
       if (lastName != null) 'lastName': lastName,
       if (birthday != null) 'birthday': birthday?.toJson(),
+      if (imageUrl != null) 'imageUrl': imageUrl,
     };
   }
 
@@ -119,18 +141,22 @@ class _Undefined {}
 class _ProfileDetailsImpl extends ProfileDetails {
   _ProfileDetailsImpl({
     int? id,
-    required _isc.UuidValue authUserId,
-    _iacc.AuthUser? authUser,
+    required int membershipId,
+    _iijnlsdj.Membership? membership,
+    String? email,
     String? firstName,
     String? lastName,
     DateTime? birthday,
+    String? imageUrl,
   }) : super._(
          id: id,
-         authUserId: authUserId,
-         authUser: authUser,
+         membershipId: membershipId,
+         membership: membership,
+         email: email,
          firstName: firstName,
          lastName: lastName,
          birthday: birthday,
+         imageUrl: imageUrl,
        );
 
   /// Returns a shallow copy of this [ProfileDetails]
@@ -139,21 +165,25 @@ class _ProfileDetailsImpl extends ProfileDetails {
   @override
   ProfileDetails copyWith({
     Object? id = _Undefined,
-    _isc.UuidValue? authUserId,
-    Object? authUser = _Undefined,
+    int? membershipId,
+    Object? membership = _Undefined,
+    Object? email = _Undefined,
     Object? firstName = _Undefined,
     Object? lastName = _Undefined,
     Object? birthday = _Undefined,
+    Object? imageUrl = _Undefined,
   }) {
     return ProfileDetails(
       id: id is int? ? id : this.id,
-      authUserId: authUserId ?? this.authUserId,
-      authUser: authUser is _iacc.AuthUser?
-          ? authUser
-          : this.authUser?.copyWith(),
+      membershipId: membershipId ?? this.membershipId,
+      membership: membership is _iijnlsdj.Membership?
+          ? membership
+          : this.membership?.copyWith(),
+      email: email is String? ? email : this.email,
       firstName: firstName is String? ? firstName : this.firstName,
       lastName: lastName is String? ? lastName : this.lastName,
       birthday: birthday is DateTime? ? birthday : this.birthday,
+      imageUrl: imageUrl is String? ? imageUrl : this.imageUrl,
     );
   }
 }

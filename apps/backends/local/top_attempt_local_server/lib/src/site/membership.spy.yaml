@@ -1,0 +1,41 @@
+### Local person directory of this site. Every person of the site appears
+### here — either as plain membership (no local login) or with a linked
+### local AuthUser (site admin / staff with login). One row per global
+### person.
+###
+### Person data (email, name, birthday, image) lives ONLY in the linked
+### profile_details row (single-directory principle, analogous to the
+### global instance); the local AuthUser is a pure login credential holder
+### (cascades away) linked only for staff/siteAdmin.
+class: Membership
+table: memberships
+fields:
+
+  ### The GLOBAL authUserId of the person — the exchange key with the
+  ### global instance (and later used by the door-opening flow: ESP32 ->
+  ### local backend -> membership lookup). This is NOT the local AuthUser id.
+  globalAuthUserId: UuidValue
+
+  ### Link to the local login account (site admin / staff); null for plain
+  ### memberships without login. The local AuthUser uuid is local-only and
+  ### must never be used for cross-instance matching. SetNull keeps the
+  ### membership (and its person data) when the login account is removed.
+  localAuthUser: module:serverpod_auth_core:AuthUser?, relation(optional, onDelete=SetNull)
+
+  ### Role as string, mirrored from the global `SiteRole` (member/staff/
+  ### siteAdmin) — synced; the local backend derives privileges from it.
+  role: String, defaultModel='member'
+
+  ### Mirrored active state of the global membership.
+  active: bool, defaultModel=true
+
+  ### When the membership was created (at enrollment for the site admin or
+  ### when a membership sync event arrived).
+  createdAt: DateTime, defaultModel=now
+indexes:
+  membership_global_auth_user_unique_idx:
+    fields: globalAuthUserId
+    unique: true
+  membership_local_auth_user_unique_idx:
+    fields: localAuthUserId
+    unique: true

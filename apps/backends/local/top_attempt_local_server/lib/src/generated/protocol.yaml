@@ -17,3 +17,4 @@ profileDetails:
 siteSetup:
   - enterSetup:
   - connectionStatus:
+  - adminInfo:

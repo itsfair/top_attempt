@@ -43,59 +43,68 @@ class _LayoutState extends State<Layout> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Home'),
-        backgroundColor: Colors.blue[900],
-        foregroundColor: Colors.white,
-        actions: [
-          AccountDropdown(
-            profileState: profileState,
-            isSignedIn: _isSignedIn,
-            onLogin: (context) => context.go('/sign-in'),
-            onLogout: () => client.auth.signOutDevice(),
-            onProfile: (context) => context.go('/profile'),
-            onSignedOut: () {
-              if (mounted) context.go('/');
-            },
-          ),
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blue),
-              child: Text(
-                'Navigation',
-                style: TextStyle(color: Colors.white, fontSize: 24),
+    // Profile data changes (e.g. after the profile screen saves) must
+    // re-render the dropdown avatar/initials.
+    return ListenableBuilder(
+      listenable: profileState,
+      builder: (context, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('Home'),
+            backgroundColor: Colors.blue[900],
+            foregroundColor: Colors.white,
+            actions: [
+              AccountDropdown(
+                isSignedIn: _isSignedIn,
+                fullName: profileState.profile?.fullName,
+                imageUrl: profileState.profile?.imageUrl?.toString(),
+                extraItems: const [],
+                onLogin: (context) => context.go('/sign-in'),
+                onLogout: () => client.auth.signOutDevice(),
+                onProfile: (context) => context.go('/profile'),
+                onSignedOut: () {
+                  if (mounted) context.go('/');
+                },
               ),
+            ],
+          ),
+          drawer: Drawer(
+            child: ListView(
+              children: [
+                const DrawerHeader(
+                  decoration: BoxDecoration(color: Colors.blue),
+                  child: Text(
+                    'Navigation',
+                    style: TextStyle(color: Colors.white, fontSize: 24),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.home),
+                  title: const Text('Home'),
+                  onTap: () {
+                    context.go('/');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.people),
+                  title: const Text('Members'),
+                  onTap: () {
+                    context.go('/members');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.location_city),
+                  title: const Text('Sites'),
+                  onTap: () {
+                    context.go('/sites');
+                  },
+                ),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('Home'),
-              onTap: () {
-                context.go('/');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.people),
-              title: const Text('Members'),
-              onTap: () {
-                context.go('/members');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.location_city),
-              title: const Text('Sites'),
-              onTap: () {
-                context.go('/sites');
-              },
-            ),
-          ],
-        ),
-      ),
-      body: widget.child,
+          ),
+          body: widget.child,
+        );
+      },
     );
   }
 }

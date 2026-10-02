@@ -21,6 +21,8 @@ import 'package:top_attempt_local_client/src/protocol/greetings/greeting.dart'
     as _idpqzm9k;
 import 'package:top_attempt_local_client/src/protocol/profile/profile_details.dart'
     as _iqp6yj66;
+import 'package:top_attempt_local_client/src/protocol/site/local_admin_info.dart'
+    as _ianfe2o9;
 import 'package:top_attempt_local_client/src/protocol/site/site_connection_info.dart'
     as _ix9ptic0;
 import 'package:top_attempt_local_client/src/protocol/site/site_setup_result.dart'
@@ -271,8 +273,8 @@ class EndpointGreeting extends _isc.EndpointRef {
 }
 
 /// Endpoint for the user's own profile details (first name, last name and
-/// birthday). Email, user id and the profile image are managed by the
-/// built-in authentication module endpoints (see UserProfileEditEndpoint).
+/// birthday). Email, user id and the profile image are mirrored from the
+/// global instance (enrollment/sync) and not editable here.
 /// {@category Endpoint}
 class EndpointProfileDetails extends _isc.EndpointRef {
   EndpointProfileDetails(_isc.EndpointCaller caller) : super(caller);
@@ -309,9 +311,10 @@ class EndpointProfileDetails extends _isc.EndpointRef {
 
 /// Local setup endpoint: connects this instance to its site's global
 /// instance by verifying with the **global credentials of the site admin**
-/// (the one chosen at site creation). Fills the local `members` row for the
-/// admin (identity: their global authUserId) and creates the local
-/// `local-admin` login with the same password.
+/// (the one chosen at site creation). Fills the local `memberships` row for
+/// the admin (identity: their global authUserId) plus their
+/// `profile_details` row and creates the local `local-admin` login with
+/// the same password.
 /// {@category Endpoint}
 class EndpointSiteSetup extends _isc.EndpointRef {
   EndpointSiteSetup(_isc.EndpointCaller caller) : super(caller);
@@ -344,6 +347,17 @@ class EndpointSiteSetup extends _isc.EndpointRef {
       caller.callServerEndpoint<_ix9ptic0.SiteConnectionInfo>(
         'siteSetup',
         'connectionStatus',
+        {},
+      );
+
+  /// Everything the local admin UI displays about this instance:
+  /// connection state + site snapshot + the admin's mirrored person data
+  /// (profile_details of their membership row). The default of the state
+  /// is `noneSetup` with an empty snapshot until the instance is enrolled.
+  _ida.Future<_ianfe2o9.LocalAdminInfo> adminInfo() =>
+      caller.callServerEndpoint<_ianfe2o9.LocalAdminInfo>(
+        'siteSetup',
+        'adminInfo',
         {},
       );
 }

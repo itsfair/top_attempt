@@ -17,17 +17,21 @@ import 'package:top_attempt_local_client/src/protocol/protocol.dart'
     as _i3m9u5jf;
 
 /// Local person directory of this site. Every person of the site appears
-/// here — either as plain member (no local login) or with a linked local
-/// AuthUser (site admin / staff with login). One row per global person.
-abstract class Member
+/// here — either as plain membership (no local login) or with a linked
+/// local AuthUser (site admin / staff with login). One row per global
+/// person.
+///
+/// Person data (email, name, birthday, image) lives ONLY in the linked
+/// profile_details row (single-directory principle, analogous to the
+/// global instance); the local AuthUser is a pure login credential holder
+/// (cascades away) linked only for staff/siteAdmin.
+abstract class Membership
     implements _isc.SerializableModel, _isc.ProtocolSerialization {
-  Member._({
+  Membership._({
     this.id,
     required this.globalAuthUserId,
-    required this.localAuthUserId,
+    this.localAuthUserId,
     this.localAuthUser,
-    this.email,
-    this.fullName,
     String? role,
     bool? active,
     DateTime? createdAt,
@@ -35,34 +39,32 @@ abstract class Member
        active = active ?? true,
        createdAt = createdAt ?? DateTime.now();
 
-  factory Member({
+  factory Membership({
     int? id,
     required _isc.UuidValue globalAuthUserId,
-    required _isc.UuidValue localAuthUserId,
+    _isc.UuidValue? localAuthUserId,
     _iacc.AuthUser? localAuthUser,
-    String? email,
-    String? fullName,
     String? role,
     bool? active,
     DateTime? createdAt,
-  }) = _MemberImpl;
+  }) = _MembershipImpl;
 
-  factory Member.fromJson(Map<String, dynamic> jsonSerialization) {
-    return Member(
+  factory Membership.fromJson(Map<String, dynamic> jsonSerialization) {
+    return Membership(
       id: jsonSerialization['id'] as int?,
       globalAuthUserId: _isc.UuidValueJsonExtension.fromJson(
         jsonSerialization['globalAuthUserId'],
       ),
-      localAuthUserId: _isc.UuidValueJsonExtension.fromJson(
-        jsonSerialization['localAuthUserId'],
-      ),
+      localAuthUserId: jsonSerialization['localAuthUserId'] == null
+          ? null
+          : _isc.UuidValueJsonExtension.fromJson(
+              jsonSerialization['localAuthUserId'],
+            ),
       localAuthUser: jsonSerialization['localAuthUser'] == null
           ? null
           : _i3m9u5jf.Protocol().deserialize<_iacc.AuthUser>(
               jsonSerialization['localAuthUser'],
             ),
-      email: jsonSerialization['email'] as String?,
-      fullName: jsonSerialization['fullName'] as String?,
       role: jsonSerialization['role'] as String?,
       active: jsonSerialization['active'] == null
           ? null
@@ -80,20 +82,16 @@ abstract class Member
 
   /// The GLOBAL authUserId of the person — the exchange key with the
   /// global instance (and later used by the door-opening flow: ESP32 ->
-  /// local backend -> member lookup). This is NOT the local AuthUser id.
+  /// local backend -> membership lookup). This is NOT the local AuthUser id.
   _isc.UuidValue globalAuthUserId;
 
-  _isc.UuidValue localAuthUserId;
+  _isc.UuidValue? localAuthUserId;
 
   /// Link to the local login account (site admin / staff); null for plain
-  /// members without login. The local AuthUser uuid is local-only and must
-  /// never be used for cross-instance matching.
+  /// memberships without login. The local AuthUser uuid is local-only and
+  /// must never be used for cross-instance matching. SetNull keeps the
+  /// membership (and its person data) when the login account is removed.
   _iacc.AuthUser? localAuthUser;
-
-  /// Mirrored profile data from the global instance.
-  String? email;
-
-  String? fullName;
 
   /// Role as string, mirrored from the global `SiteRole` (member/staff/
   /// siteAdmin) — synced; the local backend derives privileges from it.
@@ -102,20 +100,18 @@ abstract class Member
   /// Mirrored active state of the global membership.
   bool active;
 
-  /// When the local row was created (at enrollment for the site admin or
+  /// When the membership was created (at enrollment for the site admin or
   /// when a membership sync event arrived).
   DateTime createdAt;
 
-  /// Returns a shallow copy of this [Member]
+  /// Returns a shallow copy of this [Membership]
   /// with some or all fields replaced by the given arguments.
   @_isc.useResult
-  Member copyWith({
+  Membership copyWith({
     int? id,
     _isc.UuidValue? globalAuthUserId,
     _isc.UuidValue? localAuthUserId,
     _iacc.AuthUser? localAuthUser,
-    String? email,
-    String? fullName,
     String? role,
     bool? active,
     DateTime? createdAt,
@@ -123,13 +119,11 @@ abstract class Member
   @override
   Map<String, dynamic> toJson() {
     return {
-      '__className__': 'Member',
+      '__className__': 'Membership',
       if (id != null) 'id': id,
       'globalAuthUserId': globalAuthUserId.toJson(),
-      'localAuthUserId': localAuthUserId.toJson(),
+      if (localAuthUserId != null) 'localAuthUserId': localAuthUserId?.toJson(),
       if (localAuthUser != null) 'localAuthUser': localAuthUser?.toJson(),
-      if (email != null) 'email': email,
-      if (fullName != null) 'fullName': fullName,
       'role': role,
       'active': active,
       'createdAt': createdAt.toJson(),
@@ -139,13 +133,11 @@ abstract class Member
   @override
   Map<String, dynamic> toJsonForProtocol() {
     return {
-      '__className__': 'Member',
+      '__className__': 'Membership',
       if (id != null) 'id': id,
       'globalAuthUserId': globalAuthUserId.toJson(),
-      'localAuthUserId': localAuthUserId.toJson(),
+      if (localAuthUserId != null) 'localAuthUserId': localAuthUserId?.toJson(),
       if (localAuthUser != null) 'localAuthUser': localAuthUser?.toJson(),
-      if (email != null) 'email': email,
-      if (fullName != null) 'fullName': fullName,
       'role': role,
       'active': active,
       'createdAt': createdAt.toJson(),
@@ -160,14 +152,12 @@ abstract class Member
 
 class _Undefined {}
 
-class _MemberImpl extends Member {
-  _MemberImpl({
+class _MembershipImpl extends Membership {
+  _MembershipImpl({
     int? id,
     required _isc.UuidValue globalAuthUserId,
-    required _isc.UuidValue localAuthUserId,
+    _isc.UuidValue? localAuthUserId,
     _iacc.AuthUser? localAuthUser,
-    String? email,
-    String? fullName,
     String? role,
     bool? active,
     DateTime? createdAt,
@@ -176,37 +166,33 @@ class _MemberImpl extends Member {
          globalAuthUserId: globalAuthUserId,
          localAuthUserId: localAuthUserId,
          localAuthUser: localAuthUser,
-         email: email,
-         fullName: fullName,
          role: role,
          active: active,
          createdAt: createdAt,
        );
 
-  /// Returns a shallow copy of this [Member]
+  /// Returns a shallow copy of this [Membership]
   /// with some or all fields replaced by the given arguments.
   @_isc.useResult
   @override
-  Member copyWith({
+  Membership copyWith({
     Object? id = _Undefined,
     _isc.UuidValue? globalAuthUserId,
-    _isc.UuidValue? localAuthUserId,
+    Object? localAuthUserId = _Undefined,
     Object? localAuthUser = _Undefined,
-    Object? email = _Undefined,
-    Object? fullName = _Undefined,
     String? role,
     bool? active,
     DateTime? createdAt,
   }) {
-    return Member(
+    return Membership(
       id: id is int? ? id : this.id,
       globalAuthUserId: globalAuthUserId ?? this.globalAuthUserId,
-      localAuthUserId: localAuthUserId ?? this.localAuthUserId,
+      localAuthUserId: localAuthUserId is _isc.UuidValue?
+          ? localAuthUserId
+          : this.localAuthUserId,
       localAuthUser: localAuthUser is _iacc.AuthUser?
           ? localAuthUser
           : this.localAuthUser?.copyWith(),
-      email: email is String? ? email : this.email,
-      fullName: fullName is String? ? fullName : this.fullName,
       role: role ?? this.role,
       active: active ?? this.active,
       createdAt: createdAt ?? this.createdAt,

@@ -21,8 +21,11 @@ abstract class SiteConnection
     required this.globalApiUrl,
     required this.siteId,
     required this.siteName,
-    this.adminEmail,
-    this.adminFullName,
+    this.siteStreet,
+    this.siteZipCode,
+    this.siteCity,
+    this.siteCountry,
+    this.siteCompanyEmail,
     this.adminAuthUserId,
     this.deviceSessionKey,
     DateTime? enrolledAt,
@@ -33,8 +36,11 @@ abstract class SiteConnection
     required String globalApiUrl,
     required int siteId,
     required String siteName,
-    String? adminEmail,
-    String? adminFullName,
+    String? siteStreet,
+    String? siteZipCode,
+    String? siteCity,
+    String? siteCountry,
+    String? siteCompanyEmail,
     _is.UuidValue? adminAuthUserId,
     String? deviceSessionKey,
     DateTime? enrolledAt,
@@ -46,8 +52,11 @@ abstract class SiteConnection
       globalApiUrl: jsonSerialization['globalApiUrl'] as String,
       siteId: jsonSerialization['siteId'] as int,
       siteName: jsonSerialization['siteName'] as String,
-      adminEmail: jsonSerialization['adminEmail'] as String?,
-      adminFullName: jsonSerialization['adminFullName'] as String?,
+      siteStreet: jsonSerialization['siteStreet'] as String?,
+      siteZipCode: jsonSerialization['siteZipCode'] as String?,
+      siteCity: jsonSerialization['siteCity'] as String?,
+      siteCountry: jsonSerialization['siteCountry'] as String?,
+      siteCompanyEmail: jsonSerialization['siteCompanyEmail'] as String?,
       adminAuthUserId: jsonSerialization['adminAuthUserId'] == null
           ? null
           : _is.UuidValueJsonExtension.fromJson(
@@ -71,18 +80,26 @@ abstract class SiteConnection
   /// (e.g. `http://192.168.x.x:8080` in dev, real URL in production).
   String globalApiUrl;
 
-  /// The site we are enrolled at.
+  /// Snapshot of the enrolled site (all properties, fetched at
+  /// enrollment for the "Standort" page). Keep in mind: changes to the
+  /// site made globally later require a re-sync (TODO: membership/site
+  /// sync over the stream).
   int siteId;
 
   String siteName;
 
-  /// Admin identity handed over at enrollment (the site admin acts as the
-  /// connection owner; `member.globalAuthUserId` for this admin uses the
-  /// same id).
-  String? adminEmail;
+  String? siteStreet;
 
-  String? adminFullName;
+  String? siteZipCode;
 
+  String? siteCity;
+
+  String? siteCountry;
+
+  String? siteCompanyEmail;
+
+  /// Admin person identity (pointer key into the members table; email/,
+  /// profile data lives there). No person fields in this row.
   _is.UuidValue? adminAuthUserId;
 
   /// The device credential: non-rotating SAS session key issued by the
@@ -104,8 +121,11 @@ abstract class SiteConnection
     String? globalApiUrl,
     int? siteId,
     String? siteName,
-    String? adminEmail,
-    String? adminFullName,
+    String? siteStreet,
+    String? siteZipCode,
+    String? siteCity,
+    String? siteCountry,
+    String? siteCompanyEmail,
     _is.UuidValue? adminAuthUserId,
     String? deviceSessionKey,
     DateTime? enrolledAt,
@@ -118,8 +138,11 @@ abstract class SiteConnection
       'globalApiUrl': globalApiUrl,
       'siteId': siteId,
       'siteName': siteName,
-      if (adminEmail != null) 'adminEmail': adminEmail,
-      if (adminFullName != null) 'adminFullName': adminFullName,
+      if (siteStreet != null) 'siteStreet': siteStreet,
+      if (siteZipCode != null) 'siteZipCode': siteZipCode,
+      if (siteCity != null) 'siteCity': siteCity,
+      if (siteCountry != null) 'siteCountry': siteCountry,
+      if (siteCompanyEmail != null) 'siteCompanyEmail': siteCompanyEmail,
       if (adminAuthUserId != null) 'adminAuthUserId': adminAuthUserId?.toJson(),
       if (deviceSessionKey != null) 'deviceSessionKey': deviceSessionKey,
       'enrolledAt': enrolledAt.toJson(),
@@ -134,8 +157,11 @@ abstract class SiteConnection
       'globalApiUrl': globalApiUrl,
       'siteId': siteId,
       'siteName': siteName,
-      if (adminEmail != null) 'adminEmail': adminEmail,
-      if (adminFullName != null) 'adminFullName': adminFullName,
+      if (siteStreet != null) 'siteStreet': siteStreet,
+      if (siteZipCode != null) 'siteZipCode': siteZipCode,
+      if (siteCity != null) 'siteCity': siteCity,
+      if (siteCountry != null) 'siteCountry': siteCountry,
+      if (siteCompanyEmail != null) 'siteCompanyEmail': siteCompanyEmail,
       'enrolledAt': enrolledAt.toJson(),
     };
   }
@@ -176,8 +202,11 @@ class _SiteConnectionImpl extends SiteConnection {
     required String globalApiUrl,
     required int siteId,
     required String siteName,
-    String? adminEmail,
-    String? adminFullName,
+    String? siteStreet,
+    String? siteZipCode,
+    String? siteCity,
+    String? siteCountry,
+    String? siteCompanyEmail,
     _is.UuidValue? adminAuthUserId,
     String? deviceSessionKey,
     DateTime? enrolledAt,
@@ -186,8 +215,11 @@ class _SiteConnectionImpl extends SiteConnection {
          globalApiUrl: globalApiUrl,
          siteId: siteId,
          siteName: siteName,
-         adminEmail: adminEmail,
-         adminFullName: adminFullName,
+         siteStreet: siteStreet,
+         siteZipCode: siteZipCode,
+         siteCity: siteCity,
+         siteCountry: siteCountry,
+         siteCompanyEmail: siteCompanyEmail,
          adminAuthUserId: adminAuthUserId,
          deviceSessionKey: deviceSessionKey,
          enrolledAt: enrolledAt,
@@ -202,8 +234,11 @@ class _SiteConnectionImpl extends SiteConnection {
     String? globalApiUrl,
     int? siteId,
     String? siteName,
-    Object? adminEmail = _Undefined,
-    Object? adminFullName = _Undefined,
+    Object? siteStreet = _Undefined,
+    Object? siteZipCode = _Undefined,
+    Object? siteCity = _Undefined,
+    Object? siteCountry = _Undefined,
+    Object? siteCompanyEmail = _Undefined,
     Object? adminAuthUserId = _Undefined,
     Object? deviceSessionKey = _Undefined,
     DateTime? enrolledAt,
@@ -213,10 +248,13 @@ class _SiteConnectionImpl extends SiteConnection {
       globalApiUrl: globalApiUrl ?? this.globalApiUrl,
       siteId: siteId ?? this.siteId,
       siteName: siteName ?? this.siteName,
-      adminEmail: adminEmail is String? ? adminEmail : this.adminEmail,
-      adminFullName: adminFullName is String?
-          ? adminFullName
-          : this.adminFullName,
+      siteStreet: siteStreet is String? ? siteStreet : this.siteStreet,
+      siteZipCode: siteZipCode is String? ? siteZipCode : this.siteZipCode,
+      siteCity: siteCity is String? ? siteCity : this.siteCity,
+      siteCountry: siteCountry is String? ? siteCountry : this.siteCountry,
+      siteCompanyEmail: siteCompanyEmail is String?
+          ? siteCompanyEmail
+          : this.siteCompanyEmail,
       adminAuthUserId: adminAuthUserId is _is.UuidValue?
           ? adminAuthUserId
           : this.adminAuthUserId,
@@ -246,14 +284,29 @@ class SiteConnectionUpdateTable extends _is.UpdateTable<SiteConnectionTable> {
     value,
   );
 
-  _is.ColumnValue<String, String> adminEmail(String? value) => _is.ColumnValue(
-    table.adminEmail,
+  _is.ColumnValue<String, String> siteStreet(String? value) => _is.ColumnValue(
+    table.siteStreet,
     value,
   );
 
-  _is.ColumnValue<String, String> adminFullName(String? value) =>
+  _is.ColumnValue<String, String> siteZipCode(String? value) => _is.ColumnValue(
+    table.siteZipCode,
+    value,
+  );
+
+  _is.ColumnValue<String, String> siteCity(String? value) => _is.ColumnValue(
+    table.siteCity,
+    value,
+  );
+
+  _is.ColumnValue<String, String> siteCountry(String? value) => _is.ColumnValue(
+    table.siteCountry,
+    value,
+  );
+
+  _is.ColumnValue<String, String> siteCompanyEmail(String? value) =>
       _is.ColumnValue(
-        table.adminFullName,
+        table.siteCompanyEmail,
         value,
       );
 
@@ -293,12 +346,24 @@ class SiteConnectionTable extends _is.Table<int?> {
       'siteName',
       this,
     );
-    adminEmail = _is.ColumnString(
-      'adminEmail',
+    siteStreet = _is.ColumnString(
+      'siteStreet',
       this,
     );
-    adminFullName = _is.ColumnString(
-      'adminFullName',
+    siteZipCode = _is.ColumnString(
+      'siteZipCode',
+      this,
+    );
+    siteCity = _is.ColumnString(
+      'siteCity',
+      this,
+    );
+    siteCountry = _is.ColumnString(
+      'siteCountry',
+      this,
+    );
+    siteCompanyEmail = _is.ColumnString(
+      'siteCompanyEmail',
       this,
     );
     adminAuthUserId = _is.ColumnUuid(
@@ -321,18 +386,26 @@ class SiteConnectionTable extends _is.Table<int?> {
   /// (e.g. `http://192.168.x.x:8080` in dev, real URL in production).
   late final _is.ColumnString globalApiUrl;
 
-  /// The site we are enrolled at.
+  /// Snapshot of the enrolled site (all properties, fetched at
+  /// enrollment for the "Standort" page). Keep in mind: changes to the
+  /// site made globally later require a re-sync (TODO: membership/site
+  /// sync over the stream).
   late final _is.ColumnInt siteId;
 
   late final _is.ColumnString siteName;
 
-  /// Admin identity handed over at enrollment (the site admin acts as the
-  /// connection owner; `member.globalAuthUserId` for this admin uses the
-  /// same id).
-  late final _is.ColumnString adminEmail;
+  late final _is.ColumnString siteStreet;
 
-  late final _is.ColumnString adminFullName;
+  late final _is.ColumnString siteZipCode;
 
+  late final _is.ColumnString siteCity;
+
+  late final _is.ColumnString siteCountry;
+
+  late final _is.ColumnString siteCompanyEmail;
+
+  /// Admin person identity (pointer key into the members table; email/,
+  /// profile data lives there). No person fields in this row.
   late final _is.ColumnUuid adminAuthUserId;
 
   /// The device credential: non-rotating SAS session key issued by the
@@ -349,8 +422,11 @@ class SiteConnectionTable extends _is.Table<int?> {
     globalApiUrl,
     siteId,
     siteName,
-    adminEmail,
-    adminFullName,
+    siteStreet,
+    siteZipCode,
+    siteCity,
+    siteCountry,
+    siteCompanyEmail,
     adminAuthUserId,
     deviceSessionKey,
     enrolledAt,

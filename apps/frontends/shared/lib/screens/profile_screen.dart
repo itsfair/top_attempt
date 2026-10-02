@@ -11,6 +11,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:top_attempt_global_client/top_attempt_client.dart';
 
 import '../profile_state.dart';
+import '../shared_flags.dart';
 
 /// Lets the user edit their own profile: first name, last name, birthday,
 /// an optional profile image, plus read-only email, user id and its QR
@@ -201,18 +202,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildImageSection(),
           _buildDetailsSection(),
           _buildAccountSection(profile),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: _saving ? null : _save,
-            icon: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.save_outlined),
-            label: const Text('Speichern'),
-          ),
+          if (kProfileEditingEnabled) ...[
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _saving ? null : _save,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save_outlined),
+              label: const Text('Speichern'),
+            ),
+          ],
           const SizedBox(height: 32),
         ],
       ),
@@ -241,24 +244,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
               : null,
         ),
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            OutlinedButton.icon(
-              onPressed: _pickImage,
-              icon: const Icon(Icons.photo_library_outlined),
-              label: const Text('Profilbild wählen'),
-            ),
-            if (hasRemovableImage) ...[
-              IconButton(
-                tooltip: 'Bild entfernen',
-                icon: const Icon(Icons.delete_outline),
-                onPressed: _removeImage,
+        if (kProfileEditingEnabled) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _pickImage,
+                icon: const Icon(Icons.photo_library_outlined),
+                label: const Text('Profilbild wählen'),
               ),
+              if (hasRemovableImage) ...[
+                IconButton(
+                  tooltip: 'Bild entfernen',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: _removeImage,
+                ),
+              ],
             ],
-          ],
-        ),
-        const Text('(optional)', style: TextStyle(fontSize: 12)),
+          ),
+          const Text('(optional)', style: TextStyle(fontSize: 12)),
+        ],
         const SizedBox(height: 16),
       ],
     );
@@ -270,6 +275,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
         : '${_birthday!.day.toStringAsFixed(0).padLeft(2, '0')}.'
               '${_birthday!.month.toStringAsFixed(0).padLeft(2, '0')}.'
               '${_birthday!.year}';
+
+    if (!kProfileEditingEnabled) {
+      // Read-only display (sync design pending, see shared_flags.dart).
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Meine Daten',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${_firstNameController.text} ${_lastNameController.text}'
+                    .trim()
+                    .isEmpty
+                ? '(kein Name im Profil)'
+                : '${_firstNameController.text} ${_lastNameController.text}',
+          ),
+          Text(birthdayText.isEmpty ? '(kein Geburtstag)' : birthdayText),
+          const SizedBox(height: 16),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

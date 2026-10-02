@@ -4,8 +4,8 @@ import 'package:serverpod_auth_idp_server/core.dart';
 import '../generated/protocol.dart';
 
 /// Endpoint for the user's own profile details (first name, last name and
-/// birthday). Email, user id and the profile image are managed by the
-/// built-in authentication module endpoints (see UserProfileEditEndpoint).
+/// birthday). Email, user id and the profile image are mirrored from the
+/// global instance (enrollment/sync) and not editable here.
 class ProfileDetailsEndpoint extends Endpoint {
   @override
   bool get requireLogin => true;
@@ -13,12 +13,7 @@ class ProfileDetailsEndpoint extends Endpoint {
   /// Returns the profile details of the signed-in user, or null if they have
   /// never been saved yet.
   Future<ProfileDetails?> get(Session session) async {
-    final authUserId = session.authenticated!.authUserId;
-
-    return ProfileDetails.db.findFirstRow(
-      session,
-      where: (t) => t.authUserId.equals(authUserId),
-    );
+    return _detailsForAuthenticatedUser(session);
   }
 
   /// Validates and saves the profile details of the signed-in user.
@@ -30,7 +25,11 @@ class ProfileDetailsEndpoint extends Endpoint {
     required String lastName,
     required DateTime birthday,
   }) async {
-    final authUserId = session.authenticated!.authUserId;
+    final membership = await _membershipForAuthenticatedUser(session);
+    if (membership == null) {
+      throw ArgumentError('The signed-in user has no membership row.');
+    }
+
     final first = _validateName(firstName, 'firstName');
     final last = _validateName(lastName, 'lastName');
     // Birthdays are date-only values: normalize to UTC midnight so that
@@ -46,13 +45,13 @@ class ProfileDetailsEndpoint extends Endpoint {
 
     await AuthServices.instance.userProfiles.changeFullName(
       session,
-      authUserId,
+      membership.localAuthUserId!,
       '$first $last',
     );
 
     final existing = await ProfileDetails.db.findFirstRow(
       session,
-      where: (t) => t.authUserId.equals(authUserId),
+      where: (t) => t.membershipId.equals(membership.id!),
     );
 
     if (existing != null) {
@@ -69,8 +68,29 @@ class ProfileDetailsEndpoint extends Endpoint {
         firstName: first,
         lastName: last,
         birthday: normalizedBirthday,
-        authUserId: authUserId,
+        membershipId: membership.id!,
       ),
+    );
+  }
+
+  /// The signed-in user (local login) can only be a staff/siteAdmin —
+  /// plain members have no local login. The person data is resolved via
+  /// the membership row; null when no membership exists (yet).
+  Future<Membership?> _membershipForAuthenticatedUser(Session session) async {
+    final authUserId = session.authenticated!.authUserId;
+    return Membership.db.findFirstRow(
+      session,
+      where: (t) => t.localAuthUserId.equals(authUserId),
+    );
+  }
+
+  Future<ProfileDetails?> _detailsForAuthenticatedUser(Session session) async {
+    final membership = await _membershipForAuthenticatedUser(session);
+    if (membership == null) return null;
+
+    return ProfileDetails.db.findFirstRow(
+      session,
+      where: (t) => t.membershipId.equals(membership.id!),
     );
   }
 

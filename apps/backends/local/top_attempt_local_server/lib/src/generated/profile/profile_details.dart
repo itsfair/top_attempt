@@ -12,47 +12,56 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _is;
-import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
-    as _iacs;
 import 'package:top_attempt_local_server/src/generated/protocol.dart'
     as _ianhe7y2;
+import '../site/membership.dart' as _iijnlsdj;
 
+/// Extended person data of a site person (local mirror of the global
+/// profile_details): the identity is the membership row — one profile row
+/// per membership, cascade-deleted with it. Email and image URL are
+/// mirrored from the global instance (enrollment/sync) and not locally
+/// editable; name fields are written by the signed-in person via
+/// profileDetails.save.
 abstract class ProfileDetails
     implements _is.TableRow<int?>, _is.ProtocolSerialization {
   ProfileDetails._({
     this.id,
-    required this.authUserId,
-    this.authUser,
+    required this.membershipId,
+    this.membership,
+    this.email,
     this.firstName,
     this.lastName,
     this.birthday,
+    this.imageUrl,
   });
 
   factory ProfileDetails({
     int? id,
-    required _is.UuidValue authUserId,
-    _iacs.AuthUser? authUser,
+    required int membershipId,
+    _iijnlsdj.Membership? membership,
+    String? email,
     String? firstName,
     String? lastName,
     DateTime? birthday,
+    String? imageUrl,
   }) = _ProfileDetailsImpl;
 
   factory ProfileDetails.fromJson(Map<String, dynamic> jsonSerialization) {
     return ProfileDetails(
       id: jsonSerialization['id'] as int?,
-      authUserId: _is.UuidValueJsonExtension.fromJson(
-        jsonSerialization['authUserId'],
-      ),
-      authUser: jsonSerialization['authUser'] == null
+      membershipId: jsonSerialization['membershipId'] as int,
+      membership: jsonSerialization['membership'] == null
           ? null
-          : _ianhe7y2.Protocol().deserialize<_iacs.AuthUser>(
-              jsonSerialization['authUser'],
+          : _ianhe7y2.Protocol().deserialize<_iijnlsdj.Membership>(
+              jsonSerialization['membership'],
             ),
+      email: jsonSerialization['email'] as String?,
       firstName: jsonSerialization['firstName'] as String?,
       lastName: jsonSerialization['lastName'] as String?,
       birthday: jsonSerialization['birthday'] == null
           ? null
           : _is.DateTimeJsonExtension.fromJson(jsonSerialization['birthday']),
+      imageUrl: jsonSerialization['imageUrl'] as String?,
     );
   }
 
@@ -63,16 +72,23 @@ abstract class ProfileDetails
   @override
   int? id;
 
-  _is.UuidValue authUserId;
+  int membershipId;
 
-  /// The AuthUser this data belongs to.
-  _iacs.AuthUser? authUser;
+  /// The membership (person) this data belongs to.
+  _iijnlsdj.Membership? membership;
+
+  /// Mirrored from the global account; not locally editable.
+  String? email;
 
   String? firstName;
 
   String? lastName;
 
   DateTime? birthday;
+
+  /// Local public URL of the person's profile image (local RustFS, stored
+  /// at enrollment transfer for the site admin).
+  String? imageUrl;
 
   @override
   _is.Table<int?> get table => t;
@@ -82,22 +98,26 @@ abstract class ProfileDetails
   @_is.useResult
   ProfileDetails copyWith({
     int? id,
-    _is.UuidValue? authUserId,
-    _iacs.AuthUser? authUser,
+    int? membershipId,
+    _iijnlsdj.Membership? membership,
+    String? email,
     String? firstName,
     String? lastName,
     DateTime? birthday,
+    String? imageUrl,
   });
   @override
   Map<String, dynamic> toJson() {
     return {
       '__className__': 'ProfileDetails',
       if (id != null) 'id': id,
-      'authUserId': authUserId.toJson(),
-      if (authUser != null) 'authUser': authUser?.toJson(),
+      'membershipId': membershipId,
+      if (membership != null) 'membership': membership?.toJson(),
+      if (email != null) 'email': email,
       if (firstName != null) 'firstName': firstName,
       if (lastName != null) 'lastName': lastName,
       if (birthday != null) 'birthday': birthday?.toJson(),
+      if (imageUrl != null) 'imageUrl': imageUrl,
     };
   }
 
@@ -106,16 +126,20 @@ abstract class ProfileDetails
     return {
       '__className__': 'ProfileDetails',
       if (id != null) 'id': id,
-      'authUserId': authUserId.toJson(),
-      if (authUser != null) 'authUser': authUser?.toJson(),
+      'membershipId': membershipId,
+      if (membership != null) 'membership': membership?.toJsonForProtocol(),
+      if (email != null) 'email': email,
       if (firstName != null) 'firstName': firstName,
       if (lastName != null) 'lastName': lastName,
       if (birthday != null) 'birthday': birthday?.toJson(),
+      if (imageUrl != null) 'imageUrl': imageUrl,
     };
   }
 
-  static ProfileDetailsInclude include({_iacs.AuthUserInclude? authUser}) {
-    return ProfileDetailsInclude._(authUser: authUser);
+  static ProfileDetailsInclude include({
+    _iijnlsdj.MembershipInclude? membership,
+  }) {
+    return ProfileDetailsInclude._(membership: membership);
   }
 
   static ProfileDetailsIncludeList includeList({
@@ -147,18 +171,22 @@ class _Undefined {}
 class _ProfileDetailsImpl extends ProfileDetails {
   _ProfileDetailsImpl({
     int? id,
-    required _is.UuidValue authUserId,
-    _iacs.AuthUser? authUser,
+    required int membershipId,
+    _iijnlsdj.Membership? membership,
+    String? email,
     String? firstName,
     String? lastName,
     DateTime? birthday,
+    String? imageUrl,
   }) : super._(
          id: id,
-         authUserId: authUserId,
-         authUser: authUser,
+         membershipId: membershipId,
+         membership: membership,
+         email: email,
          firstName: firstName,
          lastName: lastName,
          birthday: birthday,
+         imageUrl: imageUrl,
        );
 
   /// Returns a shallow copy of this [ProfileDetails]
@@ -167,21 +195,25 @@ class _ProfileDetailsImpl extends ProfileDetails {
   @override
   ProfileDetails copyWith({
     Object? id = _Undefined,
-    _is.UuidValue? authUserId,
-    Object? authUser = _Undefined,
+    int? membershipId,
+    Object? membership = _Undefined,
+    Object? email = _Undefined,
     Object? firstName = _Undefined,
     Object? lastName = _Undefined,
     Object? birthday = _Undefined,
+    Object? imageUrl = _Undefined,
   }) {
     return ProfileDetails(
       id: id is int? ? id : this.id,
-      authUserId: authUserId ?? this.authUserId,
-      authUser: authUser is _iacs.AuthUser?
-          ? authUser
-          : this.authUser?.copyWith(),
+      membershipId: membershipId ?? this.membershipId,
+      membership: membership is _iijnlsdj.Membership?
+          ? membership
+          : this.membership?.copyWith(),
+      email: email is String? ? email : this.email,
       firstName: firstName is String? ? firstName : this.firstName,
       lastName: lastName is String? ? lastName : this.lastName,
       birthday: birthday is DateTime? ? birthday : this.birthday,
+      imageUrl: imageUrl is String? ? imageUrl : this.imageUrl,
     );
   }
 }
@@ -189,10 +221,13 @@ class _ProfileDetailsImpl extends ProfileDetails {
 class ProfileDetailsUpdateTable extends _is.UpdateTable<ProfileDetailsTable> {
   ProfileDetailsUpdateTable(super.table);
 
-  _is.ColumnValue<_is.UuidValue, _is.UuidValue> authUserId(
-    _is.UuidValue value,
-  ) => _is.ColumnValue(
-    table.authUserId,
+  _is.ColumnValue<int, int> membershipId(int value) => _is.ColumnValue(
+    table.membershipId,
+    value,
+  );
+
+  _is.ColumnValue<String, String> email(String? value) => _is.ColumnValue(
+    table.email,
     value,
   );
 
@@ -211,14 +246,23 @@ class ProfileDetailsUpdateTable extends _is.UpdateTable<ProfileDetailsTable> {
         table.birthday,
         value,
       );
+
+  _is.ColumnValue<String, String> imageUrl(String? value) => _is.ColumnValue(
+    table.imageUrl,
+    value,
+  );
 }
 
 class ProfileDetailsTable extends _is.Table<int?> {
   ProfileDetailsTable({super.tableRelation})
     : super(tableName: 'profile_details') {
     updateTable = ProfileDetailsUpdateTable(this);
-    authUserId = _is.ColumnUuid(
-      'authUserId',
+    membershipId = _is.ColumnInt(
+      'membershipId',
+      this,
+    );
+    email = _is.ColumnString(
+      'email',
       this,
     );
     firstName = _is.ColumnString(
@@ -233,14 +277,21 @@ class ProfileDetailsTable extends _is.Table<int?> {
       'birthday',
       this,
     );
+    imageUrl = _is.ColumnString(
+      'imageUrl',
+      this,
+    );
   }
 
   late final ProfileDetailsUpdateTable updateTable;
 
-  late final _is.ColumnUuid authUserId;
+  late final _is.ColumnInt membershipId;
 
-  /// The AuthUser this data belongs to.
-  _iacs.AuthUserTable? _authUser;
+  /// The membership (person) this data belongs to.
+  _iijnlsdj.MembershipTable? _membership;
+
+  /// Mirrored from the global account; not locally editable.
+  late final _is.ColumnString email;
 
   late final _is.ColumnString firstName;
 
@@ -248,46 +299,52 @@ class ProfileDetailsTable extends _is.Table<int?> {
 
   late final _is.ColumnDateTime birthday;
 
-  _iacs.AuthUserTable get authUser {
-    if (_authUser != null) return _authUser!;
-    _authUser = _is.createRelationTable(
-      relationFieldName: 'authUser',
-      field: ProfileDetails.t.authUserId,
-      foreignField: _iacs.AuthUser.t.id,
+  /// Local public URL of the person's profile image (local RustFS, stored
+  /// at enrollment transfer for the site admin).
+  late final _is.ColumnString imageUrl;
+
+  _iijnlsdj.MembershipTable get membership {
+    if (_membership != null) return _membership!;
+    _membership = _is.createRelationTable(
+      relationFieldName: 'membership',
+      field: ProfileDetails.t.membershipId,
+      foreignField: _iijnlsdj.Membership.t.id,
       tableRelation: tableRelation,
       createTable: (foreignTableRelation) =>
-          _iacs.AuthUserTable(tableRelation: foreignTableRelation),
+          _iijnlsdj.MembershipTable(tableRelation: foreignTableRelation),
     );
-    return _authUser!;
+    return _membership!;
   }
 
   @override
   List<_is.Column> get columns => [
     id,
-    authUserId,
+    membershipId,
+    email,
     firstName,
     lastName,
     birthday,
+    imageUrl,
   ];
 
   @override
   _is.Table? getRelationTable(String relationField) {
-    if (relationField == 'authUser') {
-      return authUser;
+    if (relationField == 'membership') {
+      return membership;
     }
     return null;
   }
 }
 
 class ProfileDetailsInclude extends _is.IncludeObject {
-  ProfileDetailsInclude._({_iacs.AuthUserInclude? authUser}) {
-    _authUser = authUser;
+  ProfileDetailsInclude._({_iijnlsdj.MembershipInclude? membership}) {
+    _membership = membership;
   }
 
-  _iacs.AuthUserInclude? _authUser;
+  _iijnlsdj.MembershipInclude? _membership;
 
   @override
-  Map<String, _is.Include?> get includes => {'authUser': _authUser};
+  Map<String, _is.Include?> get includes => {'membership': _membership};
 
   @override
   _is.Table<int?> get table => ProfileDetails.t;
@@ -718,25 +775,25 @@ class ProfileDetailsRepository {
 class ProfileDetailsAttachRowRepository {
   const ProfileDetailsAttachRowRepository._();
 
-  /// Creates a relation between the given [ProfileDetails] and [AuthUser]
-  /// by setting the [ProfileDetails]'s foreign key `authUserId` to refer to the [AuthUser].
-  Future<void> authUser(
+  /// Creates a relation between the given [ProfileDetails] and [Membership]
+  /// by setting the [ProfileDetails]'s foreign key `membershipId` to refer to the [Membership].
+  Future<void> membership(
     _is.DatabaseSession session,
     ProfileDetails profileDetails,
-    _iacs.AuthUser authUser, {
+    _iijnlsdj.Membership membership, {
     _is.Transaction? transaction,
   }) async {
     if (profileDetails.id == null) {
       throw ArgumentError.notNull('profileDetails.id');
     }
-    if (authUser.id == null) {
-      throw ArgumentError.notNull('authUser.id');
+    if (membership.id == null) {
+      throw ArgumentError.notNull('membership.id');
     }
 
-    var $profileDetails = profileDetails.copyWith(authUserId: authUser.id);
+    var $profileDetails = profileDetails.copyWith(membershipId: membership.id);
     await session.db.updateRow<ProfileDetails>(
       $profileDetails,
-      columns: [ProfileDetails.t.authUserId],
+      columns: [ProfileDetails.t.membershipId],
       transaction: transaction,
     );
   }

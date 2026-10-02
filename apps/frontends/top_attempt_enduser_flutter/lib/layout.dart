@@ -43,58 +43,68 @@ class _LayoutState extends State<Layout> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Home'),
-        backgroundColor: Colors.blue[900],
-        foregroundColor: Colors.white,
-        actions: [
-          AccountDropdown(
-            profileState: profileState,
-            isSignedIn: _isSignedIn,
-            onLogin: (context) => context.go('/sign-in'),
-            onLogout: () => client.auth.signOutDevice(),
-            onProfile: (context) => context.go('/profile'),
-            onSignedOut: () {
-              if (mounted) context.go('/');
-            },
+    // Profile data changes (e.g. after the profile screen saves) must
+    // re-render the dropdown avatar/initials.
+    return ListenableBuilder(
+      listenable: profileState,
+      builder: (context, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('Home'),
+            backgroundColor: Colors.blue[900],
+            foregroundColor: Colors.white,
+            actions: [
+              AccountDropdown(
+                isSignedIn: _isSignedIn,
+                fullName: profileState.profile?.fullName,
+                imageUrl: profileState.profile?.imageUrl?.toString(),
+                extraItems: const [],
+                onLogin: (context) => context.go('/sign-in'),
+                onLogout: () => client.auth.signOutDevice(),
+                onProfile: (context) => context.go('/profile'),
+                onSignedOut: () {
+                  if (mounted) context.go('/');
+                },
+              ),
+            ],
           ),
-        ],
-      ),
-      body: widget.child,
-      bottomNavigationBar: BottomAppBar(
-        shape: CircularNotchedRectangle(),
-        notchMargin: 6.0,
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            IconButton(
-              icon: Icon(Icons.home),
-              onPressed: () {
-                context.go('/');
-              },
+          body: widget.child,
+          bottomNavigationBar: BottomAppBar(
+            shape: CircularNotchedRectangle(),
+            notchMargin: 6.0,
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                IconButton(
+                  icon: Icon(Icons.home),
+                  onPressed: () {
+                    context.go('/');
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.notifications),
+                  onPressed: () {},
+                ),
+                SizedBox(width: 40), // Platz für den FAB
+                IconButton(
+                  icon: Icon(Icons.messenger),
+                  onPressed: () {},
+                ),
+              ],
             ),
-            IconButton(
-              icon: Icon(Icons.notifications),
-              onPressed: () {},
-            ),
-            SizedBox(width: 40), // Platz für den FAB
-            IconButton(
-              icon: Icon(Icons.messenger),
-              onPressed: () {},
-            ),
-          ],
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        shape: const CircleBorder(),
-        onPressed: () {
-          context.go('/qr-reader');
-        },
-        child: Icon(Icons.qr_code_scanner),
-      ),
+          ),
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerDocked,
+          floatingActionButton: FloatingActionButton(
+            shape: const CircleBorder(),
+            onPressed: () {
+              context.go('/qr-reader');
+            },
+            child: Icon(Icons.qr_code_scanner),
+          ),
+        );
+      },
     );
   }
 }

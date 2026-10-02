@@ -28,11 +28,13 @@ mirror):
   of the site admin** at the global instance (`siteSetup.enterSetup` →
   `top_attempt_global_client` → global `siteEnrollment` endpoint; site
   picker if the admin owns several sites).
-- **Members directory**: after enrollment the local member row of the
-  admin is created (`globalAuthUserId` from the transfer — **exchange
-  id**, later also the key for door authorization) and a **local
-  AuthUser** is created (email like global, **same password** the admin
-  just used; scope `local-admin` — hashed locally via
+- **Members directory**: after enrollment the local membership row of
+  the admin is created (`globalAuthUserId` from the transfer — **exchange
+  id**, later also the key for door authorization) plus their
+  `profile_details` row (person data: email, name, birthday, image —
+  single person store) and a **local AuthUser** is created (email like
+  global, **same password** the admin just used; scope `local-admin` —
+  hashed locally via
   `EmailIdp.admin.createEmailAuthentication`). No (!) local
   self-registration: logins are only ever created from verified global
   logins (the same pattern applies later for employees).
@@ -83,7 +85,7 @@ relaunched any time in the start TUI via Ctrl+R.
 | `emailIdp` (`src/auth/email_idp_endpoint.dart`) | Email IdP: local login (registration/member self-signup is intentionally off) |
 | `jwtRefresh` (`src/auth/jwt_refresh_endpoint.dart`) | Renew access tokens |
 | `profileDetails` (`src/profile/profile_details_endpoint.dart`) | First/last name + birthday (mirror of global) |
-| `siteSetup` (`src/site/site_setup_endpoint.dart`) | `enterSetup({email, password, siteId?})` (checks against global, processes transfer: members row + local `local-admin` login) and `connectionStatus()` for the App-Bar chip |
+| `siteSetup` (`src/site/site_setup_endpoint.dart`) | `enterSetup({email, password, siteId?})` (checks against global, processes transfer: memberships row + profile_details + local `local-admin` login) and `connectionStatus()` for the App-Bar chip |
 | `greeting` (`src/greetings/…`) | Serverpod sample endpoint |
 
 No `userProfileEdit` endpoint in own code (present in the global
@@ -91,6 +93,16 @@ backend) — clarify when building out the members/employee model.
 
 ## Data model notes
 
+- **Single person store (2026-09-26)**: person data (email, first/last
+  name, birthday, image URL) lives ONLY in `profile_details` — one row
+  per `memberships` row (`membershipId`, FK cascade, unique), analogous
+  to the global instance. `memberships` (renamed from `Member`/`members`)
+  is a pure membership table: `globalAuthUserId` (exchange/door key),
+  `localAuthUser` link (staff/siteAdmin only; `onDelete=SetNull` —
+  removing a login keeps membership + person data), `role`, `active`,
+  `createdAt`. Enrollment transfer writes both rows; a later "make
+  employee" only creates/links a local AuthUser (`memberships.
+  localAuthUserId`).
 - `profile_details` mirrors global. **Birthday as UTC-midnight date
   sentinel** (2026-09-25, identical to global): the picked date is
   normalized to `DateTime.utc(year, month, day)` before persistence;
@@ -107,9 +119,10 @@ backend) — clarify when building out the members/employee model.
 ## Open questions (next expansion)
 
 1. **Membership sync over the stream**: propagate new/removed global
-   `SiteMembership` events into the local `members` table (the WS
-   connection is the transport layer; rule: `members.globalAuthUserId` =
-   global person id = door authorization key).
+   `SiteMembership` events into the local `memberships` +
+   `profile_details` tables (the WS connection is the transport layer;
+   rule: `memberships.globalAuthUserId` = global person id = door
+   authorization key).
 2. **Employees**: the member verifies on site with global credentials →
    local login (same model as the admin setup); roles/status changed
    globally via `site-device`-restricted endpoints.
@@ -133,5 +146,17 @@ backend) — clarify when building out the members/employee model.
 - Next step: membership sync over the WS connection (open question 1),
   then members/employee model + admin UI protection.
 - Migrations: base migration `20260923104843538` +
-  `20260923112557527-upgrade-4-0` + site module migration
-  `20260925151309478` (SiteConnection/Member).
+  `20260923112557527-upgrade-4-0` + site module migrations
+  `20260925151309478` and `20260926112250954` (site snapshot + admin
+  pointer in `site_connections`) + `20260926130244462` (rename
+  `Member`/`members` → `Membership`/`memberships`, person data moved
+  into `profile_details` incl. `email`/`imageUrl`, `localAuthUser`
+  FK → SetNull).
+  **Existing enrollment data requires re-setup after the schema
+  change** (the site-connection row shape changed; data comes back from
+  the global instance at setup).
+- Profile image serving caveat: Flutter-web display of local RustFS
+  images requires CORS on the local RustFS instance (console :9101).
+- Security TODOs (see apps/AGENTS.md): presigned/short-lived image URLs
+  for the enrollment transfer instead of raw capability URLs, HTTPS for
+  all transfers in production, RustFS stays LAN-only.

@@ -1,0 +1,27 @@
+### Everything the local admin UI displays about this instance: connection
+### state, the site snapshot and the admin's mirrored person data.
+class: LocalAdminInfo
+fields:
+
+  ### Live connection state (from the device-connection worker).
+  connectionState: SiteConnectionState
+  connectionError: String?
+  lastConnectedAt: DateTime?
+
+  ### Site snapshot (fetched at enrollment; diverges if the site is
+  ### changed globally later — sync TODO).
+  siteId: int?
+  siteName: String?
+  siteStreet: String?
+  siteZipCode: String?
+  siteCity: String?
+  siteCountry: String?
+  siteCompanyEmail: String?
+
+  ### The admin's mirrored person data (join into the members table via
+  ### `site_connections.adminAuthUserId`).
+  adminEmail: String?
+  adminFirstName: String?
+  adminLastName: String?
+  adminBirthday: DateTime?
+  adminImageUrl: String?

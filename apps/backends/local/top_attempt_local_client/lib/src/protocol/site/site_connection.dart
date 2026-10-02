@@ -21,8 +21,11 @@ abstract class SiteConnection
     required this.globalApiUrl,
     required this.siteId,
     required this.siteName,
-    this.adminEmail,
-    this.adminFullName,
+    this.siteStreet,
+    this.siteZipCode,
+    this.siteCity,
+    this.siteCountry,
+    this.siteCompanyEmail,
     DateTime? enrolledAt,
   }) : enrolledAt = enrolledAt ?? DateTime.now();
 
@@ -31,8 +34,11 @@ abstract class SiteConnection
     required String globalApiUrl,
     required int siteId,
     required String siteName,
-    String? adminEmail,
-    String? adminFullName,
+    String? siteStreet,
+    String? siteZipCode,
+    String? siteCity,
+    String? siteCountry,
+    String? siteCompanyEmail,
     DateTime? enrolledAt,
   }) = _SiteConnectionImpl;
 
@@ -42,8 +48,11 @@ abstract class SiteConnection
       globalApiUrl: jsonSerialization['globalApiUrl'] as String,
       siteId: jsonSerialization['siteId'] as int,
       siteName: jsonSerialization['siteName'] as String,
-      adminEmail: jsonSerialization['adminEmail'] as String?,
-      adminFullName: jsonSerialization['adminFullName'] as String?,
+      siteStreet: jsonSerialization['siteStreet'] as String?,
+      siteZipCode: jsonSerialization['siteZipCode'] as String?,
+      siteCity: jsonSerialization['siteCity'] as String?,
+      siteCountry: jsonSerialization['siteCountry'] as String?,
+      siteCompanyEmail: jsonSerialization['siteCompanyEmail'] as String?,
       enrolledAt: jsonSerialization['enrolledAt'] == null
           ? null
           : _isc.DateTimeJsonExtension.fromJson(
@@ -61,17 +70,23 @@ abstract class SiteConnection
   /// (e.g. `http://192.168.x.x:8080` in dev, real URL in production).
   String globalApiUrl;
 
-  /// The site we are enrolled at.
+  /// Snapshot of the enrolled site (all properties, fetched at
+  /// enrollment for the "Standort" page). Keep in mind: changes to the
+  /// site made globally later require a re-sync (TODO: membership/site
+  /// sync over the stream).
   int siteId;
 
   String siteName;
 
-  /// Admin identity handed over at enrollment (the site admin acts as the
-  /// connection owner; `member.globalAuthUserId` for this admin uses the
-  /// same id).
-  String? adminEmail;
+  String? siteStreet;
 
-  String? adminFullName;
+  String? siteZipCode;
+
+  String? siteCity;
+
+  String? siteCountry;
+
+  String? siteCompanyEmail;
 
   /// When the enrollment happened (may be a recovery).
   DateTime enrolledAt;
@@ -84,8 +99,11 @@ abstract class SiteConnection
     String? globalApiUrl,
     int? siteId,
     String? siteName,
-    String? adminEmail,
-    String? adminFullName,
+    String? siteStreet,
+    String? siteZipCode,
+    String? siteCity,
+    String? siteCountry,
+    String? siteCompanyEmail,
     DateTime? enrolledAt,
   });
   @override
@@ -96,8 +114,11 @@ abstract class SiteConnection
       'globalApiUrl': globalApiUrl,
       'siteId': siteId,
       'siteName': siteName,
-      if (adminEmail != null) 'adminEmail': adminEmail,
-      if (adminFullName != null) 'adminFullName': adminFullName,
+      if (siteStreet != null) 'siteStreet': siteStreet,
+      if (siteZipCode != null) 'siteZipCode': siteZipCode,
+      if (siteCity != null) 'siteCity': siteCity,
+      if (siteCountry != null) 'siteCountry': siteCountry,
+      if (siteCompanyEmail != null) 'siteCompanyEmail': siteCompanyEmail,
       'enrolledAt': enrolledAt.toJson(),
     };
   }
@@ -110,8 +131,11 @@ abstract class SiteConnection
       'globalApiUrl': globalApiUrl,
       'siteId': siteId,
       'siteName': siteName,
-      if (adminEmail != null) 'adminEmail': adminEmail,
-      if (adminFullName != null) 'adminFullName': adminFullName,
+      if (siteStreet != null) 'siteStreet': siteStreet,
+      if (siteZipCode != null) 'siteZipCode': siteZipCode,
+      if (siteCity != null) 'siteCity': siteCity,
+      if (siteCountry != null) 'siteCountry': siteCountry,
+      if (siteCompanyEmail != null) 'siteCompanyEmail': siteCompanyEmail,
       'enrolledAt': enrolledAt.toJson(),
     };
   }
@@ -130,16 +154,22 @@ class _SiteConnectionImpl extends SiteConnection {
     required String globalApiUrl,
     required int siteId,
     required String siteName,
-    String? adminEmail,
-    String? adminFullName,
+    String? siteStreet,
+    String? siteZipCode,
+    String? siteCity,
+    String? siteCountry,
+    String? siteCompanyEmail,
     DateTime? enrolledAt,
   }) : super._(
          id: id,
          globalApiUrl: globalApiUrl,
          siteId: siteId,
          siteName: siteName,
-         adminEmail: adminEmail,
-         adminFullName: adminFullName,
+         siteStreet: siteStreet,
+         siteZipCode: siteZipCode,
+         siteCity: siteCity,
+         siteCountry: siteCountry,
+         siteCompanyEmail: siteCompanyEmail,
          enrolledAt: enrolledAt,
        );
 
@@ -152,8 +182,11 @@ class _SiteConnectionImpl extends SiteConnection {
     String? globalApiUrl,
     int? siteId,
     String? siteName,
-    Object? adminEmail = _Undefined,
-    Object? adminFullName = _Undefined,
+    Object? siteStreet = _Undefined,
+    Object? siteZipCode = _Undefined,
+    Object? siteCity = _Undefined,
+    Object? siteCountry = _Undefined,
+    Object? siteCompanyEmail = _Undefined,
     DateTime? enrolledAt,
   }) {
     return SiteConnection(
@@ -161,10 +194,13 @@ class _SiteConnectionImpl extends SiteConnection {
       globalApiUrl: globalApiUrl ?? this.globalApiUrl,
       siteId: siteId ?? this.siteId,
       siteName: siteName ?? this.siteName,
-      adminEmail: adminEmail is String? ? adminEmail : this.adminEmail,
-      adminFullName: adminFullName is String?
-          ? adminFullName
-          : this.adminFullName,
+      siteStreet: siteStreet is String? ? siteStreet : this.siteStreet,
+      siteZipCode: siteZipCode is String? ? siteZipCode : this.siteZipCode,
+      siteCity: siteCity is String? ? siteCity : this.siteCity,
+      siteCountry: siteCountry is String? ? siteCountry : this.siteCountry,
+      siteCompanyEmail: siteCompanyEmail is String?
+          ? siteCompanyEmail
+          : this.siteCompanyEmail,
       enrolledAt: enrolledAt ?? this.enrolledAt,
     );
   }

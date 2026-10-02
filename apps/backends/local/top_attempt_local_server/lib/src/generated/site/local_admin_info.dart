@@ -10,91 +10,92 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:serverpod_client/serverpod_client.dart' as _isc;
+import 'package:serverpod/serverpod.dart' as _is;
+import '../site/site_connection_state.dart' as _ilrp6tdy;
 
-/// Transfer data the local instance receives at successful enrollment
-/// (fresh setup). Contains no credentials: the device session key is an
-/// SAS session key (`AuthStrategy.session`) for the site admin that was
-/// issued server-side and has to be stored locally, write-once.
-abstract class SiteTransferInfo
-    implements _isc.SerializableModel, _isc.ProtocolSerialization {
-  SiteTransferInfo._({
-    required this.siteId,
-    required this.siteName,
+/// Everything the local admin UI displays about this instance: connection
+/// state, the site snapshot and the admin's mirrored person data.
+abstract class LocalAdminInfo
+    implements _is.SerializableModel, _is.ProtocolSerialization {
+  LocalAdminInfo._({
+    required this.connectionState,
+    this.connectionError,
+    this.lastConnectedAt,
+    this.siteId,
+    this.siteName,
     this.siteStreet,
     this.siteZipCode,
     this.siteCity,
     this.siteCountry,
     this.siteCompanyEmail,
-    this.siteStatusName,
-    this.siteRegisteredAt,
     this.adminEmail,
-    required this.adminAuthUserId,
     this.adminFirstName,
     this.adminLastName,
     this.adminBirthday,
     this.adminImageUrl,
-    required this.deviceSessionKey,
   });
 
-  factory SiteTransferInfo({
-    required int siteId,
-    required String siteName,
+  factory LocalAdminInfo({
+    required _ilrp6tdy.SiteConnectionState connectionState,
+    String? connectionError,
+    DateTime? lastConnectedAt,
+    int? siteId,
+    String? siteName,
     String? siteStreet,
     String? siteZipCode,
     String? siteCity,
     String? siteCountry,
     String? siteCompanyEmail,
-    String? siteStatusName,
-    DateTime? siteRegisteredAt,
     String? adminEmail,
-    required _isc.UuidValue adminAuthUserId,
     String? adminFirstName,
     String? adminLastName,
     DateTime? adminBirthday,
     String? adminImageUrl,
-    required String deviceSessionKey,
-  }) = _SiteTransferInfoImpl;
+  }) = _LocalAdminInfoImpl;
 
-  factory SiteTransferInfo.fromJson(Map<String, dynamic> jsonSerialization) {
-    return SiteTransferInfo(
-      siteId: jsonSerialization['siteId'] as int,
-      siteName: jsonSerialization['siteName'] as String,
+  factory LocalAdminInfo.fromJson(Map<String, dynamic> jsonSerialization) {
+    return LocalAdminInfo(
+      connectionState: _ilrp6tdy.SiteConnectionState.fromJson(
+        (jsonSerialization['connectionState'] as String),
+      ),
+      connectionError: jsonSerialization['connectionError'] as String?,
+      lastConnectedAt: jsonSerialization['lastConnectedAt'] == null
+          ? null
+          : _is.DateTimeJsonExtension.fromJson(
+              jsonSerialization['lastConnectedAt'],
+            ),
+      siteId: jsonSerialization['siteId'] as int?,
+      siteName: jsonSerialization['siteName'] as String?,
       siteStreet: jsonSerialization['siteStreet'] as String?,
       siteZipCode: jsonSerialization['siteZipCode'] as String?,
       siteCity: jsonSerialization['siteCity'] as String?,
       siteCountry: jsonSerialization['siteCountry'] as String?,
       siteCompanyEmail: jsonSerialization['siteCompanyEmail'] as String?,
-      siteStatusName: jsonSerialization['siteStatusName'] as String?,
-      siteRegisteredAt: jsonSerialization['siteRegisteredAt'] == null
-          ? null
-          : _isc.DateTimeJsonExtension.fromJson(
-              jsonSerialization['siteRegisteredAt'],
-            ),
       adminEmail: jsonSerialization['adminEmail'] as String?,
-      adminAuthUserId: _isc.UuidValueJsonExtension.fromJson(
-        jsonSerialization['adminAuthUserId'],
-      ),
       adminFirstName: jsonSerialization['adminFirstName'] as String?,
       adminLastName: jsonSerialization['adminLastName'] as String?,
       adminBirthday: jsonSerialization['adminBirthday'] == null
           ? null
-          : _isc.DateTimeJsonExtension.fromJson(
+          : _is.DateTimeJsonExtension.fromJson(
               jsonSerialization['adminBirthday'],
             ),
       adminImageUrl: jsonSerialization['adminImageUrl'] as String?,
-      deviceSessionKey: jsonSerialization['deviceSessionKey'] as String,
     );
   }
 
-  /// Snapshot of the enrolled site with ALL its properties (the local
-  /// instance caches it for the "Standort" page).
-  int siteId;
+  /// Live connection state (from the device-connection worker).
+  _ilrp6tdy.SiteConnectionState connectionState;
 
-  /// Name of the site.
-  String siteName;
+  String? connectionError;
 
-  /// Site address data.
+  DateTime? lastConnectedAt;
+
+  /// Site snapshot (fetched at enrollment; diverges if the site is
+  /// changed globally later — sync TODO).
+  int? siteId;
+
+  String? siteName;
+
   String? siteStreet;
 
   String? siteZipCode;
@@ -103,46 +104,27 @@ abstract class SiteTransferInfo
 
   String? siteCountry;
 
-  /// Contact mail of the operating company.
   String? siteCompanyEmail;
 
-  /// Setup status at enroll time (pendingSetup|registered).
-  String? siteStatusName;
-
-  /// When the site registered at the global instance.
-  DateTime? siteRegisteredAt;
-
-  /// Email of the site admin (global) — also used as the local admin's
-  /// login email.
+  /// The admin's mirrored person data (join into the members table via
+  /// `site_connections.adminAuthUserId`).
   String? adminEmail;
 
-  /// Global authUserId of the site admin — the exchange key for the local
-  /// members table (`members.globalAuthUserId`), used later for door
-  /// authorization. Local member rows must carry exactly this id.
-  _isc.UuidValue adminAuthUserId;
-
-  /// Global profile names of the site admin (may be null until the admin
-  /// completed their profile).
   String? adminFirstName;
 
   String? adminLastName;
 
-  /// Global birthday of the site admin (UTC-midnight date sentinel).
   DateTime? adminBirthday;
 
-  /// Public image URL of the site admin's profile image (global RustFS).
-  /// TODO (security): hand over a short-lived presigned URL instead of
-  /// the raw/eternal object URL (capability URL, see backend AGENTS.md).
   String? adminImageUrl;
 
-  /// The SAS session key for the device connection. Store securely; there
-  /// is no rotation (write once) and the key cannot be recovered.
-  String deviceSessionKey;
-
-  /// Returns a shallow copy of this [SiteTransferInfo]
+  /// Returns a shallow copy of this [LocalAdminInfo]
   /// with some or all fields replaced by the given arguments.
-  @_isc.useResult
-  SiteTransferInfo copyWith({
+  @_is.useResult
+  LocalAdminInfo copyWith({
+    _ilrp6tdy.SiteConnectionState? connectionState,
+    String? connectionError,
+    DateTime? lastConnectedAt,
     int? siteId,
     String? siteName,
     String? siteStreet,
@@ -150,91 +132,85 @@ abstract class SiteTransferInfo
     String? siteCity,
     String? siteCountry,
     String? siteCompanyEmail,
-    String? siteStatusName,
-    DateTime? siteRegisteredAt,
     String? adminEmail,
-    _isc.UuidValue? adminAuthUserId,
     String? adminFirstName,
     String? adminLastName,
     DateTime? adminBirthday,
     String? adminImageUrl,
-    String? deviceSessionKey,
   });
   @override
   Map<String, dynamic> toJson() {
     return {
-      '__className__': 'SiteTransferInfo',
-      'siteId': siteId,
-      'siteName': siteName,
+      '__className__': 'LocalAdminInfo',
+      'connectionState': connectionState.toJson(),
+      if (connectionError != null) 'connectionError': connectionError,
+      if (lastConnectedAt != null) 'lastConnectedAt': lastConnectedAt?.toJson(),
+      if (siteId != null) 'siteId': siteId,
+      if (siteName != null) 'siteName': siteName,
       if (siteStreet != null) 'siteStreet': siteStreet,
       if (siteZipCode != null) 'siteZipCode': siteZipCode,
       if (siteCity != null) 'siteCity': siteCity,
       if (siteCountry != null) 'siteCountry': siteCountry,
       if (siteCompanyEmail != null) 'siteCompanyEmail': siteCompanyEmail,
-      if (siteStatusName != null) 'siteStatusName': siteStatusName,
-      if (siteRegisteredAt != null)
-        'siteRegisteredAt': siteRegisteredAt?.toJson(),
       if (adminEmail != null) 'adminEmail': adminEmail,
-      'adminAuthUserId': adminAuthUserId.toJson(),
       if (adminFirstName != null) 'adminFirstName': adminFirstName,
       if (adminLastName != null) 'adminLastName': adminLastName,
       if (adminBirthday != null) 'adminBirthday': adminBirthday?.toJson(),
       if (adminImageUrl != null) 'adminImageUrl': adminImageUrl,
-      'deviceSessionKey': deviceSessionKey,
     };
   }
 
   @override
   Map<String, dynamic> toJsonForProtocol() {
     return {
-      '__className__': 'SiteTransferInfo',
-      'siteId': siteId,
-      'siteName': siteName,
+      '__className__': 'LocalAdminInfo',
+      'connectionState': connectionState.toJson(),
+      if (connectionError != null) 'connectionError': connectionError,
+      if (lastConnectedAt != null) 'lastConnectedAt': lastConnectedAt?.toJson(),
+      if (siteId != null) 'siteId': siteId,
+      if (siteName != null) 'siteName': siteName,
       if (siteStreet != null) 'siteStreet': siteStreet,
       if (siteZipCode != null) 'siteZipCode': siteZipCode,
       if (siteCity != null) 'siteCity': siteCity,
       if (siteCountry != null) 'siteCountry': siteCountry,
       if (siteCompanyEmail != null) 'siteCompanyEmail': siteCompanyEmail,
-      if (siteStatusName != null) 'siteStatusName': siteStatusName,
-      if (siteRegisteredAt != null)
-        'siteRegisteredAt': siteRegisteredAt?.toJson(),
       if (adminEmail != null) 'adminEmail': adminEmail,
-      'adminAuthUserId': adminAuthUserId.toJson(),
       if (adminFirstName != null) 'adminFirstName': adminFirstName,
       if (adminLastName != null) 'adminLastName': adminLastName,
       if (adminBirthday != null) 'adminBirthday': adminBirthday?.toJson(),
       if (adminImageUrl != null) 'adminImageUrl': adminImageUrl,
-      'deviceSessionKey': deviceSessionKey,
     };
   }
 
   @override
   String toString() {
-    return _isc.SerializationManager.encode(this);
+    return _is.SerializationManager.encode(this);
   }
 }
 
 class _Undefined {}
 
-class _SiteTransferInfoImpl extends SiteTransferInfo {
-  _SiteTransferInfoImpl({
-    required int siteId,
-    required String siteName,
+class _LocalAdminInfoImpl extends LocalAdminInfo {
+  _LocalAdminInfoImpl({
+    required _ilrp6tdy.SiteConnectionState connectionState,
+    String? connectionError,
+    DateTime? lastConnectedAt,
+    int? siteId,
+    String? siteName,
     String? siteStreet,
     String? siteZipCode,
     String? siteCity,
     String? siteCountry,
     String? siteCompanyEmail,
-    String? siteStatusName,
-    DateTime? siteRegisteredAt,
     String? adminEmail,
-    required _isc.UuidValue adminAuthUserId,
     String? adminFirstName,
     String? adminLastName,
     DateTime? adminBirthday,
     String? adminImageUrl,
-    required String deviceSessionKey,
   }) : super._(
+         connectionState: connectionState,
+         connectionError: connectionError,
+         lastConnectedAt: lastConnectedAt,
          siteId: siteId,
          siteName: siteName,
          siteStreet: siteStreet,
@@ -242,42 +218,44 @@ class _SiteTransferInfoImpl extends SiteTransferInfo {
          siteCity: siteCity,
          siteCountry: siteCountry,
          siteCompanyEmail: siteCompanyEmail,
-         siteStatusName: siteStatusName,
-         siteRegisteredAt: siteRegisteredAt,
          adminEmail: adminEmail,
-         adminAuthUserId: adminAuthUserId,
          adminFirstName: adminFirstName,
          adminLastName: adminLastName,
          adminBirthday: adminBirthday,
          adminImageUrl: adminImageUrl,
-         deviceSessionKey: deviceSessionKey,
        );
 
-  /// Returns a shallow copy of this [SiteTransferInfo]
+  /// Returns a shallow copy of this [LocalAdminInfo]
   /// with some or all fields replaced by the given arguments.
-  @_isc.useResult
+  @_is.useResult
   @override
-  SiteTransferInfo copyWith({
-    int? siteId,
-    String? siteName,
+  LocalAdminInfo copyWith({
+    _ilrp6tdy.SiteConnectionState? connectionState,
+    Object? connectionError = _Undefined,
+    Object? lastConnectedAt = _Undefined,
+    Object? siteId = _Undefined,
+    Object? siteName = _Undefined,
     Object? siteStreet = _Undefined,
     Object? siteZipCode = _Undefined,
     Object? siteCity = _Undefined,
     Object? siteCountry = _Undefined,
     Object? siteCompanyEmail = _Undefined,
-    Object? siteStatusName = _Undefined,
-    Object? siteRegisteredAt = _Undefined,
     Object? adminEmail = _Undefined,
-    _isc.UuidValue? adminAuthUserId,
     Object? adminFirstName = _Undefined,
     Object? adminLastName = _Undefined,
     Object? adminBirthday = _Undefined,
     Object? adminImageUrl = _Undefined,
-    String? deviceSessionKey,
   }) {
-    return SiteTransferInfo(
-      siteId: siteId ?? this.siteId,
-      siteName: siteName ?? this.siteName,
+    return LocalAdminInfo(
+      connectionState: connectionState ?? this.connectionState,
+      connectionError: connectionError is String?
+          ? connectionError
+          : this.connectionError,
+      lastConnectedAt: lastConnectedAt is DateTime?
+          ? lastConnectedAt
+          : this.lastConnectedAt,
+      siteId: siteId is int? ? siteId : this.siteId,
+      siteName: siteName is String? ? siteName : this.siteName,
       siteStreet: siteStreet is String? ? siteStreet : this.siteStreet,
       siteZipCode: siteZipCode is String? ? siteZipCode : this.siteZipCode,
       siteCity: siteCity is String? ? siteCity : this.siteCity,
@@ -285,14 +263,7 @@ class _SiteTransferInfoImpl extends SiteTransferInfo {
       siteCompanyEmail: siteCompanyEmail is String?
           ? siteCompanyEmail
           : this.siteCompanyEmail,
-      siteStatusName: siteStatusName is String?
-          ? siteStatusName
-          : this.siteStatusName,
-      siteRegisteredAt: siteRegisteredAt is DateTime?
-          ? siteRegisteredAt
-          : this.siteRegisteredAt,
       adminEmail: adminEmail is String? ? adminEmail : this.adminEmail,
-      adminAuthUserId: adminAuthUserId ?? this.adminAuthUserId,
       adminFirstName: adminFirstName is String?
           ? adminFirstName
           : this.adminFirstName,
@@ -305,7 +276,6 @@ class _SiteTransferInfoImpl extends SiteTransferInfo {
       adminImageUrl: adminImageUrl is String?
           ? adminImageUrl
           : this.adminImageUrl,
-      deviceSessionKey: deviceSessionKey ?? this.deviceSessionKey,
     );
   }
 }

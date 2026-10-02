@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:serverpod/serverpod.dart';
 import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart';
@@ -77,6 +79,11 @@ class GlobalSiteConnection {
   static const Duration _initialRetryDelay = Duration(seconds: 5);
   static const Duration _maxRetryDelay = Duration(seconds: 60);
 
+  /// True once this instance is enrolled at a global instance
+  /// (`state != noneSetup`). The frontend reads this via
+  /// `siteSetup.connectionStatus` polling and drives its redirects.
+  bool get isEnrolled => _state != SiteConnectionState.noneSetup;
+
   // -- State (surfaced via siteSetup.connectionStatus)
 
   SiteConnectionState _state = SiteConnectionState.noneSetup;
@@ -106,15 +113,34 @@ class GlobalSiteConnection {
   // -- Enrollment application (from siteSetup.enterSetup)
 
   /// Applies a successful enrollment (fresh setup) or recovery to the local
-  /// configuration, processes the admin transfer (local members row + local
-  /// `local-admin` login with the *same password* the admin just used for
-  /// the global verification), and starts the connection worker.
+  /// configuration, processes the admin transfer (local memberships row +
+  /// profile_details + local `local-admin` login with the *same password*
+  /// the admin just used for the global verification), and starts the
+  /// connection worker.
   Future<void> applySetup(
     final Session session, {
     required final String globalApiUrl,
     required final gc.SiteTransferInfo transfer,
     required final String adminPassword,
   }) async {
+    if (await _upsertConnectionRow(session, transfer, globalApiUrl) != null) {
+      await _processTransfer(session, transfer, adminPassword);
+    }
+
+    _siteName = transfer.siteName;
+    _setState(SiteConnectionState.connecting);
+    unawaited(_connectWithRetry());
+  }
+
+  /// Creates or refreshes the single `site_connections` row: connection
+  /// config + full site snapshot from the transfer (person data lives in
+  /// profile_details via the memberships table, only the identity pointer
+  /// is stored here).
+  Future<SiteConnection?> _upsertConnectionRow(
+    final Session session,
+    final gc.SiteTransferInfo transfer,
+    final String globalApiUrl,
+  ) async {
     var row = await SiteConnection.db.findFirstRow(session);
     if (row == null) {
       row = await SiteConnection.db.insertRow(
@@ -123,8 +149,11 @@ class GlobalSiteConnection {
           globalApiUrl: globalApiUrl,
           siteId: transfer.siteId,
           siteName: transfer.siteName,
-          adminEmail: transfer.adminEmail,
-          adminFullName: transfer.adminFullName,
+          siteStreet: transfer.siteStreet,
+          siteZipCode: transfer.siteZipCode,
+          siteCity: transfer.siteCity,
+          siteCountry: transfer.siteCountry,
+          siteCompanyEmail: transfer.siteCompanyEmail,
           adminAuthUserId: transfer.adminAuthUserId,
           deviceSessionKey: transfer.deviceSessionKey,
         ),
@@ -136,32 +165,37 @@ class GlobalSiteConnection {
           globalApiUrl: globalApiUrl,
           siteId: transfer.siteId,
           siteName: transfer.siteName,
-          adminEmail: transfer.adminEmail,
-          adminFullName: transfer.adminFullName,
+          siteStreet: transfer.siteStreet,
+          siteZipCode: transfer.siteZipCode,
+          siteCity: transfer.siteCity,
+          siteCountry: transfer.siteCountry,
+          siteCompanyEmail: transfer.siteCompanyEmail,
           adminAuthUserId: transfer.adminAuthUserId,
           deviceSessionKey: transfer.deviceSessionKey,
         ),
       );
     }
-
-    await _processTransfer(session, row, transfer, adminPassword);
-
-    _siteName = transfer.siteName;
-    _setState(SiteConnectionState.connecting);
-    unawaited(_connectWithRetry());
+    return row;
   }
 
   /// Fresh-setup processing only (recovery keeps local data as-is):
-  /// 1. local members row — identity: the GLOBAL authUserId (door-flow key)
-  /// 2. local AuthUser with `local-admin` scope + email account using the
+  /// 1. local memberships row — identity: the GLOBAL authUserId (door-flow
+  ///    key).
+  /// 2. profile_details row — the person data (email, first/last name,
+  ///    birthday) mirrored from the transfer; single person store locally.
+  /// 3. local AuthUser with `local-admin` scope + email account using the
   ///    same password the admin just verified with.
+  /// 4. profile image: downloaded once from the global URL
+  ///    (server-to-server) and stored directly into the local RustFS via
+  ///    the storage adapter (bypasses the UserProfile module per the
+  ///    single-directory principle); the returned public URL goes into
+  ///    `profile_details.imageUrl`.
   Future<void> _processTransfer(
     final Session session,
-    final SiteConnection row,
     final gc.SiteTransferInfo transfer,
     final String adminPassword,
   ) async {
-    if (await Member.db.findFirstRow(
+    if (await Membership.db.findFirstRow(
           session,
           where: (t) => t.globalAuthUserId.equals(transfer.adminAuthUserId),
         ) !=
@@ -174,7 +208,7 @@ class GlobalSiteConnection {
       scopes: {const Scope(kLocalAdminScope)},
     );
 
-    final adminEmail = (row.adminEmail ?? transfer.adminEmail)!;
+    final adminEmail = transfer.adminEmail!;
 
     await AuthServices.getIdentityProvider<EmailIdp>().admin
         .createEmailAuthentication(
@@ -184,16 +218,75 @@ class GlobalSiteConnection {
           password: adminPassword,
         );
 
-    await Member.db.insertRow(
+    final membership = await Membership.db.insertRow(
       session,
-      Member(
+      Membership(
         globalAuthUserId: transfer.adminAuthUserId,
         localAuthUserId: localAuthUser.id,
-        email: transfer.adminEmail,
-        fullName: transfer.adminFullName,
         role: 'siteAdmin',
       ),
     );
+
+    final profile = await ProfileDetails.db.insertRow(
+      session,
+      ProfileDetails(
+        membershipId: membership.id!,
+        email: transfer.adminEmail,
+        firstName: transfer.adminFirstName,
+        lastName: transfer.adminLastName,
+        birthday: transfer.adminBirthday,
+      ),
+    );
+
+    // Profile image transfer: download once, store into the local RustFS.
+    final imageUrlText = transfer.adminImageUrl;
+    if (imageUrlText != null && imageUrlText.isNotEmpty) {
+      try {
+        final bytes = await _downloadBytes(imageUrlText);
+        if (bytes != null) {
+          final path = 'site/${transfer.siteId}/admin-image';
+          // Storage adapter id 'public' (local backend's own RustFS).
+          await session.storage.storeFile(
+            storageId: 'public',
+            path: path,
+            byteData: bytes,
+          );
+          final publicUrl = await session.storage.publicDownloadUrl(
+            storageId: 'public',
+            path: path,
+          );
+          await ProfileDetails.db.updateRow(
+            session,
+            profile.copyWith(imageUrl: publicUrl.toString()),
+          );
+        }
+      } catch (error, stackTrace) {
+        session.log(
+          'Profile image transfer failed (continuing without image).',
+          exception: error,
+          stackTrace: stackTrace,
+        );
+      }
+    }
+  }
+
+  /// Server-to-server download of an arbitrary URL.
+  Future<ByteData?> _downloadBytes(final String url) async {
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(Uri.parse(url));
+      final response = await request.close();
+      if (response.statusCode != HttpStatus.ok) {
+        return null;
+      }
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in response) {
+        builder.add(chunk);
+      }
+      return ByteData.sublistView(builder.takeBytes());
+    } finally {
+      client.close(force: true);
+    }
   }
 
   // -- Worker

@@ -33,7 +33,6 @@ void run(List<String> args) async {
       ),
     ],
   );
-
   // Register the RustFS cloud storage (S3-compatible) as the 'public' file
   // storage, replacing the database-backed default. The endpoint is read
   // from the stage specific config file (`rustFS` block, see

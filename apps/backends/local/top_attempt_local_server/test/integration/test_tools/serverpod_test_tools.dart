@@ -21,6 +21,8 @@ import 'package:top_attempt_local_server/src/generated/greetings/greeting.dart'
     as _iwishv5y;
 import 'package:top_attempt_local_server/src/generated/profile/profile_details.dart'
     as _idgknjfr;
+import 'package:top_attempt_local_server/src/generated/site/local_admin_info.dart'
+    as _i5wpzxsk;
 import 'package:top_attempt_local_server/src/generated/site/site_connection_info.dart'
     as _ir5besx9;
 import 'package:top_attempt_local_server/src/generated/site/site_setup_result.dart'
@@ -702,6 +704,36 @@ class _SiteSetupEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<_ir5besx9.SiteConnectionInfo>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_i5wpzxsk.LocalAdminInfo> adminInfo(
+    _ist.TestSessionBuilder sessionBuilder,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'siteSetup',
+            method: 'adminInfo',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'siteSetup',
+          methodName: 'adminInfo',
+          parameters: _ist.testObjectToJson({}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i5wpzxsk.LocalAdminInfo>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

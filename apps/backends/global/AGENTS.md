@@ -188,6 +188,12 @@ Enable CORS on the bucket when Flutter web accesses files directly.
   `site-device` token-level), `SiteConnectionEndpoint` stream,
   `SiteDeviceSession` mapping, migrations `20260925122822442` +
   `20260925150857366`).
+- 2026-09-26: transfer payload enriched for the local client:
+  full **site snapshot** (address/company mail/status/registeredAt) +
+  admin **profile fields** (firstName/lastName/birthday from
+  `profile_details`, `adminImageUrl` = raw public image URL from the
+  admin's `UserProfile`). Security TODO: replace the raw image URL with
+  a short-lived presigned URL (capability URL).
 - Next steps (stage 3, details in apps/AGENTS.md → TODOs): membership
   sync over the WS connection (propagate new/removed members), live
   status push to admin clients (message central), local members/

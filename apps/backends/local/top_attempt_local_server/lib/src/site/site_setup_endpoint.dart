@@ -7,9 +7,10 @@ import 'site_connection_config.dart';
 
 /// Local setup endpoint: connects this instance to its site's global
 /// instance by verifying with the **global credentials of the site admin**
-/// (the one chosen at site creation). Fills the local `members` row for the
-/// admin (identity: their global authUserId) and creates the local
-/// `local-admin` login with the same password.
+/// (the one chosen at site creation). Fills the local `memberships` row for
+/// the admin (identity: their global authUserId) plus their
+/// `profile_details` row and creates the local `local-admin` login with
+/// the same password.
 class SiteSetupEndpoint extends Endpoint {
   /// Verifies the entered global credentials against the global backend,
   /// stores the enrollment and starts the connection worker.
@@ -77,5 +78,48 @@ class SiteSetupEndpoint extends Endpoint {
   /// The current local connection state (App-Bar chip in the admin UI).
   Future<SiteConnectionInfo> connectionStatus(final Session session) async {
     return GlobalSiteConnection.instance.status();
+  }
+
+  /// Everything the local admin UI displays about this instance:
+  /// connection state + site snapshot + the admin's mirrored person data
+  /// (profile_details of their membership row). The default of the state
+  /// is `noneSetup` with an empty snapshot until the instance is enrolled.
+  Future<LocalAdminInfo> adminInfo(final Session session) async {
+    final status = GlobalSiteConnection.instance.status();
+    final connection = await SiteConnection.db.findFirstRow(session);
+
+    ProfileDetails? adminProfile;
+    final adminAuthUserId = connection?.adminAuthUserId;
+    if (adminAuthUserId != null) {
+      final membership = await Membership.db.findFirstRow(
+        session,
+        where: (t) => t.globalAuthUserId.equals(adminAuthUserId),
+      );
+      if (membership != null) {
+        adminProfile = await ProfileDetails.db.findFirstRow(
+          session,
+          where: (t) => t.membershipId.equals(membership.id!),
+        );
+      }
+    }
+    final site = connection;
+
+    return LocalAdminInfo(
+      connectionState: status.state,
+      connectionError: status.lastError,
+      lastConnectedAt: status.lastConnectedAt,
+      siteId: site?.siteId,
+      siteName: site?.siteName,
+      siteStreet: site?.siteStreet,
+      siteZipCode: site?.siteZipCode,
+      siteCity: site?.siteCity,
+      siteCountry: site?.siteCountry,
+      siteCompanyEmail: site?.siteCompanyEmail,
+      adminEmail: adminProfile?.email,
+      adminFirstName: adminProfile?.firstName,
+      adminLastName: adminProfile?.lastName,
+      adminBirthday: adminProfile?.birthday,
+      adminImageUrl: adminProfile?.imageUrl,
+    );
   }
 }
