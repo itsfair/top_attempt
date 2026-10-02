@@ -25,7 +25,7 @@ import 'admin/user_admin_exception.dart' as _ipzw5jrh;
 import 'admin/user_admin_page.dart' as _ib47g35s;
 import 'admin/user_admin_summary.dart' as _idu811wg;
 import 'greetings/greeting.dart' as _izw8z7ou;
-import 'profile/profile_details.dart' as _is7ofcfc;
+import 'profile/member_profile.dart' as _i1iocmvy;
 import 'sites/site.dart' as _ilajh623;
 import 'sites/site_admin_exception.dart' as _ie4pusq6;
 import 'sites/site_admin_membership_candidate.dart' as _ib7ux6dk;
@@ -41,7 +41,7 @@ export 'admin/user_admin_exception.dart';
 export 'admin/user_admin_page.dart';
 export 'admin/user_admin_summary.dart';
 export 'greetings/greeting.dart';
-export 'profile/profile_details.dart';
+export 'profile/member_profile.dart';
 export 'sites/site.dart';
 export 'sites/site_admin_exception.dart';
 export 'sites/site_admin_membership_candidate.dart';
@@ -63,8 +63,8 @@ class Protocol extends _is.DatabaseSerializationManager {
 
   static List<_isp.TableDefinition> get targetTableDefinitions => [
     _isp.TableDefinition(
-      name: 'profile_details',
-      dartName: 'ProfileDetails',
+      name: 'member_profile',
+      dartName: 'MemberProfile',
       schema: 'public',
       module: 'top_attempt_global',
       columns: [
@@ -80,6 +80,12 @@ class Protocol extends _is.DatabaseSerializationManager {
           columnType: _isp.ColumnType.uuid,
           isNullable: false,
           dartType: 'UuidValue',
+        ),
+        _isp.ColumnDefinition(
+          name: 'email',
+          columnType: _isp.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
         ),
         _isp.ColumnDefinition(
           name: 'firstName',
@@ -99,10 +105,22 @@ class Protocol extends _is.DatabaseSerializationManager {
           isNullable: true,
           dartType: 'DateTime?',
         ),
+        _isp.ColumnDefinition(
+          name: 'imageUrl',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'createdAt',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
       ],
       foreignKeys: [
         _isp.ForeignKeyDefinition(
-          constraintName: 'profile_details_fk_0',
+          constraintName: 'member_profile_fk_0',
           columns: ['authUserId'],
           referenceTable: 'serverpod_auth_core_user',
           referenceTableSchema: 'public',
@@ -114,7 +132,7 @@ class Protocol extends _is.DatabaseSerializationManager {
       ],
       indexes: [
         _isp.IndexDefinition(
-          indexName: 'profile_details_auth_user_unique_idx',
+          indexName: 'member_profile_auth_user_unique_idx',
           tableSpace: null,
           elements: [
             _isp.IndexElementDefinition(
@@ -210,17 +228,16 @@ class Protocol extends _is.DatabaseSerializationManager {
           dartType: 'int',
         ),
         _isp.ColumnDefinition(
-          name: 'authUserId',
-          columnType: _isp.ColumnType.uuid,
+          name: 'profileId',
+          columnType: _isp.ColumnType.bigint,
           isNullable: false,
-          dartType: 'UuidValue',
+          dartType: 'int',
         ),
         _isp.ColumnDefinition(
           name: 'role',
           columnType: _isp.ColumnType.text,
           isNullable: false,
           dartType: 'protocol:SiteRole',
-          columnDefault: '\'member\'',
         ),
         _isp.ColumnDefinition(
           name: 'active',
@@ -248,8 +265,8 @@ class Protocol extends _is.DatabaseSerializationManager {
         ),
         _isp.ForeignKeyDefinition(
           constraintName: 'site_memberships_fk_1',
-          columns: ['authUserId'],
-          referenceTable: 'serverpod_auth_core_user',
+          columns: ['profileId'],
+          referenceTable: 'member_profile',
           referenceTableSchema: 'public',
           referenceColumns: ['id'],
           onUpdate: _isp.ForeignKeyAction.noAction,
@@ -268,7 +285,7 @@ class Protocol extends _is.DatabaseSerializationManager {
             ),
             _isp.IndexElementDefinition(
               type: _isp.IndexElementDefinitionType.column,
-              definition: 'authUserId',
+              definition: 'profileId',
             ),
           ],
           type: 'btree',
@@ -431,8 +448,8 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _izw8z7ou.Greeting) {
       return _izw8z7ou.Greeting.fromJson(data) as T;
     }
-    if (t == _is7ofcfc.ProfileDetails) {
-      return _is7ofcfc.ProfileDetails.fromJson(data) as T;
+    if (t == _i1iocmvy.MemberProfile) {
+      return _i1iocmvy.MemberProfile.fromJson(data) as T;
     }
     if (t == _ilajh623.Site) {
       return _ilajh623.Site.fromJson(data) as T;
@@ -482,8 +499,8 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _is.getType<_izw8z7ou.Greeting?>()) {
       return (data != null ? _izw8z7ou.Greeting.fromJson(data) : null) as T;
     }
-    if (t == _is.getType<_is7ofcfc.ProfileDetails?>()) {
-      return (data != null ? _is7ofcfc.ProfileDetails.fromJson(data) : null)
+    if (t == _is.getType<_i1iocmvy.MemberProfile?>()) {
+      return (data != null ? _i1iocmvy.MemberProfile.fromJson(data) : null)
           as T;
     }
     if (t == _is.getType<_ilajh623.Site?>()) {
@@ -575,7 +592,7 @@ class Protocol extends _is.DatabaseSerializationManager {
       _ib47g35s.AdminUserPage => 'AdminUserPage',
       _idu811wg.AdminUserSummary => 'AdminUserSummary',
       _izw8z7ou.Greeting => 'Greeting',
-      _is7ofcfc.ProfileDetails => 'ProfileDetails',
+      _i1iocmvy.MemberProfile => 'MemberProfile',
       _ilajh623.Site => 'Site',
       _ie4pusq6.SiteAdminException => 'SiteAdminException',
       _ib7ux6dk.SiteAdminMembershipCandidate => 'SiteAdminMembershipCandidate',
@@ -612,8 +629,8 @@ class Protocol extends _is.DatabaseSerializationManager {
         return 'AdminUserSummary';
       case _izw8z7ou.Greeting():
         return 'Greeting';
-      case _is7ofcfc.ProfileDetails():
-        return 'ProfileDetails';
+      case _i1iocmvy.MemberProfile():
+        return 'MemberProfile';
       case _ilajh623.Site():
         return 'Site';
       case _ie4pusq6.SiteAdminException():
@@ -674,8 +691,8 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (dataClassName == 'Greeting') {
       return deserialize<_izw8z7ou.Greeting>(data['data']);
     }
-    if (dataClassName == 'ProfileDetails') {
-      return deserialize<_is7ofcfc.ProfileDetails>(data['data']);
+    if (dataClassName == 'MemberProfile') {
+      return deserialize<_i1iocmvy.MemberProfile>(data['data']);
     }
     if (dataClassName == 'Site') {
       return deserialize<_ilajh623.Site>(data['data']);
@@ -751,8 +768,8 @@ class Protocol extends _is.DatabaseSerializationManager {
       }
     }
     switch (t) {
-      case _is7ofcfc.ProfileDetails:
-        return _is7ofcfc.ProfileDetails.t;
+      case _i1iocmvy.MemberProfile:
+        return _i1iocmvy.MemberProfile.t;
       case _ilajh623.Site:
         return _ilajh623.Site.t;
       case _iuoqdo0q.SiteDeviceSession:

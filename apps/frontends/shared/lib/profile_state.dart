@@ -1,15 +1,10 @@
 import 'package:flutter/foundation.dart';
-// Imported with a prefix; the plain import would clash with extensions
-// provided by the host apps.
-import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
-    as auth_core;
 import 'package:top_attempt_global_client/top_attempt_client.dart';
 
-/// Holds the profile data of the signed-in user.
-///
-/// Email, user id and profile image come from the built-in
-/// [auth_core.UserProfileModel]; the extended data (first/last name,
-/// birthday) lives in the own [ProfileDetails] model on the server.
+/// Holds the profile data of the signed-in user, read/written via the own
+/// `memberProfile` endpoint of the global instance (the built-in Serverpod
+/// UserProfile feature is bypassed by design — `member_profile` is the
+/// single person/profile store; see the backend AGENTS.md).
 ///
 /// Lives in `apps/frontends/shared` and is consumed by the end-user app
 /// and the global admin app identically — changes here apply to both.
@@ -18,18 +13,29 @@ class ProfileState extends ChangeNotifier {
 
   ProfileState(this._client);
 
-  /// Basic account info of the signed-in user (email, user id, image url).
-  auth_core.UserProfileModel? _profile;
-
-  /// Our own extended profile data (first name, last name, birthday).
-  ProfileDetails? _details;
+  MemberProfile? _memberProfile;
   bool _loaded = false;
 
-  /// Basic account info of the signed-in user (email, user id, image url).
-  auth_core.UserProfileModel? get profile => _profile;
+  /// The signed-in user's own member profile (email, person id, names,
+  /// birthday, image url).
+  MemberProfile? get memberProfile => _memberProfile;
 
-  /// Our own extended profile data (first name, last name, birthday).
-  ProfileDetails? get details => _details;
+  /// Composed full name (firstName + lastName), for display/avatar.
+  String? get fullName {
+    final parts = [
+      _memberProfile?.firstName,
+      _memberProfile?.lastName,
+    ].whereType<String>().where((part) => part.isNotEmpty);
+    final joined = parts.join(' ').trim();
+    return joined.isEmpty ? null : joined;
+  }
+
+  /// Public image URL of the profile image (string form for the shared
+  /// widgets).
+  String? get imageUrl {
+    final url = _memberProfile?.imageUrl;
+    return url == null || url.isEmpty ? null : url;
+  }
 
   /// True once the data has been fetched from the server after signing in.
   bool get loaded => _loaded;
@@ -41,39 +47,33 @@ class ProfileState extends ChangeNotifier {
   /// deliberately ignore it (admins may sign in without a completed
   /// profile).
   bool get isComplete {
-    final details = _details;
-    return details != null &&
-        details.firstName != null &&
-        details.lastName != null &&
-        details.birthday != null;
+    final profile = _memberProfile;
+    return profile != null &&
+        profile.firstName != null &&
+        profile.lastName != null &&
+        profile.birthday != null;
   }
 
-  /// Loads both profile parts from the server.
+  /// Loads the profile from the server.
   /// Auth is enforced by the server (requireLogin); this method is only
   /// triggered by the auth listener while signed in. Admin apps must not
   /// force profile completion (see consumer).
   Future<void> load() async {
-    final detailsFuture = _client.profileDetails.get();
-    final profileFuture = _client.userProfileEdit.get();
-
-    _details = await detailsFuture;
-    _profile = await profileFuture;
+    _memberProfile = await _client.memberProfile.get();
     _loaded = true;
     notifyListeners();
   }
 
   /// Replaces locally known parts of the state after a successful save,
   /// so the UI updates without another round trip.
-  void update({auth_core.UserProfileModel? profile, ProfileDetails? details}) {
-    if (profile != null) _profile = profile;
-    if (details != null) _details = details;
+  void update({MemberProfile? memberProfile}) {
+    if (memberProfile != null) _memberProfile = memberProfile;
     notifyListeners();
   }
 
   /// Clears all state after sign-out.
   void reset() {
-    _profile = null;
-    _details = null;
+    _memberProfile = null;
     _loaded = false;
     notifyListeners();
   }

@@ -9,8 +9,8 @@ model: [`apps/AGENTS.md`](../../AGENTS.md), monorepo structure:
 ## Purpose
 
 - Registration/login of end users (email + password) and password reset.
-- Central profiles (name, birthday, profile image) — data basis that
-  local instances later synchronize member data from.
+- Own person/profile model `member_profile` (see below) — the data basis
+  local instances synchronize from (site admins, member profiles).
 - Later possibly global entities (e.g. course catalog — open, see
   apps/AGENTS.md → "Open architecture questions").
 - Partner apps: `apps/frontends/top_attempt_global_flutter` (platform
@@ -47,45 +47,75 @@ device.
 |---|---|
 | `emailIdp` (`src/auth/email_idp_endpoint.dart`) | Email IdP: registration, login, password reset (verification codes are only logged in dev) |
 | `jwtRefresh` (`src/auth/jwt_refresh_endpoint.dart`) | Renew access tokens |
-| `userProfileEdit` (`src/auth/user_profile_edit_endpoint.dart`) | Email/user ID/profile image via the built-in auth module |
-| `profileDetails` (`src/profile/profile_details_endpoint.dart`) | First/last name + birthday; requireLogin, name 1–60 chars, birthday 1900–yesterday; name is written synchronously into the UserProfile |
+| `memberProfile` (`src/profile/member_profile_endpoint.dart`) | Own person/profile endpoints: `get`, `save` (names 1–60 chars + birthday), `setUserImage`, `removeUserImage` |
 | `usersAdmin` (`src/admin/users_admin_endpoint.dart`) | Platform admin: `listUsers` (50/page, email/name ILIKE filter), `getUser`, `setBlocked`, `setGlobalAdmin`, own `UserAdminException` |
-| `sitesAdmin` (`src/sites/sites_admin_endpoint.dart`) | Platform admin, sites ("Betriebe"): `createSite` (validation), `listSites`/`countSites` (50/page, search), `getSite`, `revokeSiteConnection` |
+| `sitesAdmin` (`src/sites/sites_admin_endpoint.dart`) | Platform admin, sites ("Betriebe"): `createSite`, `listSites`/`countSites` (50/page, search), `getSite`, `revokeSiteConnection` |
 | `siteEnrollment` (`src/sites/site_enrollment_endpoint.dart`) | Public: `listSiteAdminCandidates` + `enroll({email, password, siteId?})` for the local instance |
 | `siteConnection` (`src/sites/site_connection_endpoint.dart`) | Device connection method stream (`connect(Stream<SitePing>) → Stream<SiteEvent>`), scope `site-device` |
-| `greeting` (`src/greetings/…`) | Serverpod sample endpoint |
+| `greeting` (`src/greetings/…`) | Serverpod sample endpoint (candidate for removal) |
 
-### Site setup / enrollment (as of 2026-09-25)
+## member_profile (own person model — since 2026-10-02)
 
-- Models: `Site` (table `sites`: address, `companyEmail`, `status` enum
-  `pendingSetup|registered`, `firstAdmin` relation, `registeredAt`/
-  `lastSeenAt`), `SiteMembership` (table `site_memberships`: site +
-  authUser + `role` enum `member|staff|siteAdmin` + `active`) — global
-  source-of-truth directory of memberships. `SiteDeviceSession` (table
+The built-in Serverpod UserProfile feature is **bypassed by design**;
+we maintain our own person directory instead (uniform with the local
+instance's copy):
+
+- Table `member_profile`: `authUser` (module AuthUser relation; row is
+  created **sparse at registration** via the
+  `EmailIdpConfig.onAfterAccountCreated` hook incl. the email
+  duplicate), `email` (accepted duplicate — the ONLY intended one vs.
+  auth tables), `firstName`/`lastName` (1–60 chars), `birthday`
+  (UTC-midnight date sentinel), `imageUrl` (RustFS public URL),
+  `createdAt`. Unique index on `authUserId`.
+- Images: `member_images/<authUserId>.jpg` — **deterministic, one object
+  per person, overwrite on change** (`session.storage.storeFile`
+  replaces existing paths; no random suffix, no magic-byte detection:
+  uploads are JPEG-only because the shared frontend's image picker
+  produces JPEG bytes; format extension = deliberate TODO).
+- Birthday convention: values travel as **UTC-midnight sentinels** (the
+  shared frontend sends `DateTime.utc(y, m, d)`); the backend validates
+  against UTC calendar days only — no server-side re-normalization (the
+  earlier server-side fix was dropped; the bug was client-side, see
+  `apps/frontends/shared/lib/screens/profile_screen.dart`).
+- Old tables/endpoints removed: `profile_details`/
+  `ProfileDetailsEndpoint`/`userProfileEdit` are gone (the Serverpod
+  module still writes its own profile tables at registration — unused
+  residue, we never read them).
+- Site linkage: `SiteMembership.profile` FK → `member_profile`
+  (membership links the person via the directory, not the auth user).
+
+### Site setup / enrollment (as of 2026-09-25/26)
+
+- Models: `Site` (table `sites`: address, `companyEmail`, `status`
+  enum `pendingSetup|registered`, `firstAdmin` relation,
+  `registeredAt`/`lastSeenAt`), `SiteMembership` (table
+  `site_memberships`: site + profile → `member_profile` + `role` enum
+  `member|staff|siteAdmin` + `active`) — global source-of-truth
+  directory of memberships. `SiteDeviceSession` (table
   `site_device_sessions`: site ↔ SAS session id, exactly one active
   session per site).
-- `createSite` generates **no secrets anymore**: the site admin sets up
-  the local instance on site with their **global credentials** (the old
-  one-time-password / initial-password machinery was removed).
+- `createSite` generates **no secrets**: the site admin sets up the
+  local instance on site with their **global credentials**; the
+  membership seeds via the admin's `member_profile` row
+  (`SiteAdminException` if that row is missing).
 - `SiteEnrollmentEndpoint` (public):
   `listSiteAdminCandidates` + `enroll({email, password, siteId?})` —
   verifies the global credentials via the email IdP logic (rate
-  limit/blocked checks inherited, no login session is created there),
+  limit/blocked checks inherited, no login session created there),
   resolves the active `siteAdmin` membership (multiple →
   `requiresSiteSelection` + candidates for the site picker in the local
   mask), then:
-  - fresh setup: site → `registered` + `registeredAt`, transfer (site +
-    admin email/name + `adminAuthUserId` — **exchange id for the local
-    members table, later the key for door authorization**) and the
-    device session key.
-  - recovery: same verification path without transfer data; the previous
-    `SiteDeviceSession` is revoked and replaced. The local admin can
-    re-run setup alone (no platform-admin involvement needed).
+  - fresh setup: site → `registered` + `registeredAt`; transfer (site
+    snapshot incl. address/company mail/status/registeredAt +
+    member-profile mirror fields: email, names, birthday, `imageUrl`)
+    and the device session key.
+  - recovery: same verification path without transfer data; the
+    previous `SiteDeviceSession` is revoked and replaced. The local
+    admin can re-run setup alone (no platform-admin involvement).
   - device credential: SAS session (`method: 'device'`, token-level
     scope `site-device`, `AuthStrategy.session`, non-rotating,
-    write-once on the local side; no rotation/crash-window issues).
-    Pepper key: `serverSideSessionKeyHashPepper` (passwords.yaml,
-    dev+test).
+    write-once on the local side). Pepper key:
+    `serverSideSessionKeyHashPepper` (passwords.yaml, dev+test).
   - `sitesAdmin.revokeSiteConnection(siteId)`: revokes the device
     enrollment (site data/memberships kept).
 - `SiteConnectionEndpoint` (`requiredScopes: {site-device}`): method
@@ -109,8 +139,7 @@ device.
   tries token managers in order; JWT is primary (because the identity
   providers issue via the primary manager), so a SAS session key first
   fails the JWT handler (logged at debug) and is then successfully
-  validated by the server-side session manager. No action needed; out of
-  scope until upstream supports quiet-flags for non-JWT keys.
+  validated by the server-side session manager. No action needed.
 - A persistent `STREAM siteConnection.connect …` entry while a site is
   connected: that is the session logging of the (long-lived) method
   stream — it is open as long as the local instance is connected. Not an
@@ -133,37 +162,21 @@ device.
   (`scope_names` on `serverpod_auth_core_user`) + re-login.
 
 Auth setup in `lib/server.dart` (`initializeAuthServices`: JWT +
-ServerSideSessions + EmailIdp; codes are logged instead of emailed).
-RustFS storage is registered as storage id `public` (bucket
-`top-attempt`), endpoint from the `rustFS:` block of the stage config —
-**do not set `publicHost`** (adapter bug v1.0.0, see root AGENTS.md).
-
-## Data model
-
-- Own table `profile_details` (`src/profile/profile_details.spy.yaml`):
-  `authUserId`, first/last name, birthday. Required fields name +
-  birthday, image optional and in the `UserProfile`.
-- **Birthday as UTC-midnight date sentinel** (2026-09-25): a picked date
-  is normalized server-side to `DateTime.utc(year, month, day)` before
-  persistence and `profileDetails.save` validates against UTC calendar
-  days (`DateTime.timestamp()`/`DateTime.utc`). Reason: the date picker
-  produces local midnight; converted to UTC (wire/DB) a January date in
-  UT+1 would drift one day back (26.01 → stored 25.01). Display/client
-  code must always use the UTC calendar day of the returned value
-  (values come back as UTC). German-market only (UT+1/+2) today.
-  **Second line of defense**: the server normalization alone is not
-  enough — the client serialization is `DateTime.toUtc()`
-  (`serverpod_serialization`), so by decode time the calendar day is
-  already shifted. The shared `ProfileScreen` therefore sends
-  `DateTime.utc(y, m, d)` explicitly (see
-  `apps/frontends/shared/lib/screens/profile_screen.dart`).
-- Remaining auth data lives in the Serverpod auth module tables.
+ServerSideSessions + EmailIdp incl. the member_profile hook; codes are
+logged instead of emailed). RustFS storage is registered as storage id
+`public` (bucket `top-attempt`), endpoint from the `rustFS:` block of
+the stage config — **do not set `publicHost`** (adapter bug v1.0.0, see
+root AGENTS.md).
 
 ## File storage
 
 RustFS (S3 API), dev: LAN IP from `config/development.yaml` → port 9001
 (console), S3 on 9000, credentials rustfsadmin / rustfsadmin_secret.
 Enable CORS on the bucket when Flutter web accesses files directly.
+Profile images live at `member_images/<authUserId>.jpg` (own model, see
+above). RustFS stays LAN-only (never expose 9000/9001 to the internet);
+image URLs are capability URLs today — presigned-URL redesign is a
+security TODO (see apps/AGENTS.md).
 
 ## Test / CI
 
@@ -173,28 +186,19 @@ Enable CORS on the bucket when Flutter web accesses files directly.
   versions there are still old (Dart 3.8.0 / CLI 3.3.1), TODO see
   apps/AGENTS.md.
 
+## Migrations
+
+- **Rebuilt 2026-10-02** (fresh history after the member_profile
+  redesign; database volumes wiped by the user): single base migration
+  `20261002120454383`.
+
 ## State / continuation
 
-- State: MVP base — auth + profile + storage work against the end-user
-  app; verified state after the Serverpod 4.0.2 upgrade (2026-09-23),
-  see apps/AGENTS.md → upgrade section.
-- 2026-09-24: first admin endpoint set done (`usersAdmin`: paginated
-  user list 50/page with email/name search, blocked and global-admin
-  toggles incl. token revocation; self-lockout protection). Serves the
-  Members page of the platform admin app.
-- 2026-09-25: site creation + enrollment done (`sitesAdmin.createSite`
-  without secrets, `siteEnrollment` (global credential verify, site
-  picker, device session issuance SAS `method: 'device'`, scope
-  `site-device` token-level), `SiteConnectionEndpoint` stream,
-  `SiteDeviceSession` mapping, migrations `20260925122822442` +
-  `20260925150857366`).
-- 2026-09-26: transfer payload enriched for the local client:
-  full **site snapshot** (address/company mail/status/registeredAt) +
-  admin **profile fields** (firstName/lastName/birthday from
-  `profile_details`, `adminImageUrl` = raw public image URL from the
-  admin's `UserProfile`). Security TODO: replace the raw image URL with
-  a short-lived presigned URL (capability URL).
+- State: auth + member_profile + storage + sites/enrollment/device
+  connection all functional against the admin frontends and the local
+  backend (after its enrollment round).
 - Next steps (stage 3, details in apps/AGENTS.md → TODOs): membership
-  sync over the WS connection (propagate new/removed members), live
-  status push to admin clients (message central), local members/
-  employees expansion, ESP32 device authorization.
+  sync over the WS connection (propagate new/removed members incl.
+  member_profile/image mirrors), live status push to admin clients
+  (message central), "profiles editable globally only" sync rule
+  implementation, ESP32 device authorization.

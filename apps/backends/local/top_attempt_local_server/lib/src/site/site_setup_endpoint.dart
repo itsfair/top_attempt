@@ -82,25 +82,20 @@ class SiteSetupEndpoint extends Endpoint {
 
   /// Everything the local admin UI displays about this instance:
   /// connection state + site snapshot + the admin's mirrored person data
-  /// (profile_details of their membership row). The default of the state
+  /// (local `member_profile` copy, joined via the exchange id
+  /// `site_connections.adminAuthUserId`). The default of the state
   /// is `noneSetup` with an empty snapshot until the instance is enrolled.
   Future<LocalAdminInfo> adminInfo(final Session session) async {
     final status = GlobalSiteConnection.instance.status();
     final connection = await SiteConnection.db.findFirstRow(session);
 
-    ProfileDetails? adminProfile;
+    MemberProfile? adminProfile;
     final adminAuthUserId = connection?.adminAuthUserId;
     if (adminAuthUserId != null) {
-      final membership = await Membership.db.findFirstRow(
+      adminProfile = await MemberProfile.db.findFirstRow(
         session,
         where: (t) => t.globalAuthUserId.equals(adminAuthUserId),
       );
-      if (membership != null) {
-        adminProfile = await ProfileDetails.db.findFirstRow(
-          session,
-          where: (t) => t.membershipId.equals(membership.id!),
-        );
-      }
     }
     final site = connection;
 

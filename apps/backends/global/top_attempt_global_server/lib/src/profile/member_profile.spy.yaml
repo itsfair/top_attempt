@@ -1,0 +1,37 @@
+### Person directory of the global instance — includes a duplicate of the
+### registration email plus the manually maintained profile data. The
+### built-in Serverpod UserProfile feature is deliberately bypassed; our
+### own `memberProfile` endpoints maintain this table. Profile images go
+### into RustFS at `member_images/<authUserId>.<ext>` (one object per
+### person, overwritten on change; uploads are JPEG-only for now).
+### Structural note: locally the same model exists with an OPTIONAL auth
+### link (plain members have no local login) plus a required
+### `globalAuthUserId` — this id is the same person id, so both systems
+### share image names and identity semantics.
+class: MemberProfile
+table: member_profile
+fields:
+
+  ### The auth user this profile belongs to (required via unique index
+  ### and code-level checks; model relations must be nullable).
+  authUser: module:serverpod_auth_core:AuthUser?, relation(onDelete=Cascade)
+
+  ### Duplicate of the registration email (accepted; the only intended
+  ### duplication versus the auth tables).
+  email: String
+
+  ### Profile data (completion after registration; names 1-60 chars,
+  ### birthday as UTC-midnight date sentinel).
+  firstName: String?
+  lastName: String?
+  birthday: DateTime?
+
+  ### Public URL of the profile image (RustFS; null until set).
+  imageUrl: String?
+
+  ### When the profile row was created (sparse at registration via hook).
+  createdAt: DateTime, defaultModel=now
+indexes:
+  member_profile_auth_user_unique_idx:
+    fields: authUserId
+    unique: true

@@ -11,9 +11,11 @@ jwtRefresh:
   - refreshAccessToken:
 greeting:
   - hello:
-profileDetails:
+memberProfile:
   - get:
   - save:
+  - setUserImage:
+  - removeUserImage:
 siteSetup:
   - enterSetup:
   - connectionStatus:

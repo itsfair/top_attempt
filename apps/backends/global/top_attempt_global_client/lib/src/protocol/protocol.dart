@@ -24,7 +24,7 @@ import 'admin/user_admin_exception.dart' as _ipzw5jrh;
 import 'admin/user_admin_page.dart' as _ib47g35s;
 import 'admin/user_admin_summary.dart' as _idu811wg;
 import 'greetings/greeting.dart' as _izw8z7ou;
-import 'profile/profile_details.dart' as _is7ofcfc;
+import 'profile/member_profile.dart' as _i1iocmvy;
 import 'sites/site.dart' as _ilajh623;
 import 'sites/site_admin_exception.dart' as _ie4pusq6;
 import 'sites/site_admin_membership_candidate.dart' as _ib7ux6dk;
@@ -40,7 +40,7 @@ export 'admin/user_admin_exception.dart';
 export 'admin/user_admin_page.dart';
 export 'admin/user_admin_summary.dart';
 export 'greetings/greeting.dart';
-export 'profile/profile_details.dart';
+export 'profile/member_profile.dart';
 export 'sites/site.dart';
 export 'sites/site_admin_exception.dart';
 export 'sites/site_admin_membership_candidate.dart';
@@ -100,8 +100,8 @@ class Protocol extends _isc.SerializationManager {
     if (t == _izw8z7ou.Greeting) {
       return _izw8z7ou.Greeting.fromJson(data) as T;
     }
-    if (t == _is7ofcfc.ProfileDetails) {
-      return _is7ofcfc.ProfileDetails.fromJson(data) as T;
+    if (t == _i1iocmvy.MemberProfile) {
+      return _i1iocmvy.MemberProfile.fromJson(data) as T;
     }
     if (t == _ilajh623.Site) {
       return _ilajh623.Site.fromJson(data) as T;
@@ -151,8 +151,8 @@ class Protocol extends _isc.SerializationManager {
     if (t == _isc.getType<_izw8z7ou.Greeting?>()) {
       return (data != null ? _izw8z7ou.Greeting.fromJson(data) : null) as T;
     }
-    if (t == _isc.getType<_is7ofcfc.ProfileDetails?>()) {
-      return (data != null ? _is7ofcfc.ProfileDetails.fromJson(data) : null)
+    if (t == _isc.getType<_i1iocmvy.MemberProfile?>()) {
+      return (data != null ? _i1iocmvy.MemberProfile.fromJson(data) : null)
           as T;
     }
     if (t == _isc.getType<_ilajh623.Site?>()) {
@@ -241,7 +241,7 @@ class Protocol extends _isc.SerializationManager {
       _ib47g35s.AdminUserPage => 'AdminUserPage',
       _idu811wg.AdminUserSummary => 'AdminUserSummary',
       _izw8z7ou.Greeting => 'Greeting',
-      _is7ofcfc.ProfileDetails => 'ProfileDetails',
+      _i1iocmvy.MemberProfile => 'MemberProfile',
       _ilajh623.Site => 'Site',
       _ie4pusq6.SiteAdminException => 'SiteAdminException',
       _ib7ux6dk.SiteAdminMembershipCandidate => 'SiteAdminMembershipCandidate',
@@ -278,8 +278,8 @@ class Protocol extends _isc.SerializationManager {
         return 'AdminUserSummary';
       case _izw8z7ou.Greeting():
         return 'Greeting';
-      case _is7ofcfc.ProfileDetails():
-        return 'ProfileDetails';
+      case _i1iocmvy.MemberProfile():
+        return 'MemberProfile';
       case _ilajh623.Site():
         return 'Site';
       case _ie4pusq6.SiteAdminException():
@@ -336,8 +336,8 @@ class Protocol extends _isc.SerializationManager {
     if (dataClassName == 'Greeting') {
       return deserialize<_izw8z7ou.Greeting>(data['data']);
     }
-    if (dataClassName == 'ProfileDetails') {
-      return deserialize<_is7ofcfc.ProfileDetails>(data['data']);
+    if (dataClassName == 'MemberProfile') {
+      return deserialize<_i1iocmvy.MemberProfile>(data['data']);
     }
     if (dataClassName == 'Site') {
       return deserialize<_ilajh623.Site>(data['data']);

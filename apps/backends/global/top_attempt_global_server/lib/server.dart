@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:serverpod/serverpod.dart';
@@ -37,6 +38,11 @@ void run(List<String> args) async {
       EmailIdpConfigFromPasswords(
         sendRegistrationVerificationCode: _sendRegistrationCode,
         sendPasswordResetVerificationCode: _sendPasswordResetCode,
+        // Create the sparse member_profile row right at registration (the
+        // profile carries the registration email; profile data gets
+        // completed later by the memberProfile endpoints). Guarantees that
+        // memberships (which link the profile) can always resolve a person.
+        onAfterAccountCreated: _createMemberProfileRow,
       ),
     ],
   );
@@ -132,6 +138,28 @@ void _sendRegistrationCode(
   // NOTE: Here you call your mail service to send the verification code to
   // the user. For testing, we will just log the verification code.
   session.log('[EmailIdp] Registration code ($email): $verificationCode');
+}
+
+/// Creates the sparse `member_profile` row right after the account was
+/// created (registration). The row carries the registration email; the
+/// profile data (names, birthday, image) gets completed later via the
+/// `memberProfile` endpoints. Memberships link this profile, so a row must
+/// exist before a person can be assigned to a site.
+FutureOr<void> _createMemberProfileRow(
+  Session session, {
+  required String email,
+  required UuidValue authUserId,
+  required UuidValue emailAccountId,
+  required Transaction? transaction,
+}) async {
+  await MemberProfile.db.insertRow(
+    session,
+    MemberProfile(
+      authUserId: authUserId,
+      email: email.toLowerCase(),
+    ),
+    transaction: transaction,
+  );
 }
 
 void _sendPasswordResetCode(

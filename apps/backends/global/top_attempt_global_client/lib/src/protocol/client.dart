@@ -24,8 +24,8 @@ import 'package:top_attempt_global_client/src/protocol/admin/user_admin_summary.
     as _i6vy2x4g;
 import 'package:top_attempt_global_client/src/protocol/greetings/greeting.dart'
     as _i3comy50;
-import 'package:top_attempt_global_client/src/protocol/profile/profile_details.dart'
-    as _ibs1lgmn;
+import 'package:top_attempt_global_client/src/protocol/profile/member_profile.dart'
+    as _ia0ycm3b;
 import 'package:top_attempt_global_client/src/protocol/sites/site.dart'
     as _i2twafne;
 import 'package:top_attempt_global_client/src/protocol/sites/site_admin_membership_candidate.dart'
@@ -338,65 +338,6 @@ class EndpointJwtRefresh extends _iacc.EndpointRefreshJwtTokens {
       );
 }
 
-/// Exposes the built-in user profile management endpoints of the
-/// authentication module to the app (get, set/remove image, change names).
-/// {@category Endpoint}
-class EndpointUserProfileEdit extends _iacc.EndpointUserProfileEditBase {
-  EndpointUserProfileEdit(_isc.EndpointCaller caller) : super(caller);
-
-  @override
-  String get name => 'userProfileEdit';
-
-  /// Replaces the profile image. The previous image (database row + file in
-  /// storage) is removed first, so replacing an image does not pile up old
-  /// files. This is a no-op if the user has no image yet.
-  @override
-  _ida.Future<_iacc.UserProfileModel> setUserImage(_idt.ByteData image) =>
-      caller.callServerEndpoint<_iacc.UserProfileModel>(
-        'userProfileEdit',
-        'setUserImage',
-        {'image': image},
-      );
-
-  /// Removes the user's uploaded image, setting it to null.
-  ///
-  /// The client should handle displaying a placeholder for users without images.
-  @override
-  _ida.Future<_iacc.UserProfileModel> removeUserImage() =>
-      caller.callServerEndpoint<_iacc.UserProfileModel>(
-        'userProfileEdit',
-        'removeUserImage',
-        {},
-      );
-
-  /// Changes the name of a user.
-  @override
-  _ida.Future<_iacc.UserProfileModel> changeUserName(String? userName) =>
-      caller.callServerEndpoint<_iacc.UserProfileModel>(
-        'userProfileEdit',
-        'changeUserName',
-        {'userName': userName},
-      );
-
-  /// Changes the full name of a user.
-  @override
-  _ida.Future<_iacc.UserProfileModel> changeFullName(String? fullName) =>
-      caller.callServerEndpoint<_iacc.UserProfileModel>(
-        'userProfileEdit',
-        'changeFullName',
-        {'fullName': fullName},
-      );
-
-  /// Returns the user profile of the current user.
-  @override
-  _ida.Future<_iacc.UserProfileModel> get() =>
-      caller.callServerEndpoint<_iacc.UserProfileModel>(
-        'userProfileEdit',
-        'get',
-        {},
-      );
-}
-
 /// This is an example endpoint that returns a greeting message through
 /// its [hello] method.
 /// {@category Endpoint}
@@ -415,34 +356,44 @@ class EndpointGreeting extends _isc.EndpointRef {
       );
 }
 
-/// Endpoint for the user's own profile details (first name, last name and
-/// birthday). Email, user id and the profile image are managed by the
-/// built-in authentication module endpoints (see UserProfileEditEndpoint).
+/// Own person/profile endpoints of the global instance (replacing the
+/// built-in Serverpod UserProfile feature, which is bypassed on purpose).
+///
+/// Data lives in the `member_profile` table; profile images are stored in
+/// the RustFS bucket at `member_images/<authUserId>.jpg` (deterministic
+/// name, one object per person, overwrite on change).
+///
+/// Birthday convention: values travel as UTC-midnight date sentinels (the
+/// shared frontend sends `DateTime.utc(y, m, d)` explicitly); validation
+/// is done against UTC calendar days.
 /// {@category Endpoint}
-class EndpointProfileDetails extends _isc.EndpointRef {
-  EndpointProfileDetails(_isc.EndpointCaller caller) : super(caller);
+class EndpointMemberProfile extends _isc.EndpointRef {
+  EndpointMemberProfile(_isc.EndpointCaller caller) : super(caller);
 
   @override
-  String get name => 'profileDetails';
+  String get name => 'memberProfile';
 
-  /// Returns the profile details of the signed-in user, or null if they have
-  /// never been saved yet.
-  _ida.Future<_ibs1lgmn.ProfileDetails?> get() =>
-      caller.callServerEndpoint<_ibs1lgmn.ProfileDetails?>(
-        'profileDetails',
+  /// Returns the signed-in user's own profile.
+  ///
+  /// Self-heals the sparse row if the registration hook missed it (this
+  /// should not happen; the hook fires at registration).
+  _ida.Future<_ia0ycm3b.MemberProfile> get() =>
+      caller.callServerEndpoint<_ia0ycm3b.MemberProfile>(
+        'memberProfile',
         'get',
         {},
       );
 
-  /// Validates and saves the profile details of the signed-in user.
-  /// The name is also written to the built-in user profile so that other
-  /// parts of the system see a consistent full name.
-  _ida.Future<_ibs1lgmn.ProfileDetails> save({
+  /// Validates and saves the profile data of the signed-in user.
+  ///
+  /// Unlike the old flow there is no name mirror into the Serverpod
+  /// UserProfile module — everything lives in `member_profile`.
+  _ida.Future<_ia0ycm3b.MemberProfile> save({
     required String firstName,
     required String lastName,
     required DateTime birthday,
-  }) => caller.callServerEndpoint<_ibs1lgmn.ProfileDetails>(
-    'profileDetails',
+  }) => caller.callServerEndpoint<_ia0ycm3b.MemberProfile>(
+    'memberProfile',
     'save',
     {
       'firstName': firstName,
@@ -450,6 +401,29 @@ class EndpointProfileDetails extends _isc.EndpointRef {
       'birthday': birthday,
     },
   );
+
+  /// Stores the uploaded image at `member_images/<authUserId>.jpg`
+  /// (deterministic, overwrites the previous object since every person
+  /// owns exactly one image) and updates the profile's `imageUrl`.
+  ///
+  /// Uploads are expected to be JPEG (the shared frontend's image picker
+  /// produces JPEG bytes only); no magic-byte detection — format
+  /// extensions are a deliberate later extension (TODO).
+  _ida.Future<_ia0ycm3b.MemberProfile> setUserImage({
+    required _idt.ByteData image,
+  }) => caller.callServerEndpoint<_ia0ycm3b.MemberProfile>(
+    'memberProfile',
+    'setUserImage',
+    {'image': image},
+  );
+
+  /// Deletes the stored object and clears the profile's `imageUrl`.
+  _ida.Future<_ia0ycm3b.MemberProfile> removeUserImage() =>
+      caller.callServerEndpoint<_ia0ycm3b.MemberProfile>(
+        'memberProfile',
+        'removeUserImage',
+        {},
+      );
 }
 
 /// Device connection endpoint for the local instance.
@@ -672,9 +646,8 @@ class Client extends _isc.ServerpodClientShared {
     usersAdmin = EndpointUsersAdmin(this);
     emailIdp = EndpointEmailIdp(this);
     jwtRefresh = EndpointJwtRefresh(this);
-    userProfileEdit = EndpointUserProfileEdit(this);
     greeting = EndpointGreeting(this);
-    profileDetails = EndpointProfileDetails(this);
+    memberProfile = EndpointMemberProfile(this);
     siteConnection = EndpointSiteConnection(this);
     siteEnrollment = EndpointSiteEnrollment(this);
     sitesAdmin = EndpointSitesAdmin(this);
@@ -687,11 +660,9 @@ class Client extends _isc.ServerpodClientShared {
 
   late final EndpointJwtRefresh jwtRefresh;
 
-  late final EndpointUserProfileEdit userProfileEdit;
-
   late final EndpointGreeting greeting;
 
-  late final EndpointProfileDetails profileDetails;
+  late final EndpointMemberProfile memberProfile;
 
   late final EndpointSiteConnection siteConnection;
 
@@ -706,9 +677,8 @@ class Client extends _isc.ServerpodClientShared {
     'usersAdmin': usersAdmin,
     'emailIdp': emailIdp,
     'jwtRefresh': jwtRefresh,
-    'userProfileEdit': userProfileEdit,
     'greeting': greeting,
-    'profileDetails': profileDetails,
+    'memberProfile': memberProfile,
     'siteConnection': siteConnection,
     'siteEnrollment': siteEnrollment,
     'sitesAdmin': sitesAdmin,

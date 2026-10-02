@@ -129,14 +129,20 @@ class SiteEnrollmentEndpoint extends Endpoint {
     );
 
     // Full site snapshot + admin profile data for the local instance.
-    final adminProfile = await AuthServices.instance.userProfiles
-        .maybeFindUserProfileByUserId(session, authUserId);
-    // Server-side read (no login in this session): fetch the admin's
-    // extended profile data directly.
-    final adminDetails = await ProfileDetails.db.findFirstRow(
+    // Full site snapshot + admin profile data for the local instance —
+    // both come from the person's member_profile (sparse row created at
+    // registration).
+    final memberProfile = await MemberProfile.db.findFirstRow(
       session,
       where: (t) => t.authUserId.equals(authUserId),
     );
+    if (memberProfile == null) {
+      throw SiteAdminException(
+        message:
+            'Für diesen Admin-Nutzer fehlt das member_profile '
+            '(Bitte den Plattform-Betreiber informieren).',
+      );
+    }
 
     return SiteEnrollmentInfo(
       candidates: const [],
@@ -152,10 +158,10 @@ class SiteEnrollmentEndpoint extends Endpoint {
         siteRegisteredAt: site.registeredAt,
         adminEmail: email.trim().toLowerCase(),
         adminAuthUserId: authUserId,
-        adminFirstName: adminDetails?.firstName,
-        adminLastName: adminDetails?.lastName,
-        adminBirthday: adminDetails?.birthday,
-        adminImageUrl: adminProfile?.imageUrl?.toString(),
+        adminFirstName: memberProfile.firstName,
+        adminLastName: memberProfile.lastName,
+        adminBirthday: memberProfile.birthday,
+        adminImageUrl: memberProfile.imageUrl,
         deviceSessionKey: issued.sessionKey,
       ),
     );
@@ -205,10 +211,13 @@ class SiteEnrollmentEndpoint extends Endpoint {
     return SiteMembership.db.find(
       session,
       where: (t) =>
-          t.authUserId.equals(authUserId) &
+          t.profile.authUserId.equals(authUserId) &
           t.role.equals(SiteRole.siteAdmin) &
           t.active.equals(true),
-      include: SiteMembership.include(site: Site.include()),
+      include: SiteMembership.include(
+        site: Site.include(),
+        profile: MemberProfile.include(),
+      ),
     );
   }
 }

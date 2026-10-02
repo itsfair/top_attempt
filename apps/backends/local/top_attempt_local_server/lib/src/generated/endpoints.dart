@@ -10,6 +10,7 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'dart:typed_data' as _idt;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
     as _iacs;
@@ -18,7 +19,7 @@ import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
 import '../auth/email_idp_endpoint.dart' as _iuc1hd5t;
 import '../auth/jwt_refresh_endpoint.dart' as _inwq3ztq;
 import '../greetings/greeting_endpoint.dart' as _il624ik7;
-import '../profile/profile_details_endpoint.dart' as _iev396g5;
+import '../site/member_profile_endpoint.dart' as _i0gpa131;
 import '../site/site_setup_endpoint.dart' as _iq6hjzpz;
 
 class Endpoints extends _is.EndpointDispatch {
@@ -43,10 +44,10 @@ class Endpoints extends _is.EndpointDispatch {
           'greeting',
           null,
         ),
-      'profileDetails': _iev396g5.ProfileDetailsEndpoint()
+      'memberProfile': _i0gpa131.MemberProfileEndpoint()
         ..initialize(
           server,
-          'profileDetails',
+          'memberProfile',
           null,
         ),
       'siteSetup': _iq6hjzpz.SiteSetupEndpoint()
@@ -287,9 +288,9 @@ class Endpoints extends _is.EndpointDispatch {
         ),
       },
     );
-    connectors['profileDetails'] = _is.EndpointConnector(
-      name: 'profileDetails',
-      endpoint: endpoints['profileDetails']!,
+    connectors['memberProfile'] = _is.EndpointConnector(
+      name: 'memberProfile',
+      endpoint: endpoints['memberProfile']!,
       methodConnectors: {
         'get': _is.MethodConnector(
           name: 'get',
@@ -299,8 +300,8 @@ class Endpoints extends _is.EndpointDispatch {
                 _is.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['profileDetails']
-                          as _iev396g5.ProfileDetailsEndpoint)
+                  (endpoints['memberProfile']
+                          as _i0gpa131.MemberProfileEndpoint)
                       .get(session),
         ),
         'save': _is.MethodConnector(
@@ -327,14 +328,47 @@ class Endpoints extends _is.EndpointDispatch {
                 _is.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['profileDetails']
-                          as _iev396g5.ProfileDetailsEndpoint)
+                  (endpoints['memberProfile']
+                          as _i0gpa131.MemberProfileEndpoint)
                       .save(
                         session,
                         firstName: params['firstName'],
                         lastName: params['lastName'],
                         birthday: params['birthday'],
                       ),
+        ),
+        'setUserImage': _is.MethodConnector(
+          name: 'setUserImage',
+          params: {
+            'image': _is.ParameterDescription(
+              name: 'image',
+              type: _is.getType<_idt.ByteData>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['memberProfile']
+                          as _i0gpa131.MemberProfileEndpoint)
+                      .setUserImage(
+                        session,
+                        image: params['image'],
+                      ),
+        ),
+        'removeUserImage': _is.MethodConnector(
+          name: 'removeUserImage',
+          params: {},
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['memberProfile']
+                          as _i0gpa131.MemberProfileEndpoint)
+                      .removeUserImage(session),
         ),
       },
     );

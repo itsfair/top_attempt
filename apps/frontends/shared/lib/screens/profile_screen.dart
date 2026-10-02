@@ -3,10 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-// Imported with a prefix to keep the auth extension on the client
-// unambiguous in the host apps.
-import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
-    as auth_core;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:top_attempt_global_client/top_attempt_client.dart';
 
@@ -16,6 +12,9 @@ import '../shared_flags.dart';
 /// Lets the user edit their own profile: first name, last name, birthday,
 /// an optional profile image, plus read-only email, user id and its QR
 /// code.
+///
+/// Data flows through the own `memberProfile` endpoint (the built-in
+/// Serverpod UserProfile feature is bypassed by design).
 ///
 /// Lives in `apps/frontends/shared` and is consumed by the end-user app
 /// and the global admin app identically — changes here apply to both.
@@ -52,7 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     profileState.addListener(_onProfileChanged);
-    _seedFormFields(profileState.details);
+    _seedFormFields(profileState.memberProfile);
   }
 
   @override
@@ -65,15 +64,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Fill the form fields once the profile has been loaded from the server.
   void _onProfileChanged() {
-    _seedFormFields(profileState.details);
+    _seedFormFields(profileState.memberProfile);
     if (mounted) setState(() {});
   }
 
-  void _seedFormFields(ProfileDetails? details) {
+  void _seedFormFields(MemberProfile? profile) {
     if (_firstNameController.text.isEmpty) {
-      _firstNameController.text = details?.firstName ?? '';
-      _lastNameController.text = details?.lastName ?? '';
-      _birthday = details?.birthday;
+      _firstNameController.text = profile?.firstName ?? '';
+      _lastNameController.text = profile?.lastName ?? '';
+      _birthday = profile?.birthday;
     }
   }
 
@@ -96,8 +95,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
-      final updated = await client.userProfileEdit.removeUserImage();
-      profileState.update(profile: updated);
+      final updated = await client.memberProfile.removeUserImage();
+      profileState.update(memberProfile: updated);
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -126,24 +125,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       // Send the UTC-midnight sentinel: the client serialization is
       // toUtc(), so a local-midnight value would drift one day back.
-      final normalizedBirthday = _birthday == null
-          ? null
-          : DateTime.utc(_birthday!.year, _birthday!.month, _birthday!.day);
-
-      final details = await client.profileDetails.save(
-        firstName: firstName,
-        lastName: lastName,
-        birthday: normalizedBirthday ?? DateTime.utc(2000),
+      final normalizedBirthday = DateTime.utc(
+        birthday.year,
+        birthday.month,
+        birthday.day,
       );
 
-      var profile = profileState.profile!;
+      var memberProfile = await client.memberProfile.save(
+        firstName: firstName,
+        lastName: lastName,
+        birthday: normalizedBirthday,
+      );
+
       if (_pickedImage != null) {
-        profile = await client.userProfileEdit.setUserImage(
-          ByteData.sublistView(_pickedImage!),
+        memberProfile = await client.memberProfile.setUserImage(
+          image: ByteData.sublistView(_pickedImage!),
         );
       }
 
-      profileState.update(details: details, profile: profile);
+      profileState.update(memberProfile: memberProfile);
 
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -188,7 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profile = profileState.profile;
+    final profile = profileState.memberProfile;
 
     if (profile == null) {
       return const Center(child: CircularProgressIndicator());
@@ -223,25 +223,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildImageSection() {
-    final imageUrl = profileState.profile?.imageUrl;
+    final imageUrl = profileState.imageUrl;
 
     final ImageProvider? preview = switch ((_pickedImage, imageUrl)) {
       (final bytes, _) when bytes != null => MemoryImage(bytes),
-      (_, final url?) => NetworkImage(url.toString()),
+      (_, final url?) => NetworkImage(url),
       _ => null,
     };
 
     final hasRemovableImage =
-        _pickedImage != null || profileState.profile?.imageUrl != null;
+        _pickedImage != null || profileState.imageUrl != null;
 
     return Column(
       children: [
-        CircleAvatar(
-          radius: 48,
-          backgroundImage: preview,
-          child: preview == null
-              ? const Icon(Icons.person_outline, size: 44)
-              : null,
+        Center(
+          child: CircleAvatar(
+            radius: 48,
+            backgroundImage: preview,
+            child: preview == null
+                ? const Icon(Icons.person_outline, size: 44)
+                : null,
+          ),
         ),
         const SizedBox(height: 8),
         if (kProfileEditingEnabled) ...[
@@ -262,7 +264,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ],
           ),
-          const Text('(optional)', style: TextStyle(fontSize: 12)),
+          const Text('(optional, JPEG)', style: TextStyle(fontSize: 12)),
         ],
         const SizedBox(height: 16),
       ],
@@ -321,7 +323,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           decoration: const InputDecoration(
             labelText: 'Nachname',
             border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.cake_outlined),
+            prefixIcon: Icon(Icons.badge_outlined),
           ),
         ),
         const SizedBox(height: 12),
@@ -342,7 +344,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildAccountSection(auth_core.UserProfileModel profile) {
+  Widget _buildAccountSection(MemberProfile profile) {
     final userIdString = profile.authUserId.uuid;
 
     return Column(
@@ -353,13 +355,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        if (profile.email case final email?)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.alternate_email),
-            title: Text(email),
-            subtitle: const Text('E-Mail'),
-          ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.alternate_email),
+          title: Text(profile.email),
+          subtitle: const Text('E-Mail'),
+        ),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.fingerprint),

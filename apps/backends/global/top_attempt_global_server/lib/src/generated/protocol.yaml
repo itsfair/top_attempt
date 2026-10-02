@@ -14,17 +14,13 @@ emailIdp:
   - hasAccount:
 jwtRefresh:
   - refreshAccessToken:
-userProfileEdit:
-  - setUserImage:
-  - removeUserImage:
-  - changeUserName:
-  - changeFullName:
-  - get:
 greeting:
   - hello:
-profileDetails:
+memberProfile:
   - get:
   - save:
+  - setUserImage:
+  - removeUserImage:
 siteConnection:
   - connect:
 siteEnrollment:

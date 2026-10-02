@@ -21,9 +21,8 @@ import 'package:top_attempt_global_server/src/generated/sites/site_ping.dart'
 import '../admin/users_admin_endpoint.dart' as _i9qj2dak;
 import '../auth/email_idp_endpoint.dart' as _iuc1hd5t;
 import '../auth/jwt_refresh_endpoint.dart' as _inwq3ztq;
-import '../auth/user_profile_edit_endpoint.dart' as _ije0zjyg;
 import '../greetings/greeting_endpoint.dart' as _il624ik7;
-import '../profile/profile_details_endpoint.dart' as _iev396g5;
+import '../profile/member_profile_endpoint.dart' as _i9yekdp0;
 import '../sites/site_connection_endpoint.dart' as _iy15yji6;
 import '../sites/site_enrollment_endpoint.dart' as _ii29ea4g;
 import '../sites/sites_admin_endpoint.dart' as _i6ok1ur0;
@@ -50,22 +49,16 @@ class Endpoints extends _is.EndpointDispatch {
           'jwtRefresh',
           null,
         ),
-      'userProfileEdit': _ije0zjyg.UserProfileEditEndpoint()
-        ..initialize(
-          server,
-          'userProfileEdit',
-          null,
-        ),
       'greeting': _il624ik7.GreetingEndpoint()
         ..initialize(
           server,
           'greeting',
           null,
         ),
-      'profileDetails': _iev396g5.ProfileDetailsEndpoint()
+      'memberProfile': _i9yekdp0.MemberProfileEndpoint()
         ..initialize(
           server,
-          'profileDetails',
+          'memberProfile',
           null,
         ),
       'siteConnection': _iy15yji6.SiteConnectionEndpoint()
@@ -403,99 +396,6 @@ class Endpoints extends _is.EndpointDispatch {
         ),
       },
     );
-    connectors['userProfileEdit'] = _is.EndpointConnector(
-      name: 'userProfileEdit',
-      endpoint: endpoints['userProfileEdit']!,
-      methodConnectors: {
-        'setUserImage': _is.MethodConnector(
-          name: 'setUserImage',
-          params: {
-            'image': _is.ParameterDescription(
-              name: 'image',
-              type: _is.getType<_idt.ByteData>(),
-              nullable: false,
-            ),
-          },
-          call:
-              (
-                _is.Session session,
-                Map<String, dynamic> params,
-              ) async =>
-                  (endpoints['userProfileEdit']
-                          as _ije0zjyg.UserProfileEditEndpoint)
-                      .setUserImage(
-                        session,
-                        params['image'],
-                      ),
-        ),
-        'removeUserImage': _is.MethodConnector(
-          name: 'removeUserImage',
-          params: {},
-          call:
-              (
-                _is.Session session,
-                Map<String, dynamic> params,
-              ) async =>
-                  (endpoints['userProfileEdit']
-                          as _ije0zjyg.UserProfileEditEndpoint)
-                      .removeUserImage(session),
-        ),
-        'changeUserName': _is.MethodConnector(
-          name: 'changeUserName',
-          params: {
-            'userName': _is.ParameterDescription(
-              name: 'userName',
-              type: _is.getType<String?>(),
-              nullable: true,
-            ),
-          },
-          call:
-              (
-                _is.Session session,
-                Map<String, dynamic> params,
-              ) async =>
-                  (endpoints['userProfileEdit']
-                          as _ije0zjyg.UserProfileEditEndpoint)
-                      .changeUserName(
-                        session,
-                        params['userName'],
-                      ),
-        ),
-        'changeFullName': _is.MethodConnector(
-          name: 'changeFullName',
-          params: {
-            'fullName': _is.ParameterDescription(
-              name: 'fullName',
-              type: _is.getType<String?>(),
-              nullable: true,
-            ),
-          },
-          call:
-              (
-                _is.Session session,
-                Map<String, dynamic> params,
-              ) async =>
-                  (endpoints['userProfileEdit']
-                          as _ije0zjyg.UserProfileEditEndpoint)
-                      .changeFullName(
-                        session,
-                        params['fullName'],
-                      ),
-        ),
-        'get': _is.MethodConnector(
-          name: 'get',
-          params: {},
-          call:
-              (
-                _is.Session session,
-                Map<String, dynamic> params,
-              ) async =>
-                  (endpoints['userProfileEdit']
-                          as _ije0zjyg.UserProfileEditEndpoint)
-                      .get(session),
-        ),
-      },
-    );
     connectors['greeting'] = _is.EndpointConnector(
       name: 'greeting',
       endpoint: endpoints['greeting']!,
@@ -521,9 +421,9 @@ class Endpoints extends _is.EndpointDispatch {
         ),
       },
     );
-    connectors['profileDetails'] = _is.EndpointConnector(
-      name: 'profileDetails',
-      endpoint: endpoints['profileDetails']!,
+    connectors['memberProfile'] = _is.EndpointConnector(
+      name: 'memberProfile',
+      endpoint: endpoints['memberProfile']!,
       methodConnectors: {
         'get': _is.MethodConnector(
           name: 'get',
@@ -533,8 +433,8 @@ class Endpoints extends _is.EndpointDispatch {
                 _is.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['profileDetails']
-                          as _iev396g5.ProfileDetailsEndpoint)
+                  (endpoints['memberProfile']
+                          as _i9yekdp0.MemberProfileEndpoint)
                       .get(session),
         ),
         'save': _is.MethodConnector(
@@ -561,14 +461,47 @@ class Endpoints extends _is.EndpointDispatch {
                 _is.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['profileDetails']
-                          as _iev396g5.ProfileDetailsEndpoint)
+                  (endpoints['memberProfile']
+                          as _i9yekdp0.MemberProfileEndpoint)
                       .save(
                         session,
                         firstName: params['firstName'],
                         lastName: params['lastName'],
                         birthday: params['birthday'],
                       ),
+        ),
+        'setUserImage': _is.MethodConnector(
+          name: 'setUserImage',
+          params: {
+            'image': _is.ParameterDescription(
+              name: 'image',
+              type: _is.getType<_idt.ByteData>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['memberProfile']
+                          as _i9yekdp0.MemberProfileEndpoint)
+                      .setUserImage(
+                        session,
+                        image: params['image'],
+                      ),
+        ),
+        'removeUserImage': _is.MethodConnector(
+          name: 'removeUserImage',
+          params: {},
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['memberProfile']
+                          as _i9yekdp0.MemberProfileEndpoint)
+                      .removeUserImage(session),
         ),
       },
     );

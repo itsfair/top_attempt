@@ -10,26 +10,27 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
-    as _iacc;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'package:top_attempt_global_client/src/protocol/protocol.dart'
     as _i00og34q;
+import '../profile/member_profile.dart' as _ieelrt66;
 import '../sites/site.dart' as _ie3onmsc;
 import '../sites/site_role.dart' as _icyjzuro;
 
 /// Membership of a global user at a site ("Betrieb"). Global source of truth
 /// for who belongs to which site in which role; the local instance derives
-/// its local representation from this during sync (member -> local members
-/// row without login; staff/admin -> linked local AuthUser with login).
+/// its local representation from this during sync (member -> local
+/// member_profile copy without login; staff/admin -> linked local AuthUser
+/// with login). Membership links the PERSON via member_profile (not the
+/// auth user).
 abstract class SiteMembership
     implements _isc.SerializableModel, _isc.ProtocolSerialization {
   SiteMembership._({
     this.id,
     required this.siteId,
     this.site,
-    required this.authUserId,
-    this.authUser,
+    required this.profileId,
+    this.profile,
     _icyjzuro.SiteRole? role,
     bool? active,
     DateTime? createdAt,
@@ -41,8 +42,8 @@ abstract class SiteMembership
     int? id,
     required int siteId,
     _ie3onmsc.Site? site,
-    required _isc.UuidValue authUserId,
-    _iacc.AuthUser? authUser,
+    required int profileId,
+    _ieelrt66.MemberProfile? profile,
     _icyjzuro.SiteRole? role,
     bool? active,
     DateTime? createdAt,
@@ -57,13 +58,11 @@ abstract class SiteMembership
           : _i00og34q.Protocol().deserialize<_ie3onmsc.Site>(
               jsonSerialization['site'],
             ),
-      authUserId: _isc.UuidValueJsonExtension.fromJson(
-        jsonSerialization['authUserId'],
-      ),
-      authUser: jsonSerialization['authUser'] == null
+      profileId: jsonSerialization['profileId'] as int,
+      profile: jsonSerialization['profile'] == null
           ? null
-          : _i00og34q.Protocol().deserialize<_iacc.AuthUser>(
-              jsonSerialization['authUser'],
+          : _i00og34q.Protocol().deserialize<_ieelrt66.MemberProfile>(
+              jsonSerialization['profile'],
             ),
       role: jsonSerialization['role'] == null
           ? null
@@ -87,10 +86,10 @@ abstract class SiteMembership
   /// The site this membership belongs to.
   _ie3onmsc.Site? site;
 
-  _isc.UuidValue authUserId;
+  int profileId;
 
-  /// The global user this membership belongs to.
-  _iacc.AuthUser? authUser;
+  /// The person's profile this membership belongs to.
+  _ieelrt66.MemberProfile? profile;
 
   /// Role of the user at the site.
   _icyjzuro.SiteRole role;
@@ -108,8 +107,8 @@ abstract class SiteMembership
     int? id,
     int? siteId,
     _ie3onmsc.Site? site,
-    _isc.UuidValue? authUserId,
-    _iacc.AuthUser? authUser,
+    int? profileId,
+    _ieelrt66.MemberProfile? profile,
     _icyjzuro.SiteRole? role,
     bool? active,
     DateTime? createdAt,
@@ -121,8 +120,8 @@ abstract class SiteMembership
       if (id != null) 'id': id,
       'siteId': siteId,
       if (site != null) 'site': site?.toJson(),
-      'authUserId': authUserId.toJson(),
-      if (authUser != null) 'authUser': authUser?.toJson(),
+      'profileId': profileId,
+      if (profile != null) 'profile': profile?.toJson(),
       'role': role.toJson(),
       'active': active,
       'createdAt': createdAt.toJson(),
@@ -136,8 +135,8 @@ abstract class SiteMembership
       if (id != null) 'id': id,
       'siteId': siteId,
       if (site != null) 'site': site?.toJsonForProtocol(),
-      'authUserId': authUserId.toJson(),
-      if (authUser != null) 'authUser': authUser?.toJson(),
+      'profileId': profileId,
+      if (profile != null) 'profile': profile?.toJsonForProtocol(),
       'role': role.toJson(),
       'active': active,
       'createdAt': createdAt.toJson(),
@@ -157,8 +156,8 @@ class _SiteMembershipImpl extends SiteMembership {
     int? id,
     required int siteId,
     _ie3onmsc.Site? site,
-    required _isc.UuidValue authUserId,
-    _iacc.AuthUser? authUser,
+    required int profileId,
+    _ieelrt66.MemberProfile? profile,
     _icyjzuro.SiteRole? role,
     bool? active,
     DateTime? createdAt,
@@ -166,8 +165,8 @@ class _SiteMembershipImpl extends SiteMembership {
          id: id,
          siteId: siteId,
          site: site,
-         authUserId: authUserId,
-         authUser: authUser,
+         profileId: profileId,
+         profile: profile,
          role: role,
          active: active,
          createdAt: createdAt,
@@ -181,8 +180,8 @@ class _SiteMembershipImpl extends SiteMembership {
     Object? id = _Undefined,
     int? siteId,
     Object? site = _Undefined,
-    _isc.UuidValue? authUserId,
-    Object? authUser = _Undefined,
+    int? profileId,
+    Object? profile = _Undefined,
     _icyjzuro.SiteRole? role,
     bool? active,
     DateTime? createdAt,
@@ -191,10 +190,10 @@ class _SiteMembershipImpl extends SiteMembership {
       id: id is int? ? id : this.id,
       siteId: siteId ?? this.siteId,
       site: site is _ie3onmsc.Site? ? site : this.site?.copyWith(),
-      authUserId: authUserId ?? this.authUserId,
-      authUser: authUser is _iacc.AuthUser?
-          ? authUser
-          : this.authUser?.copyWith(),
+      profileId: profileId ?? this.profileId,
+      profile: profile is _ieelrt66.MemberProfile?
+          ? profile
+          : this.profile?.copyWith(),
       role: role ?? this.role,
       active: active ?? this.active,
       createdAt: createdAt ?? this.createdAt,

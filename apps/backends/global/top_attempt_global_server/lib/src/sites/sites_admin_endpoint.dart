@@ -50,6 +50,19 @@ class SitesAdminEndpoint extends Endpoint {
       );
     }
 
+    // The membership links the person via member_profile — the sparse
+    // profile row is created at registration (hook); if it is missing
+    // despite that, fail loudly instead of creating a half-linked state.
+    final adminProfile = await MemberProfile.db.findFirstRow(
+      session,
+      where: (t) => t.authUserId.equals(firstAdminId),
+    );
+    if (adminProfile == null) {
+      throw SiteAdminException(
+        message: 'Für den gewählten Admin-Nutzer fehlt das member_profile.',
+      );
+    }
+
     final site = await Site.db.insertRow(
       session,
       Site(
@@ -67,7 +80,7 @@ class SitesAdminEndpoint extends Endpoint {
       session,
       SiteMembership(
         siteId: site.id!,
-        authUserId: firstAdminId,
+        profileId: adminProfile.id!,
         role: SiteRole.siteAdmin,
       ),
     );

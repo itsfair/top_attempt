@@ -179,96 +179,102 @@ class GlobalSiteConnection {
   }
 
   /// Fresh-setup processing only (recovery keeps local data as-is):
-  /// 1. local memberships row — identity: the GLOBAL authUserId (door-flow
-  ///    key).
-  /// 2. profile_details row — the person data (email, first/last name,
-  ///    birthday) mirrored from the transfer; single person store locally.
-  /// 3. local AuthUser with `local-admin` scope + email account using the
-  ///    same password the admin just verified with.
-  /// 4. profile image: downloaded once from the global URL
-  ///    (server-to-server) and stored directly into the local RustFS via
-  ///    the storage adapter (bypasses the UserProfile module per the
-  ///    single-directory principle); the returned public URL goes into
-  ///    `profile_details.imageUrl`.
+  /// 1. fail-fast: image bytes are downloaded FIRST (server-to-server from
+  ///    the global instance) — if this fails, nothing is created at all
+  ///    (no half-created persons; see AGENTS.md).
+  /// 2. one DB transaction: local AuthUser (`local-admin` scope) + email
+  ///    login with the same password the admin just verified with + local
+  ///    `member_profile` copy (globalAuthUserId noted, auth link set).
+  /// 3. image upload into the local RustFS at the same deterministic path
+  ///    (`member_images/<globalAuthUserId>.jpg`, overwrite semantics) and
+  ///    `imageUrl` set on the profile copy.
   Future<void> _processTransfer(
     final Session session,
     final gc.SiteTransferInfo transfer,
     final String adminPassword,
   ) async {
-    if (await Membership.db.findFirstRow(
-          session,
-          where: (t) => t.globalAuthUserId.equals(transfer.adminAuthUserId),
-        ) !=
-        null) {
+    final existing = await MemberProfile.db.findFirstRow(
+      session,
+      where: (t) => t.globalAuthUserId.equals(transfer.adminAuthUserId),
+    );
+    if (existing != null) {
       return;
     }
 
-    final localAuthUser = await AuthServices.instance.authUsers.create(
-      session,
-      scopes: {const Scope(kLocalAdminScope)},
-    );
-
-    final adminEmail = transfer.adminEmail!;
-
-    await AuthServices.getIdentityProvider<EmailIdp>().admin
-        .createEmailAuthentication(
-          session,
-          authUserId: localAuthUser.id,
-          email: adminEmail,
-          password: adminPassword,
-        );
-
-    final membership = await Membership.db.insertRow(
-      session,
-      Membership(
-        globalAuthUserId: transfer.adminAuthUserId,
-        localAuthUserId: localAuthUser.id,
-        role: 'siteAdmin',
-      ),
-    );
-
-    final profile = await ProfileDetails.db.insertRow(
-      session,
-      ProfileDetails(
-        membershipId: membership.id!,
-        email: transfer.adminEmail,
-        firstName: transfer.adminFirstName,
-        lastName: transfer.adminLastName,
-        birthday: transfer.adminBirthday,
-      ),
-    );
-
-    // Profile image transfer: download once, store into the local RustFS.
+    // -- Fail-fast image transfer (no local fallback).
+    final imagePath = _imagePath(transfer.adminAuthUserId);
     final imageUrlText = transfer.adminImageUrl;
+    ByteData? imageBytes;
     if (imageUrlText != null && imageUrlText.isNotEmpty) {
-      try {
-        final bytes = await _downloadBytes(imageUrlText);
-        if (bytes != null) {
-          final path = 'site/${transfer.siteId}/admin-image';
-          // Storage adapter id 'public' (local backend's own RustFS).
-          await session.storage.storeFile(
-            storageId: 'public',
-            path: path,
-            byteData: bytes,
-          );
-          final publicUrl = await session.storage.publicDownloadUrl(
-            storageId: 'public',
-            path: path,
-          );
-          await ProfileDetails.db.updateRow(
-            session,
-            profile.copyWith(imageUrl: publicUrl.toString()),
-          );
-        }
-      } catch (error, stackTrace) {
-        session.log(
-          'Profile image transfer failed (continuing without image).',
-          exception: error,
-          stackTrace: stackTrace,
+      imageBytes = await _downloadBytes(imageUrlText);
+      if (imageBytes == null) {
+        throw SiteSetupException(
+          message:
+              'Transfer des Profilbilds fehlgeschlagen — '
+              'Einrichtung wird abgebrochen (bitte erneut versuchen).',
         );
       }
     }
+
+    // -- One transaction for all person-related rows.
+    await session.db.transaction((final transaction) async {
+      final localAuthUser = await AuthServices.instance.authUsers.create(
+        session,
+        scopes: {const Scope(kLocalAdminScope)},
+        transaction: transaction,
+      );
+
+      final adminEmail = transfer.adminEmail!;
+
+      await AuthServices.getIdentityProvider<EmailIdp>().admin
+          .createEmailAuthentication(
+            session,
+            authUserId: localAuthUser.id,
+            email: adminEmail,
+            password: adminPassword,
+            transaction: transaction,
+          );
+
+      var memberProfile = await MemberProfile.db.insertRow(
+        session,
+        MemberProfile(
+          authUserId: localAuthUser.id,
+          globalAuthUserId: transfer.adminAuthUserId,
+          email: adminEmail,
+          firstName: transfer.adminFirstName,
+          lastName: transfer.adminLastName,
+          birthday: transfer.adminBirthday,
+        ),
+        transaction: transaction,
+      );
+
+      // image upload (storage is not transaction-aware; upload before the
+      // rows are committed happens inside the transaction block, so a
+      // failure rolls the rows back — a leftover object in the bucket is
+      // acceptable and logged).
+      if (imageBytes != null) {
+        await session.storage.storeFile(
+          storageId: 'public',
+          path: imagePath,
+          byteData: imageBytes,
+        );
+        final publicUrl = await session.storage.publicDownloadUrl(
+          storageId: 'public',
+          path: imagePath,
+        );
+        memberProfile = await MemberProfile.db.updateRow(
+          session,
+          memberProfile.copyWith(imageUrl: publicUrl.toString()),
+          transaction: transaction,
+        );
+      }
+    });
   }
+
+  /// Deterministic image object path (parity: same value as the global
+  /// instance).
+  String _imagePath(final UuidValue globalAuthUserId) =>
+      'member_images/$globalAuthUserId.jpg';
 
   /// Server-to-server download of an arbitrary URL.
   Future<ByteData?> _downloadBytes(final String url) async {

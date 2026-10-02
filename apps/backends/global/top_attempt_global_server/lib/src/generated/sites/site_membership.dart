@@ -12,25 +12,26 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _is;
-import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
-    as _iacs;
 import 'package:top_attempt_global_server/src/generated/protocol.dart'
     as _in02tfqf;
+import '../profile/member_profile.dart' as _ieelrt66;
 import '../sites/site.dart' as _ie3onmsc;
 import '../sites/site_role.dart' as _icyjzuro;
 
 /// Membership of a global user at a site ("Betrieb"). Global source of truth
 /// for who belongs to which site in which role; the local instance derives
-/// its local representation from this during sync (member -> local members
-/// row without login; staff/admin -> linked local AuthUser with login).
+/// its local representation from this during sync (member -> local
+/// member_profile copy without login; staff/admin -> linked local AuthUser
+/// with login). Membership links the PERSON via member_profile (not the
+/// auth user).
 abstract class SiteMembership
     implements _is.TableRow<int?>, _is.ProtocolSerialization {
   SiteMembership._({
     this.id,
     required this.siteId,
     this.site,
-    required this.authUserId,
-    this.authUser,
+    required this.profileId,
+    this.profile,
     _icyjzuro.SiteRole? role,
     bool? active,
     DateTime? createdAt,
@@ -42,8 +43,8 @@ abstract class SiteMembership
     int? id,
     required int siteId,
     _ie3onmsc.Site? site,
-    required _is.UuidValue authUserId,
-    _iacs.AuthUser? authUser,
+    required int profileId,
+    _ieelrt66.MemberProfile? profile,
     _icyjzuro.SiteRole? role,
     bool? active,
     DateTime? createdAt,
@@ -58,13 +59,11 @@ abstract class SiteMembership
           : _in02tfqf.Protocol().deserialize<_ie3onmsc.Site>(
               jsonSerialization['site'],
             ),
-      authUserId: _is.UuidValueJsonExtension.fromJson(
-        jsonSerialization['authUserId'],
-      ),
-      authUser: jsonSerialization['authUser'] == null
+      profileId: jsonSerialization['profileId'] as int,
+      profile: jsonSerialization['profile'] == null
           ? null
-          : _in02tfqf.Protocol().deserialize<_iacs.AuthUser>(
-              jsonSerialization['authUser'],
+          : _in02tfqf.Protocol().deserialize<_ieelrt66.MemberProfile>(
+              jsonSerialization['profile'],
             ),
       role: jsonSerialization['role'] == null
           ? null
@@ -90,10 +89,10 @@ abstract class SiteMembership
   /// The site this membership belongs to.
   _ie3onmsc.Site? site;
 
-  _is.UuidValue authUserId;
+  int profileId;
 
-  /// The global user this membership belongs to.
-  _iacs.AuthUser? authUser;
+  /// The person's profile this membership belongs to.
+  _ieelrt66.MemberProfile? profile;
 
   /// Role of the user at the site.
   _icyjzuro.SiteRole role;
@@ -114,8 +113,8 @@ abstract class SiteMembership
     int? id,
     int? siteId,
     _ie3onmsc.Site? site,
-    _is.UuidValue? authUserId,
-    _iacs.AuthUser? authUser,
+    int? profileId,
+    _ieelrt66.MemberProfile? profile,
     _icyjzuro.SiteRole? role,
     bool? active,
     DateTime? createdAt,
@@ -127,8 +126,8 @@ abstract class SiteMembership
       if (id != null) 'id': id,
       'siteId': siteId,
       if (site != null) 'site': site?.toJson(),
-      'authUserId': authUserId.toJson(),
-      if (authUser != null) 'authUser': authUser?.toJson(),
+      'profileId': profileId,
+      if (profile != null) 'profile': profile?.toJson(),
       'role': role.toJson(),
       'active': active,
       'createdAt': createdAt.toJson(),
@@ -142,8 +141,8 @@ abstract class SiteMembership
       if (id != null) 'id': id,
       'siteId': siteId,
       if (site != null) 'site': site?.toJsonForProtocol(),
-      'authUserId': authUserId.toJson(),
-      if (authUser != null) 'authUser': authUser?.toJson(),
+      'profileId': profileId,
+      if (profile != null) 'profile': profile?.toJsonForProtocol(),
       'role': role.toJson(),
       'active': active,
       'createdAt': createdAt.toJson(),
@@ -152,11 +151,11 @@ abstract class SiteMembership
 
   static SiteMembershipInclude include({
     _ie3onmsc.SiteInclude? site,
-    _iacs.AuthUserInclude? authUser,
+    _ieelrt66.MemberProfileInclude? profile,
   }) {
     return SiteMembershipInclude._(
       site: site,
-      authUser: authUser,
+      profile: profile,
     );
   }
 
@@ -191,8 +190,8 @@ class _SiteMembershipImpl extends SiteMembership {
     int? id,
     required int siteId,
     _ie3onmsc.Site? site,
-    required _is.UuidValue authUserId,
-    _iacs.AuthUser? authUser,
+    required int profileId,
+    _ieelrt66.MemberProfile? profile,
     _icyjzuro.SiteRole? role,
     bool? active,
     DateTime? createdAt,
@@ -200,8 +199,8 @@ class _SiteMembershipImpl extends SiteMembership {
          id: id,
          siteId: siteId,
          site: site,
-         authUserId: authUserId,
-         authUser: authUser,
+         profileId: profileId,
+         profile: profile,
          role: role,
          active: active,
          createdAt: createdAt,
@@ -215,8 +214,8 @@ class _SiteMembershipImpl extends SiteMembership {
     Object? id = _Undefined,
     int? siteId,
     Object? site = _Undefined,
-    _is.UuidValue? authUserId,
-    Object? authUser = _Undefined,
+    int? profileId,
+    Object? profile = _Undefined,
     _icyjzuro.SiteRole? role,
     bool? active,
     DateTime? createdAt,
@@ -225,10 +224,10 @@ class _SiteMembershipImpl extends SiteMembership {
       id: id is int? ? id : this.id,
       siteId: siteId ?? this.siteId,
       site: site is _ie3onmsc.Site? ? site : this.site?.copyWith(),
-      authUserId: authUserId ?? this.authUserId,
-      authUser: authUser is _iacs.AuthUser?
-          ? authUser
-          : this.authUser?.copyWith(),
+      profileId: profileId ?? this.profileId,
+      profile: profile is _ieelrt66.MemberProfile?
+          ? profile
+          : this.profile?.copyWith(),
       role: role ?? this.role,
       active: active ?? this.active,
       createdAt: createdAt ?? this.createdAt,
@@ -244,10 +243,8 @@ class SiteMembershipUpdateTable extends _is.UpdateTable<SiteMembershipTable> {
     value,
   );
 
-  _is.ColumnValue<_is.UuidValue, _is.UuidValue> authUserId(
-    _is.UuidValue value,
-  ) => _is.ColumnValue(
-    table.authUserId,
+  _is.ColumnValue<int, int> profileId(int value) => _is.ColumnValue(
+    table.profileId,
     value,
   );
 
@@ -278,15 +275,14 @@ class SiteMembershipTable extends _is.Table<int?> {
       'siteId',
       this,
     );
-    authUserId = _is.ColumnUuid(
-      'authUserId',
+    profileId = _is.ColumnInt(
+      'profileId',
       this,
     );
     role = _is.ColumnEnum(
       'role',
       this,
       _is.EnumSerialization.byName,
-      hasDefault: true,
     );
     active = _is.ColumnBool(
       'active',
@@ -305,10 +301,10 @@ class SiteMembershipTable extends _is.Table<int?> {
   /// The site this membership belongs to.
   _ie3onmsc.SiteTable? _site;
 
-  late final _is.ColumnUuid authUserId;
+  late final _is.ColumnInt profileId;
 
-  /// The global user this membership belongs to.
-  _iacs.AuthUserTable? _authUser;
+  /// The person's profile this membership belongs to.
+  _ieelrt66.MemberProfileTable? _profile;
 
   /// Role of the user at the site.
   late final _is.ColumnEnum<_icyjzuro.SiteRole> role;
@@ -332,24 +328,24 @@ class SiteMembershipTable extends _is.Table<int?> {
     return _site!;
   }
 
-  _iacs.AuthUserTable get authUser {
-    if (_authUser != null) return _authUser!;
-    _authUser = _is.createRelationTable(
-      relationFieldName: 'authUser',
-      field: SiteMembership.t.authUserId,
-      foreignField: _iacs.AuthUser.t.id,
+  _ieelrt66.MemberProfileTable get profile {
+    if (_profile != null) return _profile!;
+    _profile = _is.createRelationTable(
+      relationFieldName: 'profile',
+      field: SiteMembership.t.profileId,
+      foreignField: _ieelrt66.MemberProfile.t.id,
       tableRelation: tableRelation,
       createTable: (foreignTableRelation) =>
-          _iacs.AuthUserTable(tableRelation: foreignTableRelation),
+          _ieelrt66.MemberProfileTable(tableRelation: foreignTableRelation),
     );
-    return _authUser!;
+    return _profile!;
   }
 
   @override
   List<_is.Column> get columns => [
     id,
     siteId,
-    authUserId,
+    profileId,
     role,
     active,
     createdAt,
@@ -360,8 +356,8 @@ class SiteMembershipTable extends _is.Table<int?> {
     if (relationField == 'site') {
       return site;
     }
-    if (relationField == 'authUser') {
-      return authUser;
+    if (relationField == 'profile') {
+      return profile;
     }
     return null;
   }
@@ -370,20 +366,20 @@ class SiteMembershipTable extends _is.Table<int?> {
 class SiteMembershipInclude extends _is.IncludeObject {
   SiteMembershipInclude._({
     _ie3onmsc.SiteInclude? site,
-    _iacs.AuthUserInclude? authUser,
+    _ieelrt66.MemberProfileInclude? profile,
   }) {
     _site = site;
-    _authUser = authUser;
+    _profile = profile;
   }
 
   _ie3onmsc.SiteInclude? _site;
 
-  _iacs.AuthUserInclude? _authUser;
+  _ieelrt66.MemberProfileInclude? _profile;
 
   @override
   Map<String, _is.Include?> get includes => {
     'site': _site,
-    'authUser': _authUser,
+    'profile': _profile,
   };
 
   @override
@@ -838,25 +834,25 @@ class SiteMembershipAttachRowRepository {
     );
   }
 
-  /// Creates a relation between the given [SiteMembership] and [AuthUser]
-  /// by setting the [SiteMembership]'s foreign key `authUserId` to refer to the [AuthUser].
-  Future<void> authUser(
+  /// Creates a relation between the given [SiteMembership] and [MemberProfile]
+  /// by setting the [SiteMembership]'s foreign key `profileId` to refer to the [MemberProfile].
+  Future<void> profile(
     _is.DatabaseSession session,
     SiteMembership siteMembership,
-    _iacs.AuthUser authUser, {
+    _ieelrt66.MemberProfile profile, {
     _is.Transaction? transaction,
   }) async {
     if (siteMembership.id == null) {
       throw ArgumentError.notNull('siteMembership.id');
     }
-    if (authUser.id == null) {
-      throw ArgumentError.notNull('authUser.id');
+    if (profile.id == null) {
+      throw ArgumentError.notNull('profile.id');
     }
 
-    var $siteMembership = siteMembership.copyWith(authUserId: authUser.id);
+    var $siteMembership = siteMembership.copyWith(profileId: profile.id);
     await session.db.updateRow<SiteMembership>(
       $siteMembership,
-      columns: [SiteMembership.t.authUserId],
+      columns: [SiteMembership.t.profileId],
       transaction: transaction,
     );
   }

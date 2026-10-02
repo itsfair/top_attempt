@@ -56,8 +56,8 @@ class _LayoutState extends State<Layout> {
             actions: [
               AccountDropdown(
                 isSignedIn: _isSignedIn,
-                fullName: profileState.profile?.fullName,
-                imageUrl: profileState.profile?.imageUrl?.toString(),
+                fullName: profileState.fullName,
+                imageUrl: profileState.imageUrl,
                 extraItems: const [],
                 onLogin: (context) => context.go('/sign-in'),
                 onLogout: () => client.auth.signOutDevice(),

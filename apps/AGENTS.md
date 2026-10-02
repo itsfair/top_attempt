@@ -57,9 +57,14 @@ long-term goal.
 
 ### Open architecture questions (still to be clarified)
 
-- **Login/user model local:** ~~resolved 2026-09-25~~ — no local
-  self-registration; local `memberships` directory + person data in
-  `profile_details`, logins only from verified global logins (see
+- **Login/user model local:** ~~resolved 2026-10-02 (final)~~ — no local
+  self-registration; **own `member_profile` model on BOTH instances**
+  (uniform shape; locally with an optional auth link + required
+  `globalAuthUserId` exchange/door key); the built-in Serverpod
+  UserProfile feature is bypassed on both sides; profiles are edited
+  **globally only** (sync rule), images live at
+  `member_images/<globalAuthUserId>.jpg` in each instance's RustFS
+  (deterministic, overwrite, fail-fast transfer at enrollment — see the
   decisions item 10).
 - **Global vs. local entities (e.g. courses):** Courses could be created
   globally (end user sees/book them globally) or locally and be
@@ -104,23 +109,26 @@ paging, global-admin/blocked toggles incl. token revocation,
 site picker, device session = SAS `method:'device'`, token-level scope
 `site-device`, mapping table), `siteConnection` (method stream,
 ping/pong updates `lastSeenAt`) — the local backend connects to this.
-Global clients use this; site migrations `20260925122822442` +
-`20260925150857366`.
+Global clients use this; **migration history rebuilt 2026-10-02** (fresh
+base migration `20261002120454383` after the member_profile redesign).
 
 ### local (`apps/backends/local/`) — details in [AGENTS.md](backends/local/AGENTS.md)
 
-Local instance of a business/site. Since 2026-09-25 **site module**:
+Local instance of a business/site. Since 2026-09-25 **site module**;
+person model rebuilt **2026-10-02** (final, uniform with global):
 enrollment via the global credentials of the site admin
-(`siteSetup.enterSetup` with global client dependency), local membership
-directory (`memberships` with `globalAuthUserId` as exchange/door id;
-person data in `profile_details` 1:1 per membership — since 2026-09-26
-incl. email/imageUrl), local
-`local-admin` login (same password as globally at setup), and the
-connection worker (`GlobalSiteConnection`: SAS session key device
-credential, long-lived method stream + 30 s ping → `lastSeenAt`, backoff
-reconnect, `needsReSetup` state). No local self-registration — logins
-are only created from verified global logins (same pattern later for
-employees). Basic infrastructure/ports: like global (8180 scheme).
+(`siteSetup.enterSetup` with global client dependency), local
+**`member_profile`** directory (same shape as global; optional auth
+link; `globalAuthUserId` = exchange/door/image-object key), local
+`local-admin` login (same password as globally at setup), own
+`memberProfile` mirror endpoints, and the connection worker
+(`GlobalSiteConnection`: SAS session key device credential, long-lived
+method stream + 30 s ping → `lastSeenAt`, backoff reconnect,
+`needsReSetup` state). Fail-fast image transfer
+(`member_images/<globalAuthUserId>.jpg` in the local RustFS). No local
+self-registration — logins are only created from verified global logins
+(same pattern later for employees). Basic infrastructure/ports: like
+global (8180 scheme).
 
 ## Frontends
 
@@ -210,47 +218,53 @@ from git:
    did not work — details and approaches in
    [`frontends/top_attempt_global_flutter/AGENTS.md`](frontends/top_attempt_global_flutter/AGENTS.md)
    → "Next steps", item 5.
-8. **Stage 2 — enrollment/WS done (2026-09-25; enriched 2026-09-26)**;
-   remaining (stage 3):
-   a) **Membership sync over the method stream**: propagate new/removed
-       global `SiteMembership` events into the local `memberships` +
-       `profile_details` tables
-       (rule: local rows carry `globalAuthUserId` — exchange/door id),
-      staff switch → local login analog admin setup, roles/status
-      reported back (site-device-restricted endpoints).
-   b) **Live status push** to the admin clients (message central)
-      instead of 30 s polling in the global sites list.
-   c) **Local protection**: local login is active; protect all future
-      member/employee admin areas behind it as well.
-   d) **Encryption at rest** for the local `site_connections` row
-      (session key) — before production.
-   e) Add `SERVERPOD_PASSWORD_serverSideSessionKeyHashPepper` to CI
-      (tests.yml) + unify Serverpod CLI versions in CI (see item 2).
-   f) **Security**: replace the raw capability image URL in the
-      enrollment transfer with a short-lived presigned URL; enforce
-      HTTPS for all transfers in production; RustFS stays LAN-only
-      (never expose 9000/9001/9101); rotate the S3 credentials before
-      production (cross-ref docs/project.md security notes).
-   g) "Edit profile in enduser app" link (local app): hidden with the
-      `endUserUrl` config plumbing; profile editing was globally
-      disabled (`kProfileEditingEnabled = false` in `frontends/shared`)
-      until the sync design is settled — **re-enabled 2026-09-26
-      temporarily to test the image transfer to the local instance**;
-      flip back to `false` after that test.
-9. **Site editor/roadmap**: edit/delete site, memberships view per site;
-   NOTE on "same password globally + locally" (desired): the local copy
-   is created at the *verified* global login (self-healing on password
-   change = TODO). **Site properties editable locally (with global
-   propagation) = TODO** (transport: the WS stream; schema work
-   global-side).
-10. **Decisions (2025-09-25/26)**: no local self-registration; logins
-    only from verified global logins (admin at setup; later employees
-    via the local admin); device credential = non-rotating SAS session
-    key (`site-device`, pepper `serverSideSessionKeyHashPepper`),
-    connection status chips via `lastSeenAt`; person data lives ONLY in
-    the local `profile_details` table (1:1 per `memberships` row, since
-    2026-09-26 incl. email/imageUrl; local AuthUser = login credential
-    holder, linked only for staff/siteAdmin).
+ 8. **Stage 2 — enrollment/WS done (2026-09-25/26; person model final
+    2026-10-02)**; remaining (stage 3):
+    a) **Membership sync over the method stream**: propagate new/removed
+       global `SiteMembership` events into the local `member_profile`
+       copies (rule: local rows carry `globalAuthUserId` — exchange/door
+       id; images mirrored at the same `member_images/<id>.jpg` path),
+       staff switch → local login analog admin setup, roles/status
+       reported back (site-device-restricted endpoints).
+    b) **Live status push** to the admin clients (message central)
+       instead of 30 s polling in the global sites list.
+    c) **Local protection**: local login is active; protect all future
+       member/employee admin areas behind it as well.
+    d) **Encryption at rest** for the local `site_connections` row
+       (session key) — before production.
+    e) Add `SERVERPOD_PASSWORD_serverSideSessionKeyHashPepper` to CI
+       (tests.yml) + unify Serverpod CLI versions in CI (see item 2).
+    f) **Security**: replace the raw capability image URL in the
+       enrollment transfer with a short-lived presigned URL; enforce
+       HTTPS for all transfers in production; RustFS stays LAN-only
+       (never expose 9000/9001/9101); rotate the S3 credentials before
+       production (cross-ref docs/project.md security notes).
+    g) "Edit profile in enduser app" link (local app): hidden with the
+       `endUserUrl` config plumbing; `kProfileEditingEnabled` (shared)
+       was temporarily re-enabled (2026-09-26) for testing the image
+       transfer — flip back to `false` once the image sync design is
+       tested/confirmed.
+    h) **Profile-editing sync design**: profiles are edited globally
+       only (decision) — local copies are mirrors; the sync round defines
+       how changes propagate (both directions of member_profile + image
+       objects).
+ 9. **Site editor/roadmap**: edit/delete site, memberships view per site;
+    NOTE on "same password globally + locally" (desired): the local copy
+    is created at the *verified* global login (self-healing on password
+    change = TODO). **Site properties editable locally (with global
+    propagation) = TODO** (transport: the WS stream; schema work
+    global-side).
+ 10. **Decisions (2025-09-25/26, final 2026-10-02)**: no local
+     self-registration; logins only from verified global logins (admin
+     at setup; later employees via the local admin); device credential =
+     non-rotating SAS session key (`site-device`, pepper
+     `serverSideSessionKeyHashPepper`); connection status chips via
+     `lastSeenAt`; **person data = own `member_profile` model on BOTH
+     instances** (global: required auth link; local: optional auth link
+     + required `globalAuthUserId`); built-in Serverpod UserProfile
+     bypassed everywhere (email duplication = the only accepted one);
+     images: `member_images/<id>.jpg`, deterministic overwrite names
+     (one object per person), fail-fast transfers.
 
 ## Continuation / next steps
 

@@ -11,6 +11,7 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _ida;
+import 'dart:typed_data' as _idt;
 import 'package:http/http.dart' as _i85jenna;
 import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
     as _iacc;
@@ -19,10 +20,10 @@ import 'package:serverpod_auth_idp_client/serverpod_auth_idp_client.dart'
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'package:top_attempt_local_client/src/protocol/greetings/greeting.dart'
     as _idpqzm9k;
-import 'package:top_attempt_local_client/src/protocol/profile/profile_details.dart'
-    as _iqp6yj66;
 import 'package:top_attempt_local_client/src/protocol/site/local_admin_info.dart'
     as _ianfe2o9;
+import 'package:top_attempt_local_client/src/protocol/site/member_profile.dart'
+    as _ixkxc8r4;
 import 'package:top_attempt_local_client/src/protocol/site/site_connection_info.dart'
     as _ix9ptic0;
 import 'package:top_attempt_local_client/src/protocol/site/site_setup_result.dart'
@@ -272,34 +273,45 @@ class EndpointGreeting extends _isc.EndpointRef {
       );
 }
 
-/// Endpoint for the user's own profile details (first name, last name and
-/// birthday). Email, user id and the profile image are mirrored from the
-/// global instance (enrollment/sync) and not editable here.
+/// Own person/profile endpoints of the local instance — mirror of the
+/// global `memberProfile` endpoint (same model shape, see AGENTS.md).
+///
+/// The `member_profile` table is the local person directory; rows exist
+/// for every person of the site, and persons WITH a local login
+/// (site admin / staff) carry the `authUserId` link. Profiles are edited
+/// globally only (sync rule) — these endpoints exist for locally
+/// logged-in persons to READ their mirrored data (and, if ever desired,
+/// write — same conventions as global: deterministic image name,
+/// JPEG-only, UTC-midnight birthday sentinels).
 /// {@category Endpoint}
-class EndpointProfileDetails extends _isc.EndpointRef {
-  EndpointProfileDetails(_isc.EndpointCaller caller) : super(caller);
+class EndpointMemberProfile extends _isc.EndpointRef {
+  EndpointMemberProfile(_isc.EndpointCaller caller) : super(caller);
 
   @override
-  String get name => 'profileDetails';
+  String get name => 'memberProfile';
 
-  /// Returns the profile details of the signed-in user, or null if they have
-  /// never been saved yet.
-  _ida.Future<_iqp6yj66.ProfileDetails?> get() =>
-      caller.callServerEndpoint<_iqp6yj66.ProfileDetails?>(
-        'profileDetails',
+  /// Returns the signed-in person's profile (lookup via the local login →
+  /// `authUserId` link).
+  ///
+  /// Self-heals a missing sparse row using the local email account's
+  /// address (enrollment normally creates the copy including the email).
+  _ida.Future<_ixkxc8r4.MemberProfile> get() =>
+      caller.callServerEndpoint<_ixkxc8r4.MemberProfile>(
+        'memberProfile',
         'get',
         {},
       );
 
-  /// Validates and saves the profile details of the signed-in user.
-  /// The name is also written to the built-in user profile so that other
-  /// parts of the system see a consistent full name.
-  _ida.Future<_iqp6yj66.ProfileDetails> save({
+  /// Validates and saves the locally mirrored profile data of the
+  /// signed-in person. NOTE: profiles are meant to be edited globally
+  /// only (sync rule) — local writes overwrite the mirror until the next
+  /// sync brings global state back.
+  _ida.Future<_ixkxc8r4.MemberProfile> save({
     required String firstName,
     required String lastName,
     required DateTime birthday,
-  }) => caller.callServerEndpoint<_iqp6yj66.ProfileDetails>(
-    'profileDetails',
+  }) => caller.callServerEndpoint<_ixkxc8r4.MemberProfile>(
+    'memberProfile',
     'save',
     {
       'firstName': firstName,
@@ -307,6 +319,28 @@ class EndpointProfileDetails extends _isc.EndpointRef {
       'birthday': birthday,
     },
   );
+
+  /// Stores the uploaded image at
+  /// `member_images/<globalAuthUserId>.jpg` — the deterministic name
+  /// shared with the global instance (same person id; parity by
+  /// construction).
+  _ida.Future<_ixkxc8r4.MemberProfile> setUserImage({
+    required _idt.ByteData image,
+  }) => caller.callServerEndpoint<_ixkxc8r4.MemberProfile>(
+    'memberProfile',
+    'setUserImage',
+    {'image': image},
+  );
+
+  /// Deletes the locally stored object and clears `imageUrl` (NOTE: the
+  /// global image remains its source of truth; the next sync restores
+  /// the mirror).
+  _ida.Future<_ixkxc8r4.MemberProfile> removeUserImage() =>
+      caller.callServerEndpoint<_ixkxc8r4.MemberProfile>(
+        'memberProfile',
+        'removeUserImage',
+        {},
+      );
 }
 
 /// Local setup endpoint: connects this instance to its site's global
@@ -352,7 +386,8 @@ class EndpointSiteSetup extends _isc.EndpointRef {
 
   /// Everything the local admin UI displays about this instance:
   /// connection state + site snapshot + the admin's mirrored person data
-  /// (profile_details of their membership row). The default of the state
+  /// (local `member_profile` copy, joined via the exchange id
+  /// `site_connections.adminAuthUserId`). The default of the state
   /// is `noneSetup` with an empty snapshot until the instance is enrolled.
   _ida.Future<_ianfe2o9.LocalAdminInfo> adminInfo() =>
       caller.callServerEndpoint<_ianfe2o9.LocalAdminInfo>(
@@ -403,7 +438,7 @@ class Client extends _isc.ServerpodClientShared {
     emailIdp = EndpointEmailIdp(this);
     jwtRefresh = EndpointJwtRefresh(this);
     greeting = EndpointGreeting(this);
-    profileDetails = EndpointProfileDetails(this);
+    memberProfile = EndpointMemberProfile(this);
     siteSetup = EndpointSiteSetup(this);
     modules = Modules(this);
   }
@@ -414,7 +449,7 @@ class Client extends _isc.ServerpodClientShared {
 
   late final EndpointGreeting greeting;
 
-  late final EndpointProfileDetails profileDetails;
+  late final EndpointMemberProfile memberProfile;
 
   late final EndpointSiteSetup siteSetup;
 
@@ -425,7 +460,7 @@ class Client extends _isc.ServerpodClientShared {
     'emailIdp': emailIdp,
     'jwtRefresh': jwtRefresh,
     'greeting': greeting,
-    'profileDetails': profileDetails,
+    'memberProfile': memberProfile,
     'siteSetup': siteSetup,
   };
 

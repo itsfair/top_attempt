@@ -17,9 +17,8 @@ import 'package:serverpod_auth_idp_client/serverpod_auth_idp_client.dart'
     as _iaic;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'greetings/greeting.dart' as _izw8z7ou;
-import 'profile/profile_details.dart' as _is7ofcfc;
 import 'site/local_admin_info.dart' as _isettk53;
-import 'site/membership.dart' as _i3vhq3zw;
+import 'site/member_profile.dart' as _iv3515ms;
 import 'site/site_candidate_local.dart' as _iin2gxgd;
 import 'site/site_connection.dart' as _irwm5040;
 import 'site/site_connection_info.dart' as _i9oolunz;
@@ -27,9 +26,8 @@ import 'site/site_connection_state.dart' as _ifrxdjdr;
 import 'site/site_setup_exception.dart' as _imfczqeb;
 import 'site/site_setup_result.dart' as _in5mc098;
 export 'greetings/greeting.dart';
-export 'profile/profile_details.dart';
 export 'site/local_admin_info.dart';
-export 'site/membership.dart';
+export 'site/member_profile.dart';
 export 'site/site_candidate_local.dart';
 export 'site/site_connection.dart';
 export 'site/site_connection_info.dart';
@@ -75,14 +73,11 @@ class Protocol extends _isc.SerializationManager {
     if (t == _izw8z7ou.Greeting) {
       return _izw8z7ou.Greeting.fromJson(data) as T;
     }
-    if (t == _is7ofcfc.ProfileDetails) {
-      return _is7ofcfc.ProfileDetails.fromJson(data) as T;
-    }
     if (t == _isettk53.LocalAdminInfo) {
       return _isettk53.LocalAdminInfo.fromJson(data) as T;
     }
-    if (t == _i3vhq3zw.Membership) {
-      return _i3vhq3zw.Membership.fromJson(data) as T;
+    if (t == _iv3515ms.MemberProfile) {
+      return _iv3515ms.MemberProfile.fromJson(data) as T;
     }
     if (t == _iin2gxgd.SiteCandidateLocal) {
       return _iin2gxgd.SiteCandidateLocal.fromJson(data) as T;
@@ -105,16 +100,13 @@ class Protocol extends _isc.SerializationManager {
     if (t == _isc.getType<_izw8z7ou.Greeting?>()) {
       return (data != null ? _izw8z7ou.Greeting.fromJson(data) : null) as T;
     }
-    if (t == _isc.getType<_is7ofcfc.ProfileDetails?>()) {
-      return (data != null ? _is7ofcfc.ProfileDetails.fromJson(data) : null)
-          as T;
-    }
     if (t == _isc.getType<_isettk53.LocalAdminInfo?>()) {
       return (data != null ? _isettk53.LocalAdminInfo.fromJson(data) : null)
           as T;
     }
-    if (t == _isc.getType<_i3vhq3zw.Membership?>()) {
-      return (data != null ? _i3vhq3zw.Membership.fromJson(data) : null) as T;
+    if (t == _isc.getType<_iv3515ms.MemberProfile?>()) {
+      return (data != null ? _iv3515ms.MemberProfile.fromJson(data) : null)
+          as T;
     }
     if (t == _isc.getType<_iin2gxgd.SiteCandidateLocal?>()) {
       return (data != null ? _iin2gxgd.SiteCandidateLocal.fromJson(data) : null)
@@ -160,9 +152,8 @@ class Protocol extends _isc.SerializationManager {
   static String? getClassNameForType(Type type) {
     return switch (type) {
       _izw8z7ou.Greeting => 'Greeting',
-      _is7ofcfc.ProfileDetails => 'ProfileDetails',
       _isettk53.LocalAdminInfo => 'LocalAdminInfo',
-      _i3vhq3zw.Membership => 'Membership',
+      _iv3515ms.MemberProfile => 'MemberProfile',
       _iin2gxgd.SiteCandidateLocal => 'SiteCandidateLocal',
       _irwm5040.SiteConnection => 'SiteConnection',
       _i9oolunz.SiteConnectionInfo => 'SiteConnectionInfo',
@@ -188,12 +179,10 @@ class Protocol extends _isc.SerializationManager {
     switch (data) {
       case _izw8z7ou.Greeting():
         return 'Greeting';
-      case _is7ofcfc.ProfileDetails():
-        return 'ProfileDetails';
       case _isettk53.LocalAdminInfo():
         return 'LocalAdminInfo';
-      case _i3vhq3zw.Membership():
-        return 'Membership';
+      case _iv3515ms.MemberProfile():
+        return 'MemberProfile';
       case _iin2gxgd.SiteCandidateLocal():
         return 'SiteCandidateLocal';
       case _irwm5040.SiteConnection():
@@ -231,14 +220,11 @@ class Protocol extends _isc.SerializationManager {
     if (dataClassName == 'Greeting') {
       return deserialize<_izw8z7ou.Greeting>(data['data']);
     }
-    if (dataClassName == 'ProfileDetails') {
-      return deserialize<_is7ofcfc.ProfileDetails>(data['data']);
-    }
     if (dataClassName == 'LocalAdminInfo') {
       return deserialize<_isettk53.LocalAdminInfo>(data['data']);
     }
-    if (dataClassName == 'Membership') {
-      return deserialize<_i3vhq3zw.Membership>(data['data']);
+    if (dataClassName == 'MemberProfile') {
+      return deserialize<_iv3515ms.MemberProfile>(data['data']);
     }
     if (dataClassName == 'SiteCandidateLocal') {
       return deserialize<_iin2gxgd.SiteCandidateLocal>(data['data']);

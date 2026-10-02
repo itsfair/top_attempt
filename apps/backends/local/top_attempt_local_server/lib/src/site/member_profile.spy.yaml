@@ -1,0 +1,43 @@
+### Local copy of the global person directory — same model shape as the
+### global `member_profile`, with these differences:
+### - `authUserId` is OPTIONAL: it exists only for local users
+###   (site admin / staff) — plain members have no local login.
+### - a required, unique `globalAuthUserId`: the exchange/door key that
+###   links this row to its global copy (and names the image object).
+###
+### The built-in Serverpod UserProfile feature is bypassed on purpose;
+### the local instance stores mirrored profile data and calls the global
+### instance for edits.
+class: MemberProfile
+table: member_profile
+fields:
+
+  ### Link to the local login account — null for plain members without
+  ### login. SetNull keeps the person data when a login account is
+  ### removed.
+  authUser: module:serverpod_auth_core:AuthUser?, relation(optional, onDelete=SetNull)
+
+  ### The GLOBAL authUserId of the person — exchange key with the global
+  ### instance, door-opening key (ESP32 -> local backend -> lookup) and
+  ### the image-object key. Identical to the global row's authUserId.
+  globalAuthUserId: UuidValue
+
+  ### Mirrored profile data (see global model).
+  email: String
+  firstName: String?
+  lastName: String?
+  birthday: DateTime?
+
+  ### Public URL of the profile image (local RustFS; null until it has
+  ### been transferred/copied).
+  imageUrl: String?
+
+  ### When the row was created.
+  createdAt: DateTime, defaultModel=now
+indexes:
+  member_profile_auth_user_unique_idx:
+    fields: authUserId
+    unique: true
+  member_profile_global_auth_user_unique_idx:
+    fields: globalAuthUserId
+    unique: true

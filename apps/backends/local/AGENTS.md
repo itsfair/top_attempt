@@ -22,22 +22,35 @@ monorepo structure: [Root AGENTS.md](../../../AGENTS.md).
 ## Current state (important!)
 
 Since 2026-09-25 the **site module** is implemented (no longer a pure
-mirror):
+mirror); person model **rebuilt 2026-10-02** to the final uniform design:
 
 - **Enrollment**: the local mask verifies with the **global credentials
   of the site admin** at the global instance (`siteSetup.enterSetup` →
   `top_attempt_global_client` → global `siteEnrollment` endpoint; site
   picker if the admin owns several sites).
-- **Members directory**: after enrollment the local membership row of
-  the admin is created (`globalAuthUserId` from the transfer — **exchange
-  id**, later also the key for door authorization) plus their
-  `profile_details` row (person data: email, name, birthday, image —
-  single person store) and a **local AuthUser** is created (email like
-  global, **same password** the admin just used; scope `local-admin` —
-  hashed locally via
-  `EmailIdp.admin.createEmailAuthentication`). No (!) local
-  self-registration: logins are only ever created from verified global
-  logins (the same pattern applies later for employees).
+- **Person model = `member_profile` (as global)**: one row per person of
+  the site — same model shape as the global instance, with an OPTIONAL
+  `authUser` module link (only site admin/staff have local logins) and a
+  required unique `globalAuthUserId` (exchange id + door-flow key +
+  image-object key). The old `memberships`/`profile_details` tables are
+  gone; a local membership mirror table comes with the sync round.
+- **Local login for the site admin**: created at enrollment (local
+  AuthUser, new random id — "id egal"; email like global, **same
+  password** the admin just used; scope `local-admin` — hashed locally
+  via `EmailIdp.admin.createEmailAuthentication`) and linked on the
+  member_profile copy. No (!) local self-registration: logins are only
+  ever created from verified global logins (same pattern for employees
+  later).
+- **Image transfer (fail-fast, no fallback)**: at fresh setup the bytes
+  are downloaded **first** (server-to-server from the global
+  `member_profile.imageUrl`) — a failure aborts the whole enrollment;
+  then one DB transaction (AuthUser + email login + member_profile copy)
+  and the upload into the local RustFS at the same deterministic path
+  `member_images/<globalAuthUserId>.jpg` (overwrite semantics, URL →
+  profile copy). Later, a plain member's image is mirrored from global
+  at the same path pattern; a member→user conversion needs **no image
+  move** (all images of a person always live under
+  `member_images/<globalAuthUserId>.jpg`).
 - **Device connection**: `GlobalSiteConnection` worker (started in
   `server.dart`): reads the credential and the global API URL
   (`siteConnection.globalApiUrl` in config), client auth with the
@@ -51,8 +64,11 @@ mirror):
   (dev: `http://localhost:8080`; devices: LAN IP).
 
 Apart from the site module, the backend is still the mirror of the
-global one created during the Serverpod-4 upgrade (JWT auth +
-`ProfileDetails`), infrastructure (ports/RustFS) see below.
+global one created during the Serverpod-4 upgrade (JWT auth), being the
+INFRASTRUCTURE basis (ports/RustFS) documented below. The built-in
+Serverpod UserProfile feature is bypassed (like global); the auth module
+still creates its own profile tables at login/registration internally —
+unused residue.
 
 ## Ports / infrastructure (dev)
 - API 8180, Insights 8181, Web 8182 (`config/development.yaml`)
@@ -84,45 +100,42 @@ relaunched any time in the start TUI via Ctrl+R.
 |---|---|
 | `emailIdp` (`src/auth/email_idp_endpoint.dart`) | Email IdP: local login (registration/member self-signup is intentionally off) |
 | `jwtRefresh` (`src/auth/jwt_refresh_endpoint.dart`) | Renew access tokens |
-| `profileDetails` (`src/profile/profile_details_endpoint.dart`) | First/last name + birthday (mirror of global) |
-| `siteSetup` (`src/site/site_setup_endpoint.dart`) | `enterSetup({email, password, siteId?})` (checks against global, processes transfer: memberships row + profile_details + local `local-admin` login) and `connectionStatus()` for the App-Bar chip |
-| `greeting` (`src/greetings/…`) | Serverpod sample endpoint |
+| `memberProfile` (`src/site/member_profile_endpoint.dart`) | Own person endpoints (mirror of global): `get`, `save` (names/birthday), `setUserImage`, `removeUserImage` — for locally logged-in persons (site admin/staff) |
+| `siteSetup` (`src/site/site_setup_endpoint.dart`) | `enterSetup({email, password, siteId?})` (checks against global, processes transfer: member_profile copy + local `local-admin` login + fail-fast image) + `adminInfo()` (connection/site snapshot/admin person data) + `connectionStatus()` for the App-Bar chip |
+| `greeting` (`src/greetings/…`) | Serverpod sample endpoint (candidate for removal) |
 
-No `userProfileEdit` endpoint in own code (present in the global
-backend) — clarify when building out the members/employee model.
+The built-in Serverpod UserProfile feature is bypassed (like global) —
+the auth module's own profile tables are unused residue.
 
 ## Data model notes
 
-- **Single person store (2026-09-26)**: person data (email, first/last
-  name, birthday, image URL) lives ONLY in `profile_details` — one row
-  per `memberships` row (`membershipId`, FK cascade, unique), analogous
-  to the global instance. `memberships` (renamed from `Member`/`members`)
-  is a pure membership table: `globalAuthUserId` (exchange/door key),
-  `localAuthUser` link (staff/siteAdmin only; `onDelete=SetNull` —
-  removing a login keeps membership + person data), `role`, `active`,
-  `createdAt`. Enrollment transfer writes both rows; a later "make
-  employee" only creates/links a local AuthUser (`memberships.
-  localAuthUserId`).
-- `profile_details` mirrors global. **Birthday as UTC-midnight date
-  sentinel** (2026-09-25, identical to global): the picked date is
-  normalized to `DateTime.utc(year, month, day)` before persistence;
-  validation uses UTC calendar days. Reason: the date picker produces
-  local midnight; the conversion to UTC (wire/DB) in UT+1 would drift
-  the calendar day one back. Client code must always display the UTC
-  calendar day of the returned value.
-  **Second line of defense**: the server normalization alone is not
-  enough — the client serialization is `DateTime.toUtc()`
-  (`serverpod_serialization`), so the calendar day is already shifted at
-  decode time. The shared `ProfileScreen` sends `DateTime.utc(y, m, d)`
-  explicitly (see `apps/frontends/shared/lib/screens/profile_screen.dart`).
+- **`member_profile` (final design 2026-10-02, symmetric to global)**:
+  one row per person; `authUserId` optional (only local users
+  (siteAdmin/staff) have a login account; `onDelete=SetNull`),
+  **`globalAuthUserId` required + unique** (exchange/door/image-object
+  key), mirrored `email` (required — duplicate of the auth mail,
+  accepted), `firstName`/`lastName`/`birthday`/`imageUrl`
+  (mirror of the global member_profile; "profiles are edited globally
+  only" — sync rule).
+- **Images**: `member_images/<globalAuthUserId>.jpg` (deterministic, one
+  object per person, overwrite on change, JPEG-only for now). Fail-fast
+  transfer at enrollment (no fallback); plain members: mirrored from
+  global on sync; a member→user conversion needs NO image move (same
+  path for every person of both types) — only the image row/profile
+  linkage is updated via native module methods.
+- **Birthday as UTC-midnight date sentinel**: values travel as
+  `DateTime.utc(y, m, d)`; the backend validates against UTC calendar
+  days only — NO server-side re-normalization (client convention;
+  documented in the shared frontend).
 
 ## Open questions (next expansion)
 
 1. **Membership sync over the stream**: propagate new/removed global
-   `SiteMembership` events into the local `memberships` +
-   `profile_details` tables (the WS connection is the transport layer;
-   rule: `memberships.globalAuthUserId` = global person id = door
-   authorization key).
+   `SiteMembership` events into the local `member_profile` copies
+   (image: download from global URL into the same local path; rule:
+   `member_profile.globalAuthUserId` = global person id = door
+   authorization key). A local membership-mirror table (role/active
+   alignment) is part of that round.
 2. **Employees**: the member verifies on site with global credentials →
    local login (same model as the admin setup); roles/status changed
    globally via `site-device`-restricted endpoints.
@@ -145,16 +158,10 @@ backend) — clarify when building out the members/employee model.
 
 - Next step: membership sync over the WS connection (open question 1),
   then members/employee model + admin UI protection.
-- Migrations: base migration `20260923104843538` +
-  `20260923112557527-upgrade-4-0` + site module migrations
-  `20260925151309478` and `20260926112250954` (site snapshot + admin
-  pointer in `site_connections`) + `20260926130244462` (rename
-  `Member`/`members` → `Membership`/`memberships`, person data moved
-  into `profile_details` incl. `email`/`imageUrl`, `localAuthUser`
-  FK → SetNull).
-  **Existing enrollment data requires re-setup after the schema
-  change** (the site-connection row shape changed; data comes back from
-  the global instance at setup).
+- Migrations: **history rebuilt 2026-10-02** (fresh base migration
+  `20261002122115491` after the member_profile redesign; the database
+  volumes were wiped). **Existing enrollment data requires re-setup**
+  (fresh DB anyway).
 - Profile image serving caveat: Flutter-web display of local RustFS
   images requires CORS on the local RustFS instance (console :9101).
 - Security TODOs (see apps/AGENTS.md): presigned/short-lived image URLs
